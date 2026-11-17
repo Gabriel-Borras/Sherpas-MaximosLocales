@@ -71,3 +71,7 @@ Para cumplir la regla estricta del hackathon (**no inventar números**), hemos i
 ## 5. Prototipo inicial incluido
 
 * [`demo-bitlife/index.html`](../demo-bitlife/index.html): micro-demo estática centrada en **Michael Carter** para validar la mecánica de `+ Age Up`, el toggle `Plain / Math`, el `Rewind` y la transición a `Step 1`.
+
+| 1. Decisión real (2027) | 2. Modo `Math` + Déficit a los 85 | 3. Rewind + Camino viable hasta los 91 |
+| :---: | :---: | :---: |
+| ![Decisión 2027](assets/bitlife-01-decision.png) | ![Modo Math y déficit a los 85](assets/bitlife-02-shortfall-math.png) | ![Camino viable hasta los 91](assets/bitlife-03-funded.png) |
