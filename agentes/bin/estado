@@ -1,0 +1,67 @@
+#!/usr/bin/env python3
+"""estado — guarda estado/ESTADO.md (agentes abiertos + tareas) y publica en GitHub si hay equipo.conf."""
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import time
+
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8", errors="replace")
+
+DEFAULT_HOME = Path(__file__).resolve().parent.parent
+HOME = Path(os.environ.get("AGENTES_HOME") or DEFAULT_HOME)
+ESTADO = HOME / "estado"
+
+
+def main():
+    ESTADO.mkdir(parents=True, exist_ok=True)
+    out = ESTADO / "ESTADO.md"
+
+    reg = ESTADO / "abiertos.json"
+    abiertos = {}
+    if reg.exists() and reg.read_text(encoding="utf-8").strip():
+        abiertos = json.loads(reg.read_text(encoding="utf-8"))
+
+    res = subprocess.run(
+        [sys.executable, str(HOME / "bin" / "tareas"), "resumen"],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+    )
+    tareas_txt = res.stdout.strip() or "- (sin tablero)"
+
+    lineas = [
+        f"# Estado guardado — {time.strftime('%Y-%m-%d %H:%M')}",
+        "",
+        "## Agentes que estaban abiertos",
+    ]
+    if abiertos:
+        for k, v in abiertos.items():
+            lineas.append(f"- {k} (dir: {v.get('dir', '?')})")
+    else:
+        lineas.append("- ninguno")
+    lineas += ["", "## Tareas", tareas_txt, ""]
+
+    tmp = out.with_suffix(".tmp")
+    tmp.write_text("\n".join(lineas), encoding="utf-8")
+    tmp.replace(out)
+    print(f"guardado en {out}")
+
+    if (HOME / "equipo.conf").exists():
+        pub = subprocess.run(
+            [sys.executable, str(HOME / "bin" / "equipo"), "publicar"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
+        if pub.stdout.strip():
+            print(pub.stdout.strip())
+
+
+if __name__ == "__main__":
+    main()

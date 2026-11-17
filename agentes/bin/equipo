@@ -14,7 +14,7 @@ Estado compartido en GitHub (lo único que ven todas las máquinas):
   equipo avisar <maquina|todos> "mensaje"              # mensaje a otra máquina
   equipo mensajes [--todos]            # mensajes nuevos para esta máquina (marca como leídos)
 
-Config: $AGENTES_HOME/equipo.conf (def. ~/agentes/equipo.conf, KEY=VALUE). Requiere `gh` autenticado.
+Config: $AGENTES_HOME/equipo.conf (por defecto <repo>/agentes/equipo.conf). Requiere `gh` autenticado.
 """
 import argparse
 from datetime import datetime, timezone
@@ -27,7 +27,12 @@ import subprocess
 import sys
 import time
 
-HOME = Path(os.environ.get("AGENTES_HOME", Path.home() / "agentes"))
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8", errors="replace")
+
+DEFAULT_HOME = Path(__file__).resolve().parent.parent
+HOME = Path(os.environ.get("AGENTES_HOME") or DEFAULT_HOME)
 CONF = HOME / "equipo.conf"
 VISTO = HOME / "estado" / "equipo-visto.json"
 LABEL_ESTADO = "equipo-estado"
@@ -37,7 +42,7 @@ TITULO_ESTADO = "🛰 Estado del equipo"
 def conf():
     if not CONF.exists():
         sys.exit(
-            f"equipo: falta {CONF}. Corré: equipo init --maquina <nombre> --rol orquestador|miembro --repo <dueño/repo> --dir <ruta>"
+            f"equipo: falta {CONF}. Ejecuta: equipo init --maquina <nombre> --rol orquestador|miembro --repo <dueño/repo> --dir ."
         )
     d = {}
     for line in CONF.read_text(encoding="utf-8").splitlines():
@@ -74,7 +79,6 @@ def api_lista(path):
     out = sh(["gh", "api", path, "--paginate"], check=True)
     if not out:
         return []
-    # --paginate concatena arrays JSON: "[...][...]"
     return [
         x
         for chunk in re.split(r"\]\s*\[", out.strip()[1:-1])
@@ -109,8 +113,8 @@ def issue_estado(repo, crear=True):
         [
             "gh", "issue", "create", "-R", repo, "--title", TITULO_ESTADO, "--label", LABEL_ESTADO,
             "--body",
-            "Cada máquina del equipo mantiene acá su estado (un comentario por máquina, lo actualiza `equipo publicar`). "
-            "Los mensajes entre máquinas también van acá. No borrar.",
+            "Cada máquina del equipo mantiene aquí su estado (un comentario por máquina, actualizado con `equipo publicar`). "
+            "Los mensajes entre máquinas también van aquí. No borrar.",
         ],
         check=True,
     )
@@ -128,20 +132,27 @@ def _parse_iso_utc(ts_str):
     return datetime.fromisoformat(ts_str.replace("Z", "+00:00")).timestamp()
 
 
+def _resolver_dir(raw_dir):
+    if not raw_dir:
+        return None
+    p = Path(os.path.expanduser(raw_dir))
+    return p if p.is_absolute() else (HOME.parent / p).resolve()
+
+
 # ---------- recolectar estado local ----------
 def estado_local(c):
     m, lineas = c["MAQUINA"], []
     lineas.append(f"{marca(m)}\n### 🖥 {m} · {c['ROL']} · {time.strftime('%d/%m %H:%M')}")
-    lineas.append(f"- host `{socket.gethostname()}` · git `{sh(['git', 'config', 'user.name']) or '?'}`")
-    d = c.get("DIR")
-    if d and Path(d).is_dir():
+    lineas.append(f"- host `{socket.gethostname()}` · OS `{sys.platform}` · git `{sh(['git', 'config', 'user.name']) or '?'}`")
+    d = _resolver_dir(c.get("DIR"))
+    if d and d.is_dir():
         rama = sh(["git", "branch", "--show-current"], cwd=d)
         cambios = len([l for l in sh(["git", "status", "--porcelain"], cwd=d).splitlines() if l.strip()])
         ult = sh(["git", "log", "-1", "--format=%h %s (%cr)"], cwd=d)
         ab = sh(["git", "rev-list", "--left-right", "--count", f"origin/main...{rama}"], cwd=d) if rama else ""
         detras, adelante = (ab.split() + ["?", "?"])[:2] if ab else ("?", "?")
         lineas.append(
-            f"- proyecto `{Path(d).name}` · rama **{rama or '(detached)'}** · {cambios} archivos sin commitear · "
+            f"- proyecto `{d.name}` · rama **{rama or '(detached)'}** · {cambios} archivos sin commitear · "
             f"{adelante} commits sin subir a main / {detras} de main sin traer"
         )
         lineas.append(f"- último commit: {ult}")
@@ -153,7 +164,7 @@ def estado_local(c):
     if en_curso:
         lineas.append("- tareas en curso (tablero local):\n" + "\n".join(f"  - {l.strip()}" for l in en_curso.splitlines()[:8]))
     corridas = []
-    for f in [HOME / "estado" / "codex.jsonl"] + ([Path(d) / ".agents" / "log"] if d else []):
+    for f in [HOME / "estado" / "codex.jsonl"] + ([d / ".agents" / "log"] if d else []):
         files = sorted(f.glob("*.jsonl")) if f.is_dir() else ([f] if f.exists() else [])
         for ff in files:
             for l in ff.read_text(encoding="utf-8").splitlines()[-20:]:
@@ -176,9 +187,10 @@ def estado_local(c):
 # ---------- comandos ----------
 def cmd_init(a):
     HOME.mkdir(parents=True, exist_ok=True)
+    dir_abs = str(Path(os.path.expanduser(a.dir)).resolve())
     previo = conf_opcional().get("ISSUE") if conf_opcional().get("REPO") == a.repo else None
     CONF.write_text(
-        f"# Config de `equipo` (ver equipo -h)\nMAQUINA={a.maquina}\nROL={a.rol}\nREPO={a.repo}\nDIR={a.dir}\n"
+        f"# Config de `equipo` (ver equipo -h)\nMAQUINA={a.maquina}\nROL={a.rol}\nREPO={a.repo}\nDIR={dir_abs}\n"
         + (f"ISSUE={previo}\n" if previo else ""),
         encoding="utf-8",
     )

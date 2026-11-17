@@ -1,6 +1,7 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+agentes/agentes.conf
 agentes/equipo.conf
 agentes/estado/
 agentes/tareas/

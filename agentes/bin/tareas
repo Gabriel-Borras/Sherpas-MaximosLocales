@@ -9,7 +9,7 @@
   tareas liberar ID [-p proyecto]                   # vuelve a pendiente (p. ej. un agente murió)
   tareas resumen                                    # Markdown de todos los proyectos
 
-Datos en $AGENTES_HOME/tareas/<proyecto>.json (def. ~/agentes). El agente sale de --como o de $AGENTE.
+Datos en $AGENTES_HOME/tareas/<proyecto>.json (por defecto <repo>/agentes/tareas). El agente sale de --como o de $AGENTE.
 """
 import argparse
 from contextlib import contextmanager
@@ -19,7 +19,12 @@ from pathlib import Path
 import sys
 import time
 
-HOME = Path(os.environ.get("AGENTES_HOME", Path.home() / "agentes"))
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8", errors="replace")
+
+DEFAULT_HOME = Path(__file__).resolve().parent.parent
+HOME = Path(os.environ.get("AGENTES_HOME") or DEFAULT_HOME)
 DIR = HOME / "tareas"
 
 
@@ -29,11 +34,14 @@ def path(p):
 
 @contextmanager
 def _lock_file(lock_path):
-    """Bloqueo exclusivo multiplataforma (fcntl en POSIX, msvcrt en Windows)."""
+    """Bloqueo exclusivo multiplataforma (msvcrt en Windows, fcntl en POSIX)."""
     if os.name == "nt":
         import msvcrt
 
         with open(lock_path, "a+b") as lk:
+            if lk.tell() == 0:
+                lk.write(b"0")
+                lk.flush()
             lk.seek(0)
             while True:
                 try:
@@ -114,7 +122,7 @@ def main():
             x.add_argument("--motivo", required=True)
     s("resumen")
     a = ap.parse_args()
-    now = time.strftime("%F %H:%M")
+    now = time.strftime("%Y-%m-%d %H:%M")
 
     if a.cmd == "resumen":
         hay = False
