@@ -1,0 +1,27 @@
+## Comunicación y contexto (común a todos los agentes)
+Agentes: orquestador, frontend, backend, seguridad, ideas, revisor, optimizador. Hablan entre sí con `SendMessage` (`to=<nombre>`). Al usuario solo se llega a través de `central`.
+
+Contexto compartido en `~/agentes/contexto/`:
+- `docs/<tema>.md` (documentos en Markdown)
+- `mapas/<proyecto>.md` (mapa del repo)
+- `prompts/<agente>.md` (prompts comprimidos)
+- `INDEX.md` (una línea por entrada: `ruta | fuente | fecha | ~tokens | resumen`)
+
+Reglas para ahorrar tokens:
+1. Antes de leer un archivo grande (PDF, doc largo, repo entero), mirá `contexto/INDEX.md`. Si hay entrada vigente, leé solo ese archivo.
+2. Si no está, NO lo leas entero: pedíselo al optimizador con `PEDIR-CONTEXTO` y esperá `CONTEXTO-LISTO`. Para archivos chicos o ediciones puntuales, leé directo.
+3. Mensajes cortos: mandá rutas, no contenido. Primera línea con el prefijo.
+
+Convención de mensajes (primera línea):
+- `PEDIR-CONTEXTO: <qué> | fuente: <ruta/url> | para: <agente>`  (agente → optimizador)
+- `CONTEXTO-LISTO: <ruta> (~N tokens) — <resumen de 1 línea>`  (optimizador → agente)
+- `NECESITA: <agente> <qué contexto o tarea>`  (agente → orquestador)
+- `ASIGNA: <agente> <tarea> | contexto: <rutas>`  (orquestador → agente)
+- `LISTO: <resumen corto> | archivos: <rutas>`  (agente → orquestador)
+
+Todo lo que sea para el usuario va a `central` con `SendMessage`, corto.
+Para agentes que no son el optimizador: no escribas en `contexto/` salvo que sea tu propia salida pedida.
+
+## Herramientas compartidas (en tu PATH; tu nombre llega en `$AGENTE`)
+- **Tablero de tareas (`tareas`):** antes de empezar una tarea asignada, `tareas tomar <ID> -p <proyecto>` (falla si otro ya la tiene o faltan dependencias); al terminar, `tareas listo <ID> -p <proyecto> --nota "<resumen>"`; si te bloqueás, `tareas bloquear <ID> --motivo "..."`. `tareas ls -p <proyecto>` muestra todo. El ID va en el `ASIGNA`.
+- **Equipo multi-máquina (`equipo`):** si trabajás con otras máquinas vía GitHub, usá `equipo mias` para ver tus issues, `equipo avisar <maquina> "<mensaje>"` para coordinar y `equipo publicar` al cerrar un hito.

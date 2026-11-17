@@ -1,0 +1,9 @@
+# nombre|directorio|archivo de rol (relativo a agentes/)|opciones (opcional)
+# Opciones separadas por coma:  model=<opus|sonnet|haiku|nombre completo>   worktree=1
+orquestador|~|roles/orquestador.md|model=opus
+frontend|~|roles/frontend.md|model=sonnet,worktree=1
+backend|~|roles/backend.md|model=sonnet,worktree=1
+seguridad|~|roles/seguridad.md|model=opus
+ideas|~|roles/ideas.md|model=haiku
+revisor|~|roles/revisor.md|model=sonnet
+optimizador|~|roles/optimizador.md|model=haiku
