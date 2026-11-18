@@ -1710,23 +1710,23 @@
   // The Sumi-e mountain is ALWAYS the 100vw x 100vh full-bleed background across the entire web app
   const isMountainPhase = state => !!state && (viewKey(state.view) === 'expedition' || viewKey(state.view) === 'overview') && (state.phase === 'expedition' || state.phase === 'blocked' || state.summit);
 
-  // Camera framing a camp while leaving room on the left/bottom for the floating card
+  // Gentle camera framing (~1.55x over 1200x750) keeping mountain context visible
   function campCamera(stage) {
     const idx = Math.max(0, Math.min(3, Number(stage) || 0));
     const pt = biomes[idx].point;
-    const w = 165, h = 103.125;
+    const w = 760, h = 475;
     const cx = idx === 3 ? pt[0] + 14 : pt[0];
     const cy = idx === 3 ? pt[1] - 14 : pt[1];
-    const x = Math.max(0, Math.min(fullCamera[2] - w, cx - w * 0.58));
-    const y = Math.max(0, Math.min(fullCamera[3] - h, cy - h * 0.42));
+    const x = Math.max(0, Math.min(fullCamera[2] - w, cx - w * 0.55));
+    const y = Math.max(0, Math.min(fullCamera[3] - h, cy - h * 0.45));
     return [x, y, w, h];
   }
 
   function riskCameraBox(record, stagePoint, stageIdx) {
     const coord = riskCoordinates(record, stagePoint, stageIdx);
-    const w = 185, h = 115.625;
-    const x = Math.max(0, Math.min(fullCamera[2] - w, coord.x - w * 0.56));
-    const y = Math.max(0, Math.min(fullCamera[3] - h, coord.y - h * 0.44));
+    const w = 800, h = 500;
+    const x = Math.max(0, Math.min(fullCamera[2] - w, coord.x - w * 0.55));
+    const y = Math.max(0, Math.min(fullCamera[3] - h, coord.y - h * 0.45));
     return [x, y, w, h];
   }
 
@@ -2582,8 +2582,8 @@
       const risk = svg.querySelector('.risk-path[data-active-risk="true"]') || risks[risks.length - 1];
       if (!risk) { if (done) done(); return; }
       const pts = String(risk.dataset.riskBreak || '620,295').split(',').map(Number);
-      const w = 185, h = 115.625;
-      const crash = [Math.max(0, Math.min(fullCamera[2] - w, pts[0] - w * 0.56)), Math.max(0, Math.min(fullCamera[3] - h, pts[1] - h * 0.44)), w, h];
+      const w = 800, h = 500;
+      const crash = [Math.max(0, Math.min(fullCamera[2] - w, pts[0] - w * 0.55)), Math.max(0, Math.min(fullCamera[3] - h, pts[1] - h * 0.45)), w, h];
       const len = risk.getTotalLength ? risk.getTotalLength() : 220;
       risk.style.strokeDasharray = String(len);
       risk.style.strokeDashoffset = String(len);
@@ -2639,7 +2639,7 @@
       }, tk);
       return;
     }
-    const zoomedElsewhere = from[2] < 600 && (Math.abs(from[0] - target[0]) > 40 || Math.abs(from[1] - target[1]) > 40);
+    const zoomedElsewhere = from[2] < 1050 && (Math.abs(from[0] - target[0]) > 40 || Math.abs(from[1] - target[1]) > 40);
     if (zoomedElsewhere) {
       animateViewBox(svg, from, fullCamera.slice(), 300, () => animateViewBox(svg, fullCamera.slice(), target, 520, done, tk), tk);
     } else {
