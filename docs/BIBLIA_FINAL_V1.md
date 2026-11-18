@@ -23,23 +23,32 @@ Al auditar los `report.pdf`, los JSON (`financial-health.json`, `investment-anal
 
 ---
 
-## 2. Arquitectura unificada: 3 Pilares en un solo flujo (`Run Simulada → Run IRL`)
+## 2. Arquitectura unificada: Flujo en orden estricto (`Parejas/Miedos → Montaña → Paso Actual IRL`)
 
 ```mermaid
 flowchart LR
-    A["1. HUD + Quest de Miedos\n(5 Pilares + Orden O1..O8 + Miedo Subjetivo)"] --> B{"2. Entrada Individual\no Cordada Asimétrica (Parejas)"}
-    B -->|Voto a ciegas 60s| C["Match 100% en común +\n1-2 puntos de fricción"]
-    B -->|Individual| D["3. Montaña de Decisiones (Run Simulada <90s)\nSilueta projections.yearly + Plain/Math"]
+    A["1. HUD + Quest de Miedos\n(5 Pilares + Orden O1..O8 + Miedo Subjetivo)"] --> B{"2. Antes de la Montaña:\n¿Es pareja?"}
+    B -->|Sí: Cordada Asimétrica 60s| C["Voto a ciegas A/B ->\n100% en común + pacto de roces"]
+    B -->|No: Individual| D["3. Gran Expedición en Montaña (1 vez, <90s)\nYa cargada con las decisiones de ambos"]
     C --> D
     D -->|Decisión errónea| E["Bloqueo en Grieta / Pared\nPor qué falla a la larga -> Rewind"]
     E --> D
-    D -->|Decisión válida| F["Cima: Step 1 (3 min) + .ics"]
-    F --> G["4. Run IRL (Tiempo real avanza siempre)\nDía 0 -> Día 3 -> Día 30 -> Fechas Hito"]
-    G --> H["5. La Radio del Sherpa (Fuera de la App)\nInsistencia IRL + Calma en Shocks Macro"]
+    D -->|Corona la cima| F["4. Modo Enfoque: SOLO Paso Actual (Run IRL)\nPróximo objetivo inmediato (Día 0 -> 3 -> 30)"]
+    F -.->|"Botón opcional cuando quiera"| D
+    F --> G["5. La Radio del Sherpa (Fuera de la App)\nInsistencia IRL + Calma en Shocks Macro"]
 ```
 
-### Pilar 1 — La Montaña de Decisiones (*Run Simulada* <90s con bloqueo en errores)
-Sustituye el PDF de 22 páginas por una **expedición topográfica móvil** construida sobre la curva real de `projections.yearly` hasta los 91 años, dividida en **campamentos base** (hitos y alertas reales del caso):
+### Paso previo obligatorio — Quest de Miedos y Cordada Asimétrica (ANTES de entrar a la Montaña)
+Ataca directamente los datos emocionales que faltan en el plan actual (`Subjective concerns` vacío + parejas `D5: DUAL` con riesgo `MISALIGNED`). **Esta fase ocurre siempre antes de la primera *Run* en la montaña**, precisamente para que el simulador ya tenga en cuenta las decisiones y miedos de ambos miembros al empezar a escalar:
+
+1. **Quest inicial de miedos (15–30s):** Cada persona ordena las preocupaciones objetivas de `persona.md` (`O1..O8`) e indica **qué le quita el sueño hoy**, alimentando el relato y el *Advisor Brief*.
+2. **Cordada Asimétrica para parejas (Weah y Johnson):**
+   - Cada titular (ej. Timothy y Melanie, o Daniel y Emily) entra por separado **a ciegas en 60 segundos** antes de ver la montaña: marca sus miedos reales y vota sus prioridades de decisión sin ver lo que elige su pareja.
+   - Al cruzar ambas respuestas, la app muestra primero **"En qué coincidís al 100%"** (su ancla motivacional compartida, p. ej. proteger a los hijos) y aísla **únicamente los 1–2 puntos de choque**, proponiendo un **punto medio realista** con su flujo de caja.
+   - **Entrada a la montaña ya alineada:** Con las preferencias de A y B registradas, la expedición arranca mostrando ya sus colores y teniendo en cuenta lo que decidió cada uno (si ambos coinciden en opciones válidas, suben juntos por el tronco; si alguno se desvía a una opción errónea, se bifurca su rama de color para ver juntos la consecuencia antes de hacer *Rewind*).
+
+### La Gran Expedición — La Montaña de Decisiones (*Run Simulada*, se hace una sola vez)
+Sustituye el PDF de 22 páginas por una **expedición topográfica móvil (<90s)** sobre la curva real de `projections.yearly` hasta los 91 años, dividida en **campamentos base**. Está pensada como una **experiencia inicial completa de una sola vez** (con opción de reabrirla más adelante si el usuario quiere volver a simular o recuperar la visión global):
 
 - **HUD de 5 Pilares + Toggle `Plain ↔ Math` permanente:** En lugar de asustar con un rojo `26/100`, muestra las 5 barras reales de `score.pillars` (*Savings & cash flow*, *Debt*, *Investments*, *Liquidity*, *Protection*) y reconoce fortalezas reales. En cualquier nodo, **`Plain`** traduce porcentajes a impacto cotidiano (dólares/año o meses de colchón) y **`Math`** despliega las métricas exactas del JSON (`top_moves`, `key_metrics`, `savingsWaterfall`, `taxDragAnalysis`).
 - **Previsualización de tendencia + Efecto IKEA:** En cada campamento, antes de confirmar una decisión, el usuario ve visualmente hacia dónde apuntan las líneas de su ruta (subida hacia la cima, estancamiento o desvío) según los `top_moves` reales de Sherpas. Al participar en las decisiones, siente el plan como propio.
@@ -49,23 +58,15 @@ Sustituye el PDF de 22 páginas por una **expedición topográfica móvil** cons
   - Un desplegable explica **por qué a la larga es mala idea** cruzando `key_metrics.facts` y `persona.md` (`Tensions T1..T5`), y solo permite hacer **`Rewind`** al campamento anterior para elegir el desvío viable y alcanzar la cima.
   - *Eventos sin alternativa precalculada* (ej. compra de vivienda en 2027/2030): no inventan cifras; muestran el impacto real en `yearly` y permiten enviar la duda directa al **Advisor Brief**.
 
-### Pilar 2 — Quest de Miedos y Cordada Asimétrica (Conciliación para parejas y captura emocional)
-Ataca directamente los datos emocionales que faltan en el plan actual (`Subjective concerns` vacío + parejas `D5: DUAL` con riesgo `MISALIGNED`):
+### Después de la Cima — Modo Enfoque (*Run IRL*: solo tu próximo paso) + La Radio del Sherpa
+Una vez terminada la gran expedición inicial, **el usuario no tiene que volver a recorrer toda la montaña ni tragarse todo el juego cada vez que entra**. La app cambia automáticamente a una **vista de enfoque en el paso actual**:
 
-1. **Quest inicial de miedos (15–30s):** El usuario ordena las preocupaciones objetivas de `persona.md` (`O1..O8`) e introduce o selecciona **qué le quita el sueño hoy**, personalizando el enfoque de toda la experiencia y alimentando el *Advisor Brief*.
-2. **Entrada asimétrica para parejas (Weah y Johnson):**
-   - Cada titular (ej. Timothy y Melanie, o Daniel y Emily) responde por separado **a ciegas en 60 segundos** sus miedos y sus votos en los campamentos de decisión, sin ver lo que marca el otro.
-   - Al cruzar respuestas, la interfaz destaca primero **"En qué coincidís al 100%"** (su ancla emocional compartida, p. ej. proteger a los hijos) y aísla **únicamente los 1–2 puntos de choque**.
-   - **Trazado por colores en la montaña:** Si ambos eligen opciones válidas (`top_moves`), sus dos colores suben juntos por el tronco principal; si uno se desvía a una opción errónea, se bifurca una rama con **el color de quien tomó esa decisión** mostrando su consecuencia real, y la IA propone un **punto medio realista** basado en su flujo de caja libre sin culpar a nadie.
-
-### Pilar 3 — *Run IRL* + La Radio del Sherpa (Proactividad fuera de la aplicación)
-Al coronar la cima en la simulación, la experiencia deja de ser un juego y se convierte en una **app viva y proactiva que sale al encuentro del usuario fuera de la web**:
-
-1. **Bloqueo de `Step 1` (3 minutos):** Traduce todo el plan en **una sola micro-acción inmediata** extraída del orden real de `savingsWaterfall` (repartida por titular en parejas: *Owner A / Owner B*).
-2. **La *Run IRL* donde el tiempo real avanza siempre:** Una segunda línea temporal real (`Día 0 → Día 3 → Día 14 → Día 30 → Fechas de transición reales`). A diferencia de una checklist estática, **los días avanzan cumplan o no**: si llega el Día 3 o el Día 30 y no han marcado la acción, la tarea se arrastra como pendiente mostrando el **coste real de la inercia** (intereses devengados, días sin cobertura) y puede consultarse hacia delante y hacia atrás.
-3. **La Radio del Sherpa (Notificaciones proactivas fuera de la app + `.ics`):**
+1. **Solo ves tu paso actual en la montaña (`Step 1` / Próximo Objetivo Inmediato):** En la pantalla principal ves únicamente en qué campamento estás hoy y **un solo objetivo inmediato de 3 minutos** (extraído de `savingsWaterfall`, y repartido en parejas por *Owner A / Owner B*), eliminando todo el ruido del resto del plan a 30 años para que te centres solo en ejecutar eso.
+2. **Botón opcional para reabrir la Montaña completa:** Aunque el día a día se centra en ese único paso actual, siempre queda accesible un botón secundario (*"Ver visión general / Repetir expedición en la montaña"*) por si más adelante el usuario quiere rejugar otro escenario o refrescar el panorama completo.
+3. **La *Run IRL* donde el tiempo real avanza siempre:** Una línea temporal real (`Día 0 → Día 3 → Día 14 → Día 30 → Fechas de transición reales`). Los días avanzan cumplan o no: si llega el Día 3 o el Día 30 y no han marcado el paso actual, la tarea se arrastra como pendiente mostrando el **coste real de la inercia** (intereses devengados, días sin cobertura) y al completarla se desbloquea el siguiente objetivo inmediato.
+4. **La Radio del Sherpa (Notificaciones proactivas fuera de la app + `.ics`):**
    - **Recordatorios de hito e insistencia:** Avisan antes de fechas reales del caso (ej. matrícula de agosto, compra de vivienda en 2027/2030) y en Día 3 / Día 30 para resolver dudas en 30 segundos, con exportación directa al calendario (`.ics`).
-   - **Alertas de calma y refuerzo ante caídas de bolsa (`analysis.events`):** Cuando ocurre un evento macro fuera de su control (caída bursátil, subida de tipos, pico de volatilidad), en lugar de dejar que el miedo les haga vender, reciben una notificación proactiva que cruza el susto actual con los **11 shocks históricos reales** de su cartera en `investment-analysis.json`: les recuerda con datos reales cómo **con sus mismos *assets* y estrategia ya aguantaron las caídas del año pasado (como los aranceles de abril de 2025 o la corrección de agosto de 2024) y se recuperaron en semanas**, reforzando su seguridad y manteniendo vivo el plan.
+   - **Alertas de calma y refuerzo ante caídas de bolsa (`analysis.events`):** Cuando ocurre un evento macro fuera de su control (caída bursátil, subida de tipos, pico de volatilidad), reciben una notificación proactiva que cruza el susto actual con los **11 shocks históricos reales** de su cartera en `investment-analysis.json`: les recuerda con datos reales cómo **con sus mismos *assets* y estrategia ya aguantaron las caídas del año pasado (como los aranceles de abril de 2025 o la corrección de agosto de 2024) y se recuperaron en semanas**, reforzando su seguridad y manteniendo vivo el plan.
 
 ---
 
@@ -77,13 +78,13 @@ Al coronar la cima en la simulación, la experiencia deja de ser un juego y se c
 | **2** | Cifras grandes y porcentajes sin sentido (`"$2.37M"`). | Toggle permanente **`Plain ↔ Math`** (impacto cotidiano vs. cifras exactas del asesor). |
 | **3** | Un buen *score* oculta un problema grave (Samantha: `82`). | La montaña desvela el abismo real en **2053 (edad 74, `-$227,414`)** pese al `82` inicial. |
 | **4** | Responde a lo calculable, no al miedo que les quita el sueño. | **Quest inicial de miedos** (`O1..O8` + `Subjective concerns`) que ordena el relato y nutre el *Advisor Brief*. |
-| **5** | Familias ocupadas no leen 22 páginas; usan móvil a ratos. | Expedición de **<90 segundos** *mobile-first* + seguimiento por micro-notificaciones. |
+| **5** | Familias ocupadas no leen 22 páginas; usan móvil a ratos. | Expedición inicial de **<90 segundos** (1 sola vez) y después vista enfocada **solo en el paso actual** + micro-notificaciones. |
 | **6** | Malas noticias paralizan (Michael: `26 critical`). | HUD con 5 pilares que reconoce su ahorro (`23.9%`) y demuestra en el tronco que puede subir `26 → 62`. |
 | **7** | Muerte y seguros se evitan por incomodidad. | Protección integrada como campamento visual de escudo familiar (`52 → 60` en Johnson). |
-| **8** | Parejas con distinto riesgo que no acuerdan (Weah / Johnson). | **Cordada Asimétrica (voto a ciegas 60s)** + ramas por color + punto medio sin reproches. |
+| **8** | Parejas con distinto riesgo que no acuerdan (Weah / Johnson). | **Cordada Asimétrica (60s a ciegas ANTES de la montaña)** + ramas por color + punto medio sin reproches. |
 | **9** | Dudas en Día 3 / Día 30 cuando ya olvidaron la reunión. | **Run IRL** viva + notificaciones de insistencia que resuelven bloqueos en 30s. |
 | **10** | El plan llega fuera de las fechas reales de acción. | Hitos anclados a fechas reales (`chartGoals` / *Transition alerts*) + `.ics` + alertas de mercado IRL. |
-| **11** | Demasiadas opciones sin Primer Paso claro ni seguimiento. | Un único **`Step 1`** de 3 min (según `savingsWaterfall`) con arrastre real de coste si se pospone. |
+| **11** | Demasiadas opciones sin Primer Paso claro ni seguimiento. | Tras la cima, **solo ves tu próximo objetivo inmediato** (`Step 1` de 3 min) con opción de reabrir la montaña completa cuando quieras. |
 
 ---
 
