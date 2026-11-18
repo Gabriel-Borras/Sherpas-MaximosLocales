@@ -1791,8 +1791,8 @@
       </g>`;
     }).join('');
 
-    const partners = couple
-      ? `<path class="partner-rope" d="${TRAIL_PATH}" transform="translate(-1.6 -1.1)" stroke="var(--partner-a)" stroke-width="1.25" opacity=".78"/><path class="partner-rope" d="${TRAIL_PATH}" transform="translate(1.6 1.1)" stroke="var(--partner-b)" stroke-width="1.25" opacity=".78"/>${diverged ? '<path class="partner-rope" d="M 390 465 Q 455 442 505 426 T 620 295" stroke="#C83A2B" stroke-dasharray="3 3" stroke-width="1.1" opacity=".68"/>' : ''}`
+    const partners = couple && activeOffset < TRAIL_LENGTH
+      ? `<path id="partnerRopeA" class="partner-rope" d="${TRAIL_PATH}" transform="translate(-1.6 -1.1)" stroke="var(--partner-a)" stroke-width="1.25" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity=".78"/><path id="partnerRopeB" class="partner-rope" d="${TRAIL_PATH}" transform="translate(1.6 1.1)" stroke="var(--partner-b)" stroke-width="1.25" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity=".78"/>`
       : '';
 
     const campNodes = [
@@ -2618,11 +2618,16 @@
       const fromFrac = 1 - fromOff / TRAIL_LENGTH;
       const toFrac = 1 - toOff / TRAIL_LENGTH;
       const trailEl = svg.querySelector('#activeTrail');
+      const ropeA = svg.querySelector('#partnerRopeA');
+      const ropeB = svg.querySelector('#partnerRopeB');
       const markerEl = svg.querySelector('#climberMarker');
       animateViewBox(svg, from, fullCamera.slice(), 400, () => {
         animateSteps(560, tk, p => {
           const e = easeInOut(p);
-          if (trailEl) trailEl.setAttribute('stroke-dashoffset', String(fromOff + (toOff - fromOff) * e));
+          const offVal = String(fromOff + (toOff - fromOff) * e);
+          if (trailEl) trailEl.setAttribute('stroke-dashoffset', offVal);
+          if (ropeA) ropeA.setAttribute('stroke-dashoffset', offVal);
+          if (ropeB) ropeB.setAttribute('stroke-dashoffset', offVal);
           if (markerEl) {
             const [mx, my] = trailPointAt(svg, fromFrac + (toFrac - fromFrac) * e);
             markerEl.setAttribute('transform', `translate(${mx.toFixed(2)} ${my.toFixed(2)})`);
