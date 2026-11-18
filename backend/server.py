@@ -24,7 +24,9 @@ if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backend.api import SessionStore, dispatch_request
+from backend.behavioral_narrator import BehavioralNarrator
 from backend.irl_engine import IRLEngine, create_irl_run
+from backend.llm_proxy import LLMProxyClient
 from backend.mcp_client import CaseNotFoundError, get_case, list_cases
 from backend.notifications import NotificationEngine
 from backend.timeline_engine import TimelineEngine
@@ -79,6 +81,7 @@ class ServerState:
         *,
         session_store: SessionStore | None = None,
         cases_dir: str | Path | None = None,
+        llm_client: LLMProxyClient | None = None,
     ) -> None:
         self.cases_dir = cases_dir
 
@@ -92,6 +95,19 @@ class ServerState:
             engine=TimelineEngine(case_provider=case_provider, cases_dir=cases_dir)
         )
         self.runs = IRLRunStore(cases_dir=cases_dir)
+        # A missing TEAM_KEY is handled synchronously by LLMProxyClient without
+        # any network access.  With a key, keep failed/unreachable proxy calls
+        # bounded so the narrator can immediately return its deterministic,
+        # case-grounded response instead of holding an HTTP request open.
+        self.llm_client = llm_client or LLMProxyClient(
+            timeout=0.25,
+            concurrency_timeout=0.0,
+            rate_limit_timeout=0.0,
+        )
+        self.narrator = BehavioralNarrator(
+            cases_dir=cases_dir,
+            llm_client=self.llm_client,
+        )
 
 
 def _validate_mode(value: str | None) -> str | None:
@@ -359,6 +375,170 @@ def _handle_radio(
     raise KeyError("Ruta Radio no encontrada")
 
 
+def _required_case_id(body: dict[str, Any], state: ServerState) -> str:
+    """Validate a narrative request case without translating unknown IDs to 400."""
+    case_id = body.get("case_id")
+    if not isinstance(case_id, str) or not case_id.strip():
+        raise BadRequestError("case_id es obligatorio")
+    case_id = case_id.strip()
+    if case_id not in state.narrator.list_cases():
+        raise CaseNotFoundError(f"Caso no encontrado: {case_id}")
+    return case_id
+
+
+def _optional_string(
+    body: dict[str, Any],
+    name: str,
+    *,
+    default: str | None = None,
+    allowed: set[str] | None = None,
+) -> str | None:
+    """Read a non-empty optional string and, when supplied, validate its domain."""
+    value = body.get(name, default)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value.strip():
+        raise BadRequestError(f"{name} debe ser texto no vacio")
+    value = value.strip()
+    if allowed is not None and value not in allowed:
+        choices = ", ".join(sorted(allowed))
+        raise BadRequestError(f"{name} debe ser uno de: {choices}")
+    return value
+
+
+def _optional_string_list(body: dict[str, Any], name: str) -> list[str] | None:
+    """Require a list of non-empty strings when an optional list is supplied."""
+    if name not in body or body[name] is None:
+        return None
+    value = body[name]
+    if not isinstance(value, list) or any(
+        not isinstance(item, str) or not item.strip() for item in value
+    ):
+        raise BadRequestError(f"{name} debe ser una lista de textos no vacios")
+    return [item.strip() for item in value]
+
+
+def _optional_mapping(body: dict[str, Any], name: str) -> dict[str, Any] | None:
+    """Require an object when an optional narrator mapping is supplied."""
+    if name not in body or body[name] is None:
+        return None
+    value = body[name]
+    if not isinstance(value, dict):
+        raise BadRequestError(f"{name} debe ser un objeto JSON")
+    return value
+
+
+def _handle_ai(
+    method: str,
+    parsed,
+    body: dict[str, Any],
+    state: ServerState,
+) -> tuple[int, Any]:
+    """Expose only the case-grounded narrator operations over HTTP.
+
+    Each operation deliberately opts into the existing narrator's LLM path.
+    That path verifies generated numbers against the loaded case and returns
+    the deterministic payload whenever TEAM_KEY is absent, the proxy errors,
+    times out, or returns an unverified figure.
+    """
+    if method != "POST":
+        raise KeyError("Ruta narrativa no encontrada")
+
+    route = parsed.path
+    if route not in {"/api/ai/reframe", "/api/ai/pact", "/api/ai/brief"}:
+        raise KeyError("Ruta narrativa no encontrada")
+    case_id = _required_case_id(body, state)
+    model = _optional_string(body, "model")
+
+    if route == "/api/ai/reframe":
+        topic = _optional_string(
+            body,
+            "topic",
+            default="overview",
+            allowed={
+                "overview",
+                "liquidity",
+                "cash_flow",
+                "cash",
+                "debt",
+                "deuda",
+                "retirement",
+                "jubilacion",
+                "protection",
+                "proteccion",
+                "insurance",
+                "investments",
+                "tax_drag",
+                "inversiones",
+                "home_purchase",
+                "housing",
+                "vivienda",
+            },
+        )
+        lens = _optional_string(
+            body,
+            "lens",
+            default="both",
+            allowed={"both", "plain", "math"},
+        )
+        context = _optional_mapping(body, "context")
+        return 200, state.narrator.translate_dual_lens(
+            case_id=case_id,
+            topic=topic or "overview",
+            lens=lens or "both",
+            context=context,
+            use_llm=True,
+            llm_client=state.llm_client,
+            model=model,
+        )
+
+    if route == "/api/ai/pact":
+        return 200, state.narrator.synthesize_cordada_pact(
+            case_id=case_id,
+            member_a_votes=_optional_mapping(body, "member_a_votes"),
+            member_b_votes=_optional_mapping(body, "member_b_votes"),
+            use_llm=True,
+            llm_client=state.llm_client,
+            model=model,
+        )
+
+    if route == "/api/ai/brief":
+        subjective_concerns = body.get("subjective_concerns")
+        if subjective_concerns is not None and (
+            not isinstance(subjective_concerns, str)
+            and (
+                not isinstance(subjective_concerns, list)
+                or any(
+                    not isinstance(item, str) or not item.strip()
+                    for item in subjective_concerns
+                )
+            )
+        ):
+            raise BadRequestError(
+                "subjective_concerns debe ser texto o una lista de textos no vacios"
+            )
+        if isinstance(subjective_concerns, str) and not subjective_concerns.strip():
+            raise BadRequestError("subjective_concerns debe ser texto no vacio")
+        if isinstance(subjective_concerns, list):
+            subjective_concerns = [item.strip() for item in subjective_concerns]
+        elif isinstance(subjective_concerns, str):
+            subjective_concerns = subjective_concerns.strip()
+
+        return 200, state.narrator.generate_advisor_brief(
+            case_id=case_id,
+            fear_ranking=_optional_string_list(body, "fear_ranking"),
+            subjective_concerns=subjective_concerns,
+            couple_votes=_optional_mapping(body, "couple_votes"),
+            skipped_moves=_optional_string_list(body, "skipped_moves"),
+            unmodeled_goals=_optional_string_list(body, "unmodeled_goals"),
+            use_llm=True,
+            llm_client=state.llm_client,
+            model=model,
+        )
+
+    raise KeyError("Ruta narrativa no encontrada")
+
+
 def _json_bytes(data: Any) -> bytes:
     return json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
 
@@ -370,9 +550,14 @@ def create_server(
     store: SessionStore | None = None,
     cases_dir: str | Path | None = None,
     frontend_dir: str | Path | None = None,
+    llm_client: LLMProxyClient | None = None,
 ) -> ThreadingHTTPServer:
     """Create the standard-library threaded API server without starting it."""
-    state = ServerState(session_store=store, cases_dir=cases_dir)
+    state = ServerState(
+        session_store=store,
+        cases_dir=cases_dir,
+        llm_client=llm_client,
+    )
     static_root = Path(frontend_dir) if frontend_dir is not None else DEFAULT_FRONTEND_DIR
 
     class Handler(BaseHTTPRequestHandler):
@@ -489,6 +674,10 @@ def create_server(
                         self.command, parsed, body, state
                     )
                     self._send(status, data, content_type)
+                    return
+                if parsed.path.startswith("/api/ai/"):
+                    status, data = _handle_ai(self.command, parsed, body, state)
+                    self._send(status, data)
                     return
                 self._send(404, {"error": "not_found", "message": "Ruta no encontrada"})
             except (BadRequestError, ValueError, TypeError) as error:

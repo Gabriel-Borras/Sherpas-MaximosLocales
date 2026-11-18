@@ -8,8 +8,16 @@ import tempfile
 import threading
 import unittest
 from urllib import error, request
+from urllib.parse import urlsplit
 
-from backend.server import create_server
+from backend.behavioral_narrator import (
+    extract_case_allowed_numbers,
+    load_case,
+    verify_text_numbers_against_case,
+)
+from backend.llm_proxy import LLMProxyClient
+from backend.mcp_client import CaseNotFoundError
+from backend.server import BadRequestError, ServerState, _handle_ai, create_server
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -26,7 +34,13 @@ class UnifiedServerTests(unittest.TestCase):
         (frontend / "index.html").write_text("<h1>Sherpa</h1>", encoding="utf-8")
         (frontend / "app.js").write_text("console.log('sherpa');", encoding="utf-8")
 
-        cls.server = create_server(port=0, frontend_dir=frontend)
+        # An explicitly empty key makes the no-network deterministic path
+        # independent from a developer's local .env file.
+        cls.server = create_server(
+            port=0,
+            frontend_dir=frontend,
+            llm_client=LLMProxyClient(team_key="", transport="urllib"),
+        )
         cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
         cls.thread.start()
         cls.base_url = f"http://127.0.0.1:{cls.server.server_port}"
@@ -318,6 +332,104 @@ class UnifiedServerTests(unittest.TestCase):
         status, _, body = self.api_request("GET", "/api/does-not-exist")
         self.assertEqual(status, 404)
         self.assertEqual(body["error"], "not_found")
+
+
+class NarrativeRouteUnitTests(unittest.TestCase):
+    """Exercise narrative POST dispatch without binding a sandbox-blocked socket."""
+
+    def setUp(self) -> None:
+        self.state = ServerState(
+            llm_client=LLMProxyClient(team_key="", transport="urllib")
+        )
+
+    def post(self, path: str, payload: dict[str, object]) -> tuple[int, object]:
+        """Match the HTTP adapter's 400/404 exception-to-response contract."""
+        try:
+            return _handle_ai("POST", urlsplit(path), payload, self.state)
+        except (BadRequestError, ValueError, TypeError) as exc:
+            return 400, {"error": "bad_request", "message": str(exc)}
+        except (KeyError, FileNotFoundError, CaseNotFoundError) as exc:
+            return 404, {"error": "not_found", "message": str(exc)}
+
+    def test_post_narrative_routes_fall_back_without_team_key_and_use_only_case_numbers(self) -> None:
+        requests = (
+            (
+                "/api/ai/reframe",
+                {
+                    "case_id": "michael-carter",
+                    "topic": "home_purchase",
+                    "lens": "both",
+                },
+            ),
+            (
+                "/api/ai/pact",
+                {
+                    "case_id": "timothy-melanie-weah",
+                    "member_a_votes": {
+                        "top_fears": ["O1", "O3"],
+                        "risk_choice": "Growth",
+                    },
+                    "member_b_votes": {
+                        "top_fears": ["O1", "O2"],
+                        "risk_choice": "Moderate",
+                    },
+                },
+            ),
+            (
+                "/api/ai/brief",
+                {
+                    "case_id": "daniel-emily-johnson",
+                    "fear_ranking": ["O2", "O1"],
+                    "couple_votes": {
+                        "member_a": {"risk_choice": "Growth"},
+                        "member_b": {"risk_choice": "Moderate"},
+                    },
+                },
+            ),
+        )
+
+        for path, payload in requests:
+            with self.subTest(path=path):
+                status, narrative = self.post(path, payload)
+                self.assertEqual(status, 200)
+                self.assertIsInstance(narrative, dict)
+                self.assertFalse(narrative["used_llm"])
+                self.assertTrue(narrative["llm_fallback_used"])
+                self.assertEqual(narrative["fallback_reason"], "missing_team_key")
+                self.assertTrue(narrative["verified_numbers_only"])
+
+                case = load_case(narrative["case_id"])
+                allowed = extract_case_allowed_numbers(case)
+                verified, unverified = verify_text_numbers_against_case(
+                    json.dumps(narrative, ensure_ascii=False), allowed
+                )
+                self.assertTrue(
+                    verified,
+                    f"El endpoint incorporó números no verificados: {unverified}",
+                )
+
+    def test_post_narrative_routes_return_400_or_404_for_invalid_payloads_and_cases(self) -> None:
+        for path in ("/api/ai/reframe", "/api/ai/pact", "/api/ai/brief"):
+            with self.subTest(path=path, payload="missing case_id"):
+                status, body = self.post(path, {})
+                self.assertEqual(status, 400)
+                self.assertEqual(body["error"], "bad_request")
+
+            with self.subTest(path=path, payload="unknown case_id"):
+                status, body = self.post(path, {"case_id": "case-does-not-exist"})
+                self.assertEqual(status, 404)
+                self.assertEqual(body["error"], "not_found")
+
+        invalid_payloads = (
+            ("/api/ai/reframe", {"case_id": "michael-carter", "lens": 7}),
+            ("/api/ai/pact", {"case_id": "timothy-melanie-weah", "member_a_votes": []}),
+            ("/api/ai/brief", {"case_id": "michael-carter", "fear_ranking": "O1"}),
+        )
+        for path, payload in invalid_payloads:
+            with self.subTest(path=path, payload=payload):
+                status, body = self.post(path, payload)
+                self.assertEqual(status, 400)
+                self.assertEqual(body["error"], "bad_request")
 
 
 class RepositoryFrontendTests(unittest.TestCase):
