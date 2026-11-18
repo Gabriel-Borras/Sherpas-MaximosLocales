@@ -34,7 +34,8 @@ flowchart LR
     D -->|Decisión errónea| E["Bloqueo en Grieta / Pared\nPor qué falla a la larga -> Rewind"]
     E --> D
     D -->|Corona la cima| F["4. Modo Enfoque: SOLO Paso Actual (Run IRL)\nPróximo objetivo inmediato (Día 0 -> 3 -> 30)"]
-    F -.->|"Botón opcional cuando quiera"| D
+    F -.->|"Botón: Ver mapa general"| H["Vista General de la Montaña\nCamino bueno tomado + ramas fallidas visibles"]
+    H -.->|"Botón: Repetir run"| D
     F --> G["5. La Radio del Sherpa (Fuera de la App)\nInsistencia IRL + Calma en Shocks Macro"]
 ```
 
@@ -62,7 +63,7 @@ Sustituye el PDF de 22 páginas por una **expedición topográfica móvil (<90s)
 Una vez terminada la gran expedición inicial, **el usuario no tiene que volver a recorrer toda la montaña ni tragarse todo el juego cada vez que entra**. La app cambia automáticamente a una **vista de enfoque en el paso actual**:
 
 1. **Solo ves tu paso actual en la montaña (`Step 1` / Próximo Objetivo Inmediato):** En la pantalla principal ves únicamente en qué campamento estás hoy y **un solo objetivo inmediato de 3 minutos** (extraído de `savingsWaterfall`, y repartido en parejas por *Owner A / Owner B*), eliminando todo el ruido del resto del plan a 30 años para que te centres solo en ejecutar eso.
-2. **Botón opcional para reabrir la Montaña completa:** Aunque el día a día se centra en ese único paso actual, siempre queda accesible un botón secundario (*"Ver visión general / Repetir expedición en la montaña"*) por si más adelante el usuario quiere rejugar otro escenario o refrescar el panorama completo.
+2. **Vista general de tu montaña + botón separado para repetir la run:** Desde el modo enfoque siempre hay un botón (*"Ver visión general de la montaña"*) que **no te reinicia el juego**, sino que te muestra tu mapa ya completado: **el camino correcto que elegiste hacia la cima y las ramas donde fallaste visibles como recordatorio** de por qué descartaste esas opciones. Dentro de esa vista general existe un **segundo botón explícito (*"Repetir expedición"*)** por si quieres volver a jugar y probar otro camino desde cero.
 3. **La *Run IRL* donde el tiempo real avanza siempre:** Una línea temporal real (`Día 0 → Día 3 → Día 14 → Día 30 → Fechas de transición reales`). Los días avanzan cumplan o no: si llega el Día 3 o el Día 30 y no han marcado el paso actual, la tarea se arrastra como pendiente mostrando el **coste real de la inercia** (intereses devengados, días sin cobertura) y al completarla se desbloquea el siguiente objetivo inmediato.
 4. **La Radio del Sherpa (Notificaciones proactivas fuera de la app + `.ics`):**
    - **Recordatorios de hito e insistencia:** Avisan antes de fechas reales del caso (ej. matrícula de agosto, compra de vivienda en 2027/2030) y en Día 3 / Día 30 para resolver dudas en 30 segundos, con exportación directa al calendario (`.ics`).
@@ -84,7 +85,7 @@ Una vez terminada la gran expedición inicial, **el usuario no tiene que volver 
 | **8** | Parejas con distinto riesgo que no acuerdan (Weah / Johnson). | **Cordada Asimétrica (60s a ciegas ANTES de la montaña)** + ramas por color + punto medio sin reproches. |
 | **9** | Dudas en Día 3 / Día 30 cuando ya olvidaron la reunión. | **Run IRL** viva + notificaciones de insistencia que resuelven bloqueos en 30s. |
 | **10** | El plan llega fuera de las fechas reales de acción. | Hitos anclados a fechas reales (`chartGoals` / *Transition alerts*) + `.ics` + alertas de mercado IRL. |
-| **11** | Demasiadas opciones sin Primer Paso claro ni seguimiento. | Tras la cima, **solo ves tu próximo objetivo inmediato** (`Step 1` de 3 min) con opción de reabrir la montaña completa cuando quieras. |
+| **11** | Demasiadas opciones sin Primer Paso claro ni seguimiento. | Tras la cima, **solo ves tu próximo objetivo inmediato** (`Step 1` de 3 min), con acceso al mapa general resuelto (camino bueno + ramas fallidas) y botón aparte para repetir la run. |
 
 ---
 
