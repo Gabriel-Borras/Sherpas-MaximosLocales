@@ -214,16 +214,24 @@
     return 'expedition';
   };
 
-  const TRAIL_PATH = 'M 190 610 Q 285 552 390 465 Q 505 385 620 295 Q 725 222 830 130';
-  const TRAIL_CTRLS = [[285, 552], [505, 385], [725, 222]];
-  const TRAIL_LENGTH = 800;
+  const TRAIL_PATH = 'M 255 552 Q 285 516 312 491 Q 368 498 432 479 Q 504 442 564 382 Q 624 378 684 319 Q 744 295 804 209 Q 836 168 858 145';
+  const TRAIL_SEGS = [
+    [[255, 552], [285, 516], [312, 491]],
+    [[312, 491], [368, 498], [432, 479]],
+    [[432, 479], [504, 442], [564, 382]],
+    [[564, 382], [624, 378], [684, 319]],
+    [[684, 319], [744, 295], [804, 209]],
+    [[804, 209], [836, 168], [858, 145]]
+  ];
+  const TRAIL_LENGTH = 757;
+  const TRAIL_FRACS = [0.1104, 0.4883, 0.6713, 1];
   const fullCamera = [0, 0, 1200, 750];
 
   const biomes = [
-    { id: 'forest', point: [190, 610], offset: 800, ES: 'Campamento Base · Bosque · 2.800 m', EN: 'Basecamp · Forest · 2,800 m' },
-    { id: 'rock', point: [390, 465], offset: 553, ES: 'Campo 1 · Roca y niebla · 4.600 m', EN: 'Camp 1 · Rock and fog · 4,600 m' },
-    { id: 'snow', point: [620, 295], offset: 267, ES: 'Campo 2 · Glaciar · 6.900 m', EN: 'Camp 2 · Glacier · 6,900 m' },
-    { id: 'summit', point: [830, 130], offset: 0, ES: 'La Cima · Meta alcanzada · 8.848 m', EN: 'Summit · Goal reached · 8,848 m' }
+    { id: 'forest', point: [312, 491], offset: 757, ES: 'Campamento Base · Bosque · 2.800 m', EN: 'Basecamp · Forest · 2,800 m' },
+    { id: 'rock', point: [564, 382], offset: 387, ES: 'Campo 1 · Roca y niebla · 4.600 m', EN: 'Camp 1 · Rock and fog · 4,600 m' },
+    { id: 'snow', point: [684, 319], offset: 249, ES: 'Campo 2 · Glaciar · 6.900 m', EN: 'Camp 2 · Glacier · 6,900 m' },
+    { id: 'summit', point: [858, 145], offset: 0, ES: 'La Cima · Meta alcanzada · 8.848 m', EN: 'Summit · Goal reached · 8,848 m' }
   ];
   const biome = (i, lang) => Object.assign({}, biomes[i], { label: biomes[i][lang] });
 
@@ -1211,47 +1219,55 @@
     return `Current score ${score}/100 · Starting with your #1 ("${top1.shortTitle || top1.title}") at this camp.`;
   }
 
-  // Evaluate exact point along the mountain ascent curve for any fraction in [0, 1]
+  // Evaluate exact point along the painted sumi-e mountain ridge curve for any fraction in [0, 1]
   function trailPointAtFraction(fraction) {
     const f = Math.max(0, Math.min(1, Number(fraction) || 0));
-    const seg = Math.min(2, Math.floor(f * 3));
-    const localT = Math.max(0, Math.min(1, (f * 3) - seg));
-    const p0 = biomes[seg].point;
-    const p2 = biomes[seg + 1].point;
-    const ctrl = TRAIL_CTRLS[seg];
+    const n = TRAIL_SEGS.length;
+    const seg = Math.min(n - 1, Math.floor(f * n));
+    const localT = Math.max(0, Math.min(1, (f * n) - seg));
+    const [p0, ctrl, p2] = TRAIL_SEGS[seg];
     const mt = 1 - localT;
     const x = mt * mt * p0[0] + 2 * mt * localT * ctrl[0] + localT * localT * p2[0];
     const y = mt * mt * p0[1] + 2 * mt * localT * ctrl[1] + localT * localT * p2[1];
     return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
   }
 
-  // Build logical failure path: climbs along the mountain route up to the exhaustion age/year fraction, then drops to the bad point
+  // Build organic failure path: 24 smooth ridge steps from exact camp fraction to exhaustion age, then gravity cubic C drop
   function riskCoordinates(record, stagePoint, stageIdx) {
     const idx = Math.max(0, Math.min(3, Number(stageIdx) || 0));
     const [sx, sy] = stagePoint || biomes[idx].point;
     if (!record || !record.hasExhaustion) {
-      const bx = Math.min(1140, Math.round(sx + 42 + idx * 6));
-      const by = Math.min(685, Math.round(sy + 14));
-      return { sx, sy, rx: sx, ry: sy, x: bx, y: by, wall: true, d: `M ${sx} ${sy} L ${bx} ${by}` };
+      const bx = Math.min(1140, Math.round(sx + 62 + idx * 8));
+      const by = Math.min(685, Math.round(sy + 26));
+      const c1x = Math.round(sx + (bx - sx) * 0.45);
+      const c1y = Math.round(sy + 2);
+      const c2x = Math.round(sx + (bx - sx) * 0.85);
+      const c2y = Math.round(sy + (by - sy) * 0.45);
+      return { sx, sy, rx: sx, ry: sy, x: bx, y: by, wall: true, d: `M ${sx} ${sy} C ${c1x} ${c1y} ${c2x} ${c2y} ${bx} ${by}` };
     }
-    const startFrac = idx / 3;
+    const startFrac = TRAIL_FRACS[idx] != null ? TRAIL_FRACS[idx] : idx / 3;
     const exhaustFrac = record.length > 1 ? record.index / (record.length - 1) : startFrac;
-    const climbFrac = Math.max(startFrac + 0.05, Math.min(0.96, exhaustFrac));
-    const steps = 8;
+    const climbFrac = Math.max(startFrac + 0.08, Math.min(0.95, exhaustFrac));
+    const steps = 24;
     const climbPts = [];
     for (let i = 0; i <= steps; i++) {
-      const f = startFrac + (climbFrac - startFrac) * (i / steps);
-      climbPts.push(trailPointAtFraction(f));
+      const t = i / steps;
+      const f = startFrac + (climbFrac - startFrac) * t;
+      const [px, py] = trailPointAtFraction(f);
+      const driftY = Math.round(4.8 * Math.pow(t, 1.45) * 10) / 10;
+      climbPts.push([i === 0 ? sx : px, i === 0 ? sy : Math.round((py + driftY) * 10) / 10]);
     }
     const [rx, ry] = climbPts[climbPts.length - 1];
     const offsetSpread = idx * 18;
-    const bx = Math.min(1130, Math.round(rx + 64 + offsetSpread));
-    const by = Math.min(690, Math.round(ry + 82 + idx * 10));
-    const ctrlX = Math.round(rx + (bx - rx) * 0.55);
-    const ctrlY = Math.round(ry + 14);
+    const bx = Math.min(1130, Math.round(rx + 74 + offsetSpread));
+    const by = Math.min(685, Math.round(ry + 92 + idx * 10));
+    const c1x = Math.round(rx + (bx - rx) * 0.42);
+    const c1y = Math.round(ry + 4);
+    const c2x = Math.round(rx + (bx - rx) * 0.88);
+    const c2y = Math.round(ry + (by - ry) * 0.38);
     const climbD = climbPts.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt[0]} ${pt[1]}`).join(' ');
-    const d = `${climbD} Q ${ctrlX} ${ctrlY} ${bx} ${by}`;
-    return { sx, sy, rx, ry, x: bx, y: by, wall: false, climbFrac, exhaustFrac, d };
+    const d = `${climbD} C ${c1x} ${c1y} ${c2x} ${c2y} ${bx} ${by}`;
+    return { sx, sy, rx, ry, x: bx, y: by, wall: false, steps, climbFrac, exhaustFrac, d };
   }
 
   function blockedCopy(id, mode, persona, state) {
@@ -1710,11 +1726,11 @@
   // The Sumi-e mountain is ALWAYS the 100vw x 100vh full-bleed background across the entire web app
   const isMountainPhase = state => !!state && (viewKey(state.view) === 'expedition' || viewKey(state.view) === 'overview') && (state.phase === 'expedition' || state.phase === 'blocked' || state.summit);
 
-  // Gentle camera framing (~1.55x over 1200x750) keeping mountain context visible
+  // Gentle camera framing (~1.82x over 1200x750) keeping mountain context visible
   function campCamera(stage) {
     const idx = Math.max(0, Math.min(3, Number(stage) || 0));
     const pt = biomes[idx].point;
-    const w = 760, h = 475;
+    const w = 660, h = 412;
     const cx = idx === 3 ? pt[0] + 14 : pt[0];
     const cy = idx === 3 ? pt[1] - 14 : pt[1];
     const x = Math.max(0, Math.min(fullCamera[2] - w, cx - w * 0.55));
@@ -1724,7 +1740,7 @@
 
   function riskCameraBox(record, stagePoint, stageIdx) {
     const coord = riskCoordinates(record, stagePoint, stageIdx);
-    const w = 800, h = 500;
+    const w = 696, h = 435;
     const x = Math.max(0, Math.min(fullCamera[2] - w, coord.x - w * 0.55));
     const y = Math.max(0, Math.min(fullCamera[3] - h, coord.y - h * 0.45));
     return [x, y, w, h];
@@ -1777,123 +1793,79 @@
         ? `${shortLabels[originIdx]} → ${record.year}${record.age != null ? ` (${lang === 'EN' ? 'age' : 'edad'} ${record.age})` : ''} · ${exactMoney(record.investable_assets)}`
         : `${shortLabels[originIdx]} · ${lang === 'EN' ? 'Score gap' : 'Brecha del plan'}`;
       const stopWall = coord.wall
-        ? `<path d="M ${coord.x} ${coord.y - 9} L ${coord.x} ${coord.y + 9}" stroke="#C83A2B" stroke-width="1.35" stroke-linecap="round"/>`
-        : `<circle cx="${coord.rx}" cy="${coord.ry}" r="2.1" fill="#C83A2B" opacity=".85"/>`;
+        ? `<path d="M ${coord.x} ${coord.y - 9} L ${coord.x} ${coord.y + 9}" stroke="#9E2A2B" stroke-width="1.35" stroke-linecap="round"/>`
+        : `<circle cx="${coord.rx}" cy="${coord.ry}" r="2.1" fill="#9E2A2B" opacity=".88"/>`;
       return `<g class="risk-group" data-risk-stage="${originIdx}" data-risk-index="${idx}">
-        <path class="risk-path" data-active-risk="${isLatest ? 'true' : 'false'}" data-risk-break="${coord.x},${coord.y}" data-exhaustion="${record && record.hasExhaustion ? 'true' : 'false'}" data-year="${record && record.year ? record.year : ''}" data-age="${record && record.age != null ? record.age : ''}" data-investable-assets="${record && record.investable_assets != null ? record.investable_assets : ''}" d="${coord.d}" stroke-width="${isInspected ? '2.6' : '2.1'}" opacity="${isInspected ? '0.96' : '0.82'}"/>
+        <path class="risk-path" data-active-risk="${isLatest ? 'true' : 'false'}" data-risk-break="${coord.x},${coord.y}" data-exhaustion="${record && record.hasExhaustion ? 'true' : 'false'}" data-year="${record && record.year ? record.year : ''}" data-age="${record && record.age != null ? record.age : ''}" data-investable-assets="${record && record.investable_assets != null ? record.investable_assets : ''}" d="${coord.d}" fill="none" stroke="#9E2A2B" stroke-linecap="round" stroke-linejoin="round" stroke-width="${isInspected ? '2.5' : '2'}" opacity="${isInspected ? '0.96' : '0.86'}"/>
         ${stopWall}
         <g class="risk-node ${isInspected ? 'is-active' : ''}" data-action="inspect-risk" data-risk-index="${idx}" data-risk-stage="${originIdx}" transform="translate(${coord.x} ${coord.y})" role="button" tabindex="0" aria-label="${esc(nodeLabel)}">
           <circle class="risk-hit" cx="0" cy="0" r="16" fill="transparent"/>
-          <circle class="risk-node-halo" cx="0" cy="0" r="${isInspected ? '6.5' : '5'}" fill="#C83A2B" opacity="${isInspected ? '0.28' : '0.18'}"/>
-          <circle cx="0" cy="0" r="3.1" fill="#C83A2B" stroke="#FBF9F5" stroke-width="0.9"/>
-          <text x="5.5" y="1.2" fill="#C83A2B" font-size="3.4" font-weight="600" font-family="system-ui">${esc(nodeLabel)}</text>
+          <circle class="risk-node-halo" cx="0" cy="0" r="${isInspected ? '6.5' : '5'}" fill="#9E2A2B" opacity="${isInspected ? '0.26' : '0.16'}"/>
+          <circle cx="0" cy="0" r="3.1" fill="#9E2A2B" stroke="#ffffff" stroke-width="0.9"/>
+          <text x="5.5" y="1.2" fill="#9E2A2B" font-size="3.4" font-weight="600" font-family="system-ui">${esc(nodeLabel)}</text>
         </g>
       </g>`;
     }).join('');
 
-    const partners = couple
-      ? `<path class="partner-rope" d="${TRAIL_PATH}" transform="translate(-1.6 -1.1)" stroke="var(--partner-a)" stroke-width="1.25" opacity=".78"/><path class="partner-rope" d="${TRAIL_PATH}" transform="translate(1.6 1.1)" stroke="var(--partner-b)" stroke-width="1.25" opacity=".78"/>${diverged ? '<path class="partner-rope" d="M 390 465 Q 455 442 505 426 T 620 295" stroke="#C83A2B" stroke-dasharray="3 3" stroke-width="1.1" opacity=".68"/>' : ''}`
+    const partners = couple && activeOffset < TRAIL_LENGTH
+      ? `<path id="partnerRopeA" class="partner-rope" d="${TRAIL_PATH}" transform="translate(-1.4 -1)" stroke="#141414" stroke-width="1.2" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity=".62"/><path id="partnerRopeB" class="partner-rope" d="${TRAIL_PATH}" transform="translate(1.4 1)" stroke="#525252" stroke-width="1.2" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity=".52"/>`
       : '';
 
     const campNodes = [
-      `<g class="micro-camp ${activeStage === 0 ? 'is-active' : ''} ${activeStage > 0 ? 'is-reached' : ''}" data-action="focus-node" data-node="0" transform="translate(190 610)">
+      `<g class="micro-camp ${activeStage === 0 ? 'is-active' : ''} ${activeStage > 0 ? 'is-reached' : ''}" data-action="focus-node" data-node="0" transform="translate(312 491)">
         <circle class="camp-hit" cx="0" cy="0" r="18" fill="transparent"/>
         <circle class="camp-beacon" cx="0" cy="0" r="7.5"/>
-        <path class="camp-tent" d="M -3.2 1.8 L 0 -3.8 L 3.2 1.8 Z" fill="#FBF9F5" stroke="#141311" stroke-width="0.55" stroke-linejoin="round"/>
-        <text x="0" y="7.2" text-anchor="middle" font-size="3.1" font-family="system-ui" font-weight="600" fill="#141311" opacity=".82">${esc(shortLabels[0])} · 2,800m</text>
+        <path class="camp-tent" d="M -3.2 1.8 L 0 -3.8 L 3.2 1.8 Z" fill="#ffffff" stroke="#141414" stroke-width="0.65" stroke-linejoin="round"/>
+        <text x="0" y="9.5" text-anchor="middle" font-size="3.6" font-family="system-ui" font-weight="600" fill="#141414" opacity=".82">${esc(shortLabels[0])} · 2,800m</text>
       </g>`,
-      `<g class="micro-camp ${activeStage === 1 ? 'is-active' : ''} ${activeStage > 1 ? 'is-reached' : ''}" data-action="focus-node" data-node="1" transform="translate(390 465)">
+      `<g class="micro-camp ${activeStage === 1 ? 'is-active' : ''} ${activeStage > 1 ? 'is-reached' : ''}" data-action="focus-node" data-node="1" transform="translate(564 382)">
         <circle class="camp-hit" cx="0" cy="0" r="18" fill="transparent"/>
         <circle class="camp-beacon" cx="0" cy="0" r="7.5"/>
-        <path class="camp-tent" d="M -3.2 1.8 L 0 -3.8 L 3.2 1.8 Z" fill="#FBF9F5" stroke="#141311" stroke-width="0.55" stroke-linejoin="round"/>
-        <text x="0" y="7.2" text-anchor="middle" font-size="3.1" font-family="system-ui" font-weight="600" fill="#141311" opacity=".82">${esc(shortLabels[1])} · 4,600m</text>
+        <path class="camp-tent" d="M -3.2 1.8 L 0 -3.8 L 3.2 1.8 Z" fill="#ffffff" stroke="#141414" stroke-width="0.65" stroke-linejoin="round"/>
+        <text x="0" y="9.5" text-anchor="middle" font-size="3.6" font-family="system-ui" font-weight="600" fill="#141414" opacity=".82">${esc(shortLabels[1])} · 4,600m</text>
       </g>`,
-      `<g class="micro-camp ${activeStage === 2 ? 'is-active' : ''} ${activeStage > 2 ? 'is-reached' : ''}" data-action="focus-node" data-node="2" transform="translate(620 295)">
+      `<g class="micro-camp ${activeStage === 2 ? 'is-active' : ''} ${activeStage > 2 ? 'is-reached' : ''}" data-action="focus-node" data-node="2" transform="translate(684 319)">
         <circle class="camp-hit" cx="0" cy="0" r="18" fill="transparent"/>
         <circle class="camp-beacon" cx="0" cy="0" r="7.5"/>
-        <path class="camp-tent" d="M -3.4 1.8 Q 0 -4.2 3.4 1.8 Z" fill="#FBF9F5" stroke="#141311" stroke-width="0.55"/>
-        <text x="0" y="7.2" text-anchor="middle" font-size="3.1" font-family="system-ui" font-weight="600" fill="#141311" opacity=".82">${esc(shortLabels[2])} · 6,900m</text>
+        <path class="camp-tent" d="M -3.4 1.8 Q 0 -4.2 3.4 1.8 Z" fill="#ffffff" stroke="#141414" stroke-width="0.65"/>
+        <text x="0" y="9.5" text-anchor="middle" font-size="3.6" font-family="system-ui" font-weight="600" fill="#141414" opacity=".82">${esc(shortLabels[2])} · 6,900m</text>
       </g>`,
-      `<g class="micro-camp ${activeStage === 3 ? 'is-active' : ''}" data-action="focus-node" data-node="3" transform="translate(830 130)">
+      `<g class="micro-camp ${activeStage === 3 ? 'is-active' : ''}" data-action="focus-node" data-node="3" transform="translate(858 145)">
         <circle class="camp-hit" cx="8" cy="-12" r="24" fill="transparent"/>
         <circle class="camp-beacon" cx="0" cy="0" r="7.5"/>
         <g class="sherpas-flag" aria-label="Sherpas">
-          <path d="M 0 1 V -42" fill="none" stroke="#141311" stroke-width="1.3" stroke-linecap="round"/>
-          <path d="M 0.5 -41 L 46 -30 L 0.5 -17 Z" fill="#141311"/>
-          <path d="M 8 -29 L 15 -34.5 L 22 -29 L 15 -24 Z" fill="#FBF9F5"/>
-          <text x="5.5" y="-20.5" fill="#FBF9F5" font-size="4.8" font-family="system-ui" font-weight="700" letter-spacing=".6">SHERPAS</text>
+          <path d="M 0 1 V -40" fill="none" stroke="#141414" stroke-width="1.35" stroke-linecap="round"/>
+          <path d="M 0.5 -39 L 44 -28.5 L 0.5 -16 Z" fill="#141414"/>
+          <path d="M 7.5 -27.5 L 14 -32.8 L 20.5 -27.5 L 14 -22.5 Z" fill="#ffffff"/>
+          <text x="5.5" y="-19.5" fill="#ffffff" font-size="4.6" font-family="system-ui" font-weight="700" letter-spacing=".6">SHERPAS</text>
         </g>
-        <text x="0" y="7.2" text-anchor="middle" font-size="3.1" font-family="system-ui" font-weight="700" fill="#141311" opacity=".88">${esc(shortLabels[3])} · 8,848m</text>
+        <text x="0" y="9.5" text-anchor="middle" font-size="3.6" font-family="system-ui" font-weight="700" fill="#141414" opacity=".88">${esc(shortLabels[3])} · 8,848m</text>
       </g>`
     ].join('');
 
     const climber = couple
       ? `<g id="climberMarker" class="climber-rig" transform="translate(${x} ${y})" data-cx="${x}" data-cy="${y}">
-          <circle cx="-2.4" cy="0" r="4.2" fill="#4565d6" opacity=".18"/>
-          <circle cx="2.4" cy="0" r="4.2" fill="#0d9488" opacity=".18"/>
-          <circle cx="-2.4" cy="0" r="2.5" fill="#4565d6" stroke="#FBF9F5" stroke-width="1.1"/>
-          <circle cx="2.4" cy="0" r="2.5" fill="#0d9488" stroke="#FBF9F5" stroke-width="1.1"/>
+          <circle cx="-2.4" cy="0" r="4.6" fill="#141414" opacity=".14"/>
+          <circle cx="2.4" cy="0" r="4.6" fill="#141414" opacity=".12"/>
+          <circle cx="-2.4" cy="0" r="2.6" fill="#141414" stroke="#ffffff" stroke-width="1.15"/>
+          <circle cx="2.4" cy="0" r="2.6" fill="#525252" stroke="#ffffff" stroke-width="1.15"/>
         </g>`
       : `<g id="climberMarker" class="climber-rig" transform="translate(${x} ${y})" data-cx="${x}" data-cy="${y}">
-          <circle cx="0" cy="0" r="5.2" fill="#4565d6" opacity=".2"/>
-          <circle cx="0" cy="0" r="3" fill="#4565d6" stroke="#FBF9F5" stroke-width="1.2"/>
+          <circle cx="0" cy="0" r="5.5" fill="#141414" opacity=".16"/>
+          <circle cx="0" cy="0" r="3.1" fill="#141414" stroke="#ffffff" stroke-width="1.2"/>
         </g>`;
-
-    const sumiPines = `<g class="sumi-pines" fill="#1e2024" opacity=".76">
-      <path d="M 72 608 L 76 582 L 80 608 Z M 70 598 L 76 576 L 82 598 Z M 71 589 L 76 570 L 81 589 Z"/>
-      <path d="M 88 614 L 93 578 L 98 614 Z M 86 600 L 93 570 L 100 600 Z M 88 588 L 93 563 L 98 588 Z" opacity=".88"/>
-      <path d="M 108 622 L 112 592 L 116 622 Z M 106 610 L 112 585 L 118 610 Z" opacity=".62"/>
-      <path d="M 128 626 L 133 586 L 138 626 Z M 126 612 L 133 578 L 140 612 Z M 128 598 L 133 572 L 138 598 Z" opacity=".82"/>
-      <path d="M 152 635 L 156 602 L 160 635 Z M 150 622 L 156 595 L 162 622 Z" opacity=".54"/>
-      <path d="M 218 648 L 223 610 L 228 648 Z M 216 634 L 223 602 L 230 634 Z" opacity=".68"/>
-      <path d="M 244 656 L 248 626 L 252 656 Z M 242 644 L 248 618 L 254 644 Z" opacity=".48"/>
-      <path d="M 326 482 Q 329 479 332 482 Q 335 479 338 482 M 344 474 Q 346.5 471.5 349 474 Q 351.5 471.5 354 474 M 362 478 Q 364 476 366 478 Q 368 476 370 478 M 382 468 Q 384.5 465.5 387 468 Q 389.5 465.5 392 468" fill="none" stroke="#2c2e33" stroke-width="0.9" stroke-linecap="round" opacity=".55"/>
-    </g>`;
 
     return `<svg class="mountain-svg" data-camera="mountain" viewBox="${initialBox}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${lang === 'EN' ? 'Sumi-e mountain route with Sherpas summit flag' : 'Ruta de montaña sumi-e con bandera Sherpas en la cima'}">
       <defs>
-        <filter id="sumi-soft" x="-10%" y="-10%" width="120%" height="120%">
-          <feGaussianBlur stdDeviation="6"/>
+        <filter id="dryBrush" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.8" xChannelSelector="R" yChannelSelector="G"/>
         </filter>
-        <filter id="sumi-mist-blur" x="-15%" y="-20%" width="130%" height="140%">
-          <feGaussianBlur stdDeviation="18"/>
-        </filter>
-        <linearGradient id="sumi-distant" x1="0.3" y1="0" x2="0.35" y2="1">
-          <stop offset="0%" stop-color="#2c2f36" stop-opacity=".32"/>
-          <stop offset="45%" stop-color="#555963" stop-opacity=".14"/>
-          <stop offset="82%" stop-color="#FBF9F5" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="sumi-mid-wash" x1="0.45" y1="0" x2="0.5" y2="1">
-          <stop offset="0%" stop-color="#1d1f24" stop-opacity=".46"/>
-          <stop offset="50%" stop-color="#3d4048" stop-opacity=".2"/>
-          <stop offset="88%" stop-color="#FBF9F5" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="sumi-peak-wash" x1="0.5" y1="0" x2="0.48" y2="1">
-          <stop offset="0%" stop-color="#141519" stop-opacity=".76"/>
-          <stop offset="34%" stop-color="#282a30" stop-opacity=".44"/>
-          <stop offset="68%" stop-color="#5a5e68" stop-opacity=".15"/>
-          <stop offset="94%" stop-color="#FBF9F5" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="sumi-forest-wash" x1="0.1" y1="0" x2="0.3" y2="1">
-          <stop offset="0%" stop-color="#1c1e22" stop-opacity=".52"/>
-          <stop offset="58%" stop-color="#484b52" stop-opacity=".18"/>
-          <stop offset="95%" stop-color="#FBF9F5" stop-opacity="0"/>
-        </linearGradient>
       </defs>
       <g id="cameraRig">
-        <path class="sumi-wash" d="M 20 420 Q 115 340 195 310 Q 230 295 268 272 Q 315 245 365 282 Q 445 335 555 370 L 580 540 L 10 540 Z" fill="url(#sumi-distant)" filter="url(#sumi-soft)"/>
-        <path class="sumi-wash" d="M 310 470 Q 395 405 462 355 Q 505 325 552 345 Q 620 278 688 228 Q 742 268 805 310 Q 915 215 978 242 Q 1055 280 1150 430 L 1170 620 L 290 620 Z" fill="url(#sumi-mid-wash)"/>
-        <ellipse cx="520" cy="435" rx="390" ry="52" fill="#FBF9F5" opacity=".88" filter="url(#sumi-mist-blur)"/>
-        <path id="layerMain" class="sumi-wash" d="M 35 695 Q 115 642 190 610 Q 292 544 390 465 Q 504 384 620 295 Q 702 228 768 182 Q 802 152 830 130 Q 858 154 892 212 Q 942 292 985 274 Q 1038 320 1135 485 L 1175 725 L 20 725 Z" fill="url(#sumi-peak-wash)"/>
-        <path d="M 830 130 L 795 176 L 816 172 L 774 224 L 822 192 L 832 232 L 846 186 L 878 222 L 854 166 Z" fill="#FBF9F5" opacity=".78"/>
-        <path d="M 620 295 L 588 334 L 614 326 L 574 372 L 626 340 L 648 358 Z" fill="#FBF9F5" opacity=".54"/>
-        <path d="M 390 465 L 364 494 L 388 488 L 412 506 Z" fill="#FBF9F5" opacity=".46"/>
-        <path class="sumi-ridge-soft" d="M 85 662 Q 140 632 190 610 Q 288 548 390 465 Q 505 385 620 295 Q 726 220 830 130 Q 868 168 912 246 M 955 286 Q 985 272 1048 345" fill="none" stroke-width="2.2" opacity=".64"/>
-        <path class="sumi-wash" d="M 30 585 Q 110 595 190 618 Q 275 645 375 675 L 385 745 L 20 745 Z" fill="url(#sumi-forest-wash)" filter="url(#sumi-soft)"/>
-        ${sumiPines}
-        <ellipse cx="600" cy="695" rx="620" ry="58" fill="#FBF9F5" opacity=".9" filter="url(#sumi-mist-blur)"/>
-        <path class="route-guide" d="${TRAIL_PATH}" stroke-width="1.4"/>
-        <path id="activeTrail" class="route-ink" d="${TRAIL_PATH}" stroke-width="2.6" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}"/>
+        <image id="sumiMountainArt" href="assets/mountain-sumi.jpg" x="0" y="38" width="1200" height="675" preserveAspectRatio="xMidYMid meet" style="mix-blend-mode:multiply;filter:grayscale(100%) contrast(1.12);pointer-events:none;"/>
+        <path class="route-guide" d="${TRAIL_PATH}" stroke-width="1.4" filter="url(#dryBrush)"/>
+        <path id="activeTrail" class="route-ink" d="${TRAIL_PATH}" stroke-width="2.5" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" filter="url(#dryBrush)"/>
         ${partners}
         ${riskMarkup}
         ${campNodes}
@@ -2581,28 +2553,89 @@
       const risks = svg.querySelectorAll('.risk-path');
       const risk = svg.querySelector('.risk-path[data-active-risk="true"]') || risks[risks.length - 1];
       if (!risk) { if (done) done(); return; }
-      const pts = String(risk.dataset.riskBreak || '620,295').split(',').map(Number);
-      const w = 800, h = 500;
+      const group = risk.closest ? risk.closest('.risk-group') : null;
+      const activeNode = group ? group.querySelector('.risk-node') : null;
+      const markerEl = svg.querySelector('#climberMarker');
+      const pts = String(risk.dataset.riskBreak || '684,319').split(',').map(Number);
+      const w = 696, h = 435;
       const crash = [Math.max(0, Math.min(fullCamera[2] - w, pts[0] - w * 0.55)), Math.max(0, Math.min(fullCamera[3] - h, pts[1] - h * 0.45)), w, h];
-      const len = risk.getTotalLength ? risk.getTotalLength() : 220;
+      const len = risk.getTotalLength ? risk.getTotalLength() : 260;
+
+      if (!hasRaf()) {
+        risk.style.strokeDashoffset = '0';
+        risk.style.strokeDasharray = 'none';
+        if (activeNode) activeNode.style.opacity = '1';
+        if (markerEl && typeof risk.getPointAtLength === 'function') {
+          const endPt = risk.getPointAtLength(len);
+          markerEl.setAttribute('transform', `translate(${endPt.x.toFixed(2)} ${endPt.y.toFixed(2)})`);
+        }
+        setViewBox(svg, crash);
+        if (done) done();
+        return;
+      }
+
       risk.style.strokeDasharray = String(len);
       risk.style.strokeDashoffset = String(len);
-      animateViewBox(svg, from, fullCamera.slice(), 340, () => {
-        animateSteps(920, tk, p => {
-          const e = easeInOut(p);
-          risk.style.strokeDashoffset = String(len * (1 - e));
+      if (activeNode) activeNode.style.opacity = '0';
+
+      // Natural 3-phase pacing: steady ridge ascent (0..0.68), tension pause at break (0.68..0.78), gravity drop (0.78..1)
+      const riskPacing = p => {
+        if (p < 0.68) return (p / 0.68) * 0.74;
+        if (p < 0.78) return 0.74 + ((p - 0.68) / 0.10) * 0.04;
+        const dropT = (p - 0.78) / 0.22;
+        return 0.78 + (dropT * dropT) * 0.22;
+      };
+
+      const act2Ms = Math.max(1770, Math.min(2130, Math.round(1590 + len * 1.0)));
+      let curBox = from.slice();
+
+      // Act 1 (470ms, easeInOut): smooth pullback to open mountain context
+      animateSteps(470, tk, p => {
+        const e = easeInOut(p);
+        curBox = from.map((n, i) => n + (fullCamera[i] - n) * e);
+        setViewBox(svg, curBox);
+      }, () => {
+        // Act 2 (1770-2130ms): organic ink draw + #climberMarker riding tip + exponentially damped camera follow
+        animateSteps(act2Ms, tk, p => {
+          const prog = riskPacing(p);
+          risk.style.strokeDashoffset = String(len * (1 - prog));
           if (typeof risk.getPointAtLength === 'function') {
-            const pt = risk.getPointAtLength(len * e);
-            const curW = fullCamera[2] + (w - fullCamera[2]) * e;
-            const curH = fullCamera[3] + (h - fullCamera[3]) * e;
-            const curX = Math.max(0, Math.min(fullCamera[2] - curW, pt.x - curW * 0.56));
-            const curY = Math.max(0, Math.min(fullCamera[3] - curH, pt.y - curH * 0.44));
-            setViewBox(svg, [curX, curY, curW, curH]);
+            const pt = risk.getPointAtLength(len * prog);
+            if (markerEl) {
+              markerEl.setAttribute('transform', `translate(${pt.x.toFixed(2)} ${pt.y.toFixed(2)})`);
+            }
+            const zoomT = easeInOut(Math.min(1, p * 1.05));
+            const targetW = fullCamera[2] + (w - fullCamera[2]) * zoomT;
+            const targetH = fullCamera[3] + (h - fullCamera[3]) * zoomT;
+            const targetX = Math.max(0, Math.min(fullCamera[2] - targetW, pt.x - targetW * 0.55));
+            const targetY = Math.max(0, Math.min(fullCamera[3] - targetH, pt.y - targetH * 0.45));
+            const desired = [targetX, targetY, targetW, targetH];
+            curBox = curBox.map((n, i) => n + (desired[i] - n) * 0.09);
+            setViewBox(svg, curBox);
           } else {
-            setViewBox(svg, fullCamera.map((n, i) => n + (crash[i] - n) * e));
+            const desired = fullCamera.map((n, i) => n + (crash[i] - n) * easeInOut(p));
+            curBox = curBox.map((n, i) => n + (desired[i] - n) * 0.09);
+            setViewBox(svg, curBox);
           }
-        }, done);
-      }, tk);
+        }, () => {
+          // Lock stroke visible so Chromium never hides or clips the red path after animation
+          risk.style.strokeDashoffset = '0';
+          risk.style.strokeDasharray = 'none';
+          // Act 3 (380ms): fade in red node + settle camera into exact riskCameraBox, then 145ms breath before dialog
+          const settleFrom = curBox.slice();
+          animateSteps(380, tk, p => {
+            const e = easeOut(p);
+            if (activeNode) activeNode.style.opacity = String(e.toFixed(3));
+            setViewBox(svg, settleFrom.map((n, i) => n + (crash[i] - n) * e));
+          }, () => {
+            if (activeNode) activeNode.style.opacity = '1';
+            setViewBox(svg, crash);
+            if (done) {
+              setTimeout(() => { if (tk === activeToken) done(); }, 145);
+            }
+          });
+        });
+      });
       return;
     }
     if (type === 'enter') {
@@ -2615,14 +2648,20 @@
       const toStage = Math.max(0, Math.min(3, Number(intent.toStage != null ? intent.toStage : stage)));
       const fromOff = biomes[fromStage].offset;
       const toOff = biomes[toStage].offset;
-      const fromFrac = 1 - fromOff / TRAIL_LENGTH;
-      const toFrac = 1 - toOff / TRAIL_LENGTH;
+      const trailFracs = [0.1104, 0.4883, 0.6713, 1];
+      const fromFrac = trailFracs[fromStage] != null ? trailFracs[fromStage] : (1 - fromOff / TRAIL_LENGTH);
+      const toFrac = trailFracs[toStage] != null ? trailFracs[toStage] : (1 - toOff / TRAIL_LENGTH);
       const trailEl = svg.querySelector('#activeTrail');
+      const ropeA = svg.querySelector('#partnerRopeA');
+      const ropeB = svg.querySelector('#partnerRopeB');
       const markerEl = svg.querySelector('#climberMarker');
       animateViewBox(svg, from, fullCamera.slice(), 400, () => {
         animateSteps(560, tk, p => {
           const e = easeInOut(p);
-          if (trailEl) trailEl.setAttribute('stroke-dashoffset', String(fromOff + (toOff - fromOff) * e));
+          const offVal = String(fromOff + (toOff - fromOff) * e);
+          if (trailEl) trailEl.setAttribute('stroke-dashoffset', offVal);
+          if (ropeA) ropeA.setAttribute('stroke-dashoffset', offVal);
+          if (ropeB) ropeB.setAttribute('stroke-dashoffset', offVal);
           if (markerEl) {
             const [mx, my] = trailPointAt(svg, fromFrac + (toFrac - fromFrac) * e);
             markerEl.setAttribute('transform', `translate(${mx.toFixed(2)} ${my.toFixed(2)})`);
