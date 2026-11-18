@@ -1710,11 +1710,11 @@
   // The Sumi-e mountain is ALWAYS the 100vw x 100vh full-bleed background across the entire web app
   const isMountainPhase = state => !!state && (viewKey(state.view) === 'expedition' || viewKey(state.view) === 'overview') && (state.phase === 'expedition' || state.phase === 'blocked' || state.summit);
 
-  // Gentle camera framing (~1.55x over 1200x750) keeping mountain context visible
+  // Gentle camera framing (~1.82x over 1200x750) keeping mountain context visible
   function campCamera(stage) {
     const idx = Math.max(0, Math.min(3, Number(stage) || 0));
     const pt = biomes[idx].point;
-    const w = 760, h = 475;
+    const w = 660, h = 412;
     const cx = idx === 3 ? pt[0] + 14 : pt[0];
     const cy = idx === 3 ? pt[1] - 14 : pt[1];
     const x = Math.max(0, Math.min(fullCamera[2] - w, cx - w * 0.55));
@@ -1724,7 +1724,7 @@
 
   function riskCameraBox(record, stagePoint, stageIdx) {
     const coord = riskCoordinates(record, stagePoint, stageIdx);
-    const w = 800, h = 500;
+    const w = 696, h = 435;
     const x = Math.max(0, Math.min(fullCamera[2] - w, coord.x - w * 0.55));
     const y = Math.max(0, Math.min(fullCamera[3] - h, coord.y - h * 0.45));
     return [x, y, w, h];
@@ -2582,7 +2582,7 @@
       const risk = svg.querySelector('.risk-path[data-active-risk="true"]') || risks[risks.length - 1];
       if (!risk) { if (done) done(); return; }
       const pts = String(risk.dataset.riskBreak || '620,295').split(',').map(Number);
-      const w = 800, h = 500;
+      const w = 696, h = 435;
       const crash = [Math.max(0, Math.min(fullCamera[2] - w, pts[0] - w * 0.55)), Math.max(0, Math.min(fullCamera[3] - h, pts[1] - h * 0.45)), w, h];
       const len = risk.getTotalLength ? risk.getTotalLength() : 220;
       risk.style.strokeDasharray = String(len);
