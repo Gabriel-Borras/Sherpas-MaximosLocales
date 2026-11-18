@@ -1,590 +1,102 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sherpas Life — Play Your Plan (Michael Carter Demo)</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --bg: #F4F6F9;
-      --surface: #FFFFFF;
-      --ink: #0F172A;
-      --muted: #526075;
-      --line: #E2E8F0;
-      --emerald: #059669;
-      --emerald-dark: #047857;
-      --emerald-soft: #ECFDF5;
-      --amber: #D97706;
-      --amber-soft: #FFFBEB;
-      --crimson: #DC2626;
-      --crimson-soft: #FEF2F2;
-    }
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sherpas Life — mini demo (Michael Carter)</title>
+<style>
+:root{--bg:#F4F6F9;--ink:#0F172A;--mut:#526075;--line:#E2E8F0;--g:#059669;--a:#D97706;--r:#DC2626}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font:14px/1.45 system-ui,sans-serif;background:var(--bg);color:var(--ink);display:flex;justify-content:center}
+main{width:100%;max-width:480px;min-height:100dvh;background:#fff;padding:16px;border:1px solid var(--line)}
+h1{font-size:18px}h2{font-size:15px;margin-bottom:6px}.sub{color:var(--mut);font-size:12px}
+.bar{margin:8px 0}.bar b{display:flex;justify-content:space-between;font-size:12px}
+.t{height:7px;background:var(--bg);border-radius:9px;overflow:hidden}.f{height:100%;border-radius:9px}
+.card{border:2px solid var(--ink);border-radius:12px;padding:12px;margin:12px 0}
+button{display:block;width:100%;text-align:left;border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:10px;margin-top:8px;font:inherit;cursor:pointer}
+button:hover{border-color:var(--ink)}button small{display:block;color:var(--mut);font-size:12px}
+.go{background:var(--g);color:#fff;text-align:center;font-weight:700;border:0}
+.rail{position:relative;margin:14px 0;padding-left:14px;border-left:3px solid var(--g)}
+.node{margin:0 0 10px;cursor:pointer}.node.off{opacity:.45}
+.node i{font:700 11px monospace;color:var(--mut);font-style:normal;display:block}
+.branch{margin:6px 0 10px 18px;padding:8px 10px;border-left:3px dashed var(--r);background:#FEF2F2;border-radius:0 8px 8px 0;font-size:13px}
+.ok{background:#ECFDF5;border:1.5px solid var(--g);border-radius:12px;padding:12px;margin-top:12px}
+.math{display:none;font:11.5px monospace;color:var(--mut);margin-top:4px}.m .math{display:block}
+.tabs{display:flex;gap:6px;margin-top:12px}.tabs button{margin:0;text-align:center;font-weight:700;font-size:12px}.tabs .on{background:var(--ink);color:#fff}.chk{display:flex;gap:8px;align-items:center;margin-top:8px}.chk input{width:18px;height:18px}
+.tog{width:auto;display:inline-block;padding:4px 10px;border-radius:99px;text-align:center;font-size:11px;float:right}
+</style></head><body><main id="app"></main>
+<script>
+// All numbers come from cases/michael-carter (financial-health.json, persona.md). Nothing invented.
+const pillars=[["Savings & cash flow",0,25],["Debt",8,10],["Investments",11,25],["Liquidity",4,20],["Protection",4,20]];
+const fears=["Retirement shortfall (O1)","Cash for the home purchase (O2)","Life insurance gap: $720,000 (O3)","No umbrella cover (O4)"];
+const nodes=[
+ {y:2026,age:37,t:"Today · first move",q:"Sherpas' low-effort moves. Which do you do first?",
+  opts:[["Add $1M umbrella cover","score 26 → 31",31,1],["Raise growth allocation 74% → 88%","score 26 → 31 · ~$19,900 moved",31,1],["Keep everything as is","score stays 26",26,0]],
+  math:"top_moves[0], top_moves[2]"},
+ {y:2027,age:38,t:"Home purchase (plan event)",event:1,q:"Your plan buys the $550,000 home in January 2027. Investable assets go $178,717 → $81,172 and cash covers 0 months afterwards.",
+  opts:[["Buy as planned","$113,300 down · $3,015/mo",null],["Ask my advisor to model a delay","Not scored: Sherpas has no calculated alternative → goes to Advisor Brief",null]],
+  math:"yearly 2026→2027; persona O2/T1"},
+ {y:2047,age:58,t:"Retire at 58",q:"Savings must cover ~$59,613/yr (5.6% average draw). How do you retire?",
+  opts:[["Cut withdrawals to $10,300/yr","score 26 → 62 (biggest published lift)",62,1],["Keep the 5.6% draw","score stays 26",26,0]],
+  math:"top_moves[1] · retirementGap $1,177,586"}
+];
+let S;
+function reset(){S={step:-1,fear:[],score:26,done:[],math:false,tab:'act',sel:null,checks:[false,false,false]};render()}
+const bar=(l,v,m,c)=>`<div class=bar><b><span>${l}</span><span>${v}</span></b><div class=t><div class=f style="width:${m}%;background:${c}"></div></div></div>`;
+const col=p=>p>=70?'var(--g)':p>=40?'var(--a)':'var(--r)';
+function hud(){return `<h1>Michael Carter · 37 <button class=tog onclick="S.math=!S.math;render()">${S.math?'Math':'Plain'}</button></h1>
+<div class=sub>Austin, TX · $180k/yr · Goal: retire at 58</div>`+pillars.map(p=>bar(p[0],p[1]+'/'+p[2],p[1]/p[2]*100,col(p[1]/p[2]*100))).join('')+bar('Plan score if you act',S.score,S.score,col(S.score))}
+function render(){
+ let h=`<div class="${S.math?'m':''}">`+hud();
+ if(S.step<0){
+  h+=`<div class=card><h2>Quest: what worries you most?</h2><div class=sub>Tap in order, most worrying first (${S.fear.length}/4)</div>`+
+   fears.map((f,i)=>S.fear.includes(i)?'':`<button onclick="S.fear.push(${i});if(S.fear.length==3)S.fear.push([0,1,2,3].find(x=>!S.fear.includes(x)));if(S.fear.length==4)S.step=0;render()">${f}</button>`).join('')+`</div>`;
+ }else{
+  const fin=S.done.length==nodes.length;
+  const rail=tl(fin);
+  const n=nodes[S.step];
+  if(!fin){h+=rail;
+   if(n&&S.done.length==S.step)h+=`<div class=card><i class=sub>${n.y} · age ${n.age}</i><h2>${n.t}</h2><div>${n.q}</div><div class=math>Source: ${n.math}</div>`+n.opts.map((o,i)=>`<button onclick="pick(${i})">${o[0]}<small>${o[1]}</small></button>`).join('')+`</div>`;
+  }else{
+   h+=`<div class=tabs>`+[['act','Action'],['plan','My plan'],['brief','Advisor Brief']].map(t=>`<button class="${S.tab==t[0]?'on':''}" onclick="S.tab='${t[0]}';render()">${t[1]}</button>`).join('')+`</div>`;
+   if(S.tab=='act'){
+    const c=S.checks;
+    h+=`<div class=ok><h2>Step 1 · today (3 min)</h2>Pay off the $3,500 Amex (20% APR) from your $27,000 bank cash.
+    <label class=chk><input type=checkbox ${c[0]?'checked':''} onchange="S.checks[0]=this.checked;render()"> Done</label>
+    <h2 style="margin-top:12px">Day 3 check-in</h2><label class=chk><input type=checkbox ${c[1]?'checked':''} onchange="S.checks[1]=this.checked;render()"> Card balance is $0</label>
+    <h2 style="margin-top:12px">Day 30 check-in</h2><label class=chk><input type=checkbox ${c[2]?'checked':''} onchange="S.checks[2]=this.checked;render()"> Raised 401(k) deferral above $17,000 (limit $24,500)</label>
+    <div class=sub style="margin-top:8px">${c.filter(x=>x).length}/3 done · self-reported</div></div>`;
+   }else if(S.tab=='plan'){
+    const Y=[[2026,178717],[2032,279056],[2038,763133],[2044,1550861],[2050,1823675],[2056,1125478],[2062,717522],[2068,316843],[2074,3288],[2080,-160752]];
+    const mx=1823675,mn=-160752,pt=Y.map((p,i)=>`${10+i*31},${90-(p[1]-mn)/(mx-mn)*80}`).join(' ');
+    h+=`<div class=card><h2>Investable assets (yearly, today's plan)</h2><svg viewBox="0 0 300 100" width=100%><line x1=0 x2=300 y1=${90-(0-mn)/(mx-mn)*80} y2=${90-(0-mn)/(mx-mn)*80} stroke="#DC2626" stroke-dasharray="3"/><polyline fill=none stroke="#059669" stroke-width=2 points="${pt}"/></svg>
+    <div class=sub>2026 $178,717 · peak 2050 $1,823,675 · 2075 −$38,276</div></div>`+rail+`<div class=math>Source: projections.yearly</div>`;
+   }else{
+    const q=S.done.some(d=>d.c[0].startsWith('Ask'));
+    h+=`<div class=ok><h2>For your advisor</h2><div>• Your top worry: ${fears[S.fear[0]]}</div>${q?'<div>• Model delaying the 2027 house (not calculated by Sherpas)</div>':''}${S.done.filter(d=>d.bad).map(d=>`<div>• You skipped: ${d.n.t}</div>`).join('')}<div class=sub style="margin-top:6px">Single client: no partner comparison.</div></div>`;
+   }
+   h+=`<button class=go style="margin-top:12px" onclick="reset()">Rewind (replay run)</button>`;
+  }
+ }
+ document.getElementById('app').innerHTML=h+'</div>';
+}
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      color: var(--ink);
-      min-height: 100dvh;
-      display: flex;
-      justify-content: center;
-    }
-
-    .phone-frame {
-      width: 100%;
-      max-width: 480px;
-      min-height: 100dvh;
-      background: var(--surface);
-      display: flex;
-      flex-direction: column;
-      border-left: 1px solid var(--line);
-      border-right: 1px solid var(--line);
-    }
-
-    /* Top HUD */
-    .hud {
-      position: sticky;
-      top: 0;
-      z-index: 20;
-      background: var(--surface);
-      border-bottom: 1px solid var(--line);
-      padding: 14px 16px 12px;
-    }
-
-    .hud-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .identity {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .avatar {
-      width: 42px;
-      height: 42px;
-      border-radius: 12px;
-      background: var(--ink);
-      color: #fff;
-      font-weight: 800;
-      font-size: 16px;
-      display: grid;
-      place-items: center;
-      flex-shrink: 0;
-    }
-
-    .name { font-size: 16px; font-weight: 800; line-height: 1.2; }
-    .sub { font-size: 12px; color: var(--muted); font-weight: 500; }
-
-    .lens-toggle {
-      display: flex;
-      background: var(--bg);
-      border: 1px solid var(--line);
-      border-radius: 999px;
-      padding: 2px;
-      font-size: 11px;
-      font-weight: 700;
-    }
-
-    .lens-btn {
-      border: none;
-      background: transparent;
-      color: var(--muted);
-      padding: 5px 10px;
-      border-radius: 999px;
-      cursor: pointer;
-      transition: background .15s, color .15s;
-    }
-
-    .lens-btn.active {
-      background: var(--ink);
-      color: #fff;
-    }
-
-    /* 4 Life Bars */
-    .bars {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px 12px;
-    }
-
-    .bar-item { display: flex; flex-direction: column; gap: 4px; }
-    .bar-head {
-      display: flex;
-      justify-content: space-between;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--muted);
-    }
-    .bar-val {
-      font-family: 'JetBrains Mono', monospace;
-      color: var(--ink);
-      font-variant-numeric: tabular-nums;
-    }
-    .track {
-      height: 7px;
-      background: var(--bg);
-      border-radius: 999px;
-      overflow: hidden;
-    }
-    .fill {
-      height: 100%;
-      border-radius: 999px;
-      transition: width .35s ease, background .25s ease;
-    }
-
-    /* Life Feed */
-    .feed {
-      flex: 1;
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      overflow-y: auto;
-      padding-bottom: 110px;
-    }
-
-    .year-entry {
-      border-left: 3px solid var(--line);
-      padding-left: 12px;
-      animation: popIn .22s ease-out;
-    }
-    .year-entry.good { border-left-color: var(--emerald); }
-    .year-entry.warn { border-left-color: var(--amber); }
-    .year-entry.crit { border-left-color: var(--crimson); }
-
-    @keyframes popIn {
-      from { opacity: 0; transform: translateY(6px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .year-tag {
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--muted);
-      margin-bottom: 3px;
-    }
-
-    .year-text {
-      font-size: 14px;
-      line-height: 1.45;
-      color: var(--ink);
-    }
-
-    .math-note {
-      margin-top: 6px;
-      padding: 7px 10px;
-      background: var(--bg);
-      border-radius: 8px;
-      font-family: 'JetBrains Mono', monospace;
-      font-size: 11.5px;
-      color: var(--muted);
-      display: none;
-    }
-    body.advisor-mode .math-note { display: block; }
-
-    /* Interactive Decision Card */
-    .decision-card {
-      background: var(--surface);
-      border: 2px solid var(--ink);
-      border-radius: 14px;
-      padding: 14px;
-      margin-top: 4px;
-      animation: popIn .25s ease-out;
-    }
-
-    .decision-title {
-      font-size: 15px;
-      font-weight: 800;
-      margin-bottom: 6px;
-    }
-
-    .decision-desc {
-      font-size: 13.5px;
-      color: var(--muted);
-      line-height: 1.45;
-      margin-bottom: 12px;
-    }
-
-    .choices {
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-
-    .choice-btn {
-      text-align: left;
-      background: var(--bg);
-      border: 1.5px solid var(--line);
-      border-radius: 10px;
-      padding: 10px 12px;
-      cursor: pointer;
-      transition: border-color .15s, background .15s;
-    }
-    .choice-btn:hover {
-      border-color: var(--ink);
-      background: #EDF2F7;
-    }
-    .choice-label { font-size: 13.5px; font-weight: 700; color: var(--ink); display: block; }
-    .choice-hint { font-size: 12px; color: var(--muted); margin-top: 2px; display: block; }
-
-    /* Quest / Day 3-30 Card */
-    .quest-card {
-      background: var(--emerald-soft);
-      border: 1.5px solid var(--emerald);
-      border-radius: 14px;
-      padding: 14px;
-    }
-    .quest-card h3 { font-size: 15px; font-weight: 800; color: var(--emerald-dark); margin-bottom: 6px; }
-    .quest-card p { font-size: 13px; line-height: 1.45; color: var(--ink); margin-bottom: 10px; }
-    .checkin-pills {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-    .pill {
-      font-size: 11px;
-      font-weight: 700;
-      background: #fff;
-      border: 1px solid #A7F3D0;
-      color: var(--emerald-dark);
-      padding: 4px 8px;
-      border-radius: 999px;
-    }
-
-    /* Bottom Controls */
-    .controls {
-      position: fixed;
-      bottom: 0;
-      width: 100%;
-      max-width: 478px;
-      background: var(--surface);
-      border-top: 1px solid var(--line);
-      padding: 12px 16px;
-      display: flex;
-      gap: 10px;
-      z-index: 20;
-    }
-
-    .age-btn {
-      flex: 1;
-      background: var(--emerald);
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      padding: 14px;
-      font-size: 16px;
-      font-weight: 800;
-      cursor: pointer;
-      transition: background .15s, transform .1s;
-    }
-    .age-btn:hover:not(:disabled) { background: var(--emerald-dark); }
-    .age-btn:active:not(:disabled) { transform: scale(0.98); }
-    .age-btn:disabled { background: #CBD5E1; color: #64748B; cursor: not-allowed; }
-
-    .reset-btn {
-      background: var(--bg);
-      color: var(--ink);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 0 16px;
-      font-size: 13px;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .reset-btn:hover { background: #E2E8F0; }
-  </style>
-</head>
-<body>
-  <main class="phone-frame">
-    <header class="hud">
-      <div class="hud-top">
-        <div class="identity">
-          <div class="avatar">MC</div>
-          <div>
-            <div class="name">Michael Carter <span id="hud-age">· Age 37</span></div>
-            <div class="sub">Austin, TX · $180k/yr · Goal: Retire at 58</div>
-          </div>
-        </div>
-        <div class="lens-toggle" role="group" aria-label="Explanation depth">
-          <button class="lens-btn active" id="btn-plain" onclick="setLens(false)">Plain</button>
-          <button class="lens-btn" id="btn-advisor" onclick="setLens(true)">Math</button>
-        </div>
-      </div>
-
-      <div class="bars">
-        <div class="bar-item">
-          <div class="bar-head"><span>Net Worth</span><span class="bar-val" id="val-nw">$218.5k</span></div>
-          <div class="track"><div class="fill" id="bar-nw" style="width:22%;background:var(--emerald)"></div></div>
-        </div>
-        <div class="bar-item">
-          <div class="bar-head"><span>Cash Cushion</span><span class="bar-val" id="val-cash">3.2 mo</span></div>
-          <div class="track"><div class="fill" id="bar-cash" style="width:53%;background:var(--amber)"></div></div>
-        </div>
-        <div class="bar-item">
-          <div class="bar-head"><span>Retire Runway</span><span class="bar-val" id="val-retire">Runs out @ 85</span></div>
-          <div class="track"><div class="fill" id="bar-retire" style="width:60%;background:var(--amber)"></div></div>
-        </div>
-        <div class="bar-item">
-          <div class="bar-head"><span>Plan Health</span><span class="bar-val" id="val-score">26 / 100</span></div>
-          <div class="track"><div class="fill" id="bar-score" style="width:26%;background:var(--crimson)"></div></div>
-        </div>
-      </div>
-    </header>
-
-    <section class="feed" id="feed"></section>
-
-    <footer class="controls">
-      <button class="reset-btn" onclick="resetGame()">Rewind</button>
-      <button class="age-btn" id="age-btn" onclick="ageUp()">+ Age Up (2027)</button>
-    </footer>
-  </main>
-
-  <script>
-    let state;
-    const feedEl = document.getElementById('feed');
-    const ageBtn = document.getElementById('age-btn');
-
-    function setLens(advisor) {
-      document.body.classList.toggle('advisor-mode', advisor);
-      document.getElementById('btn-plain').classList.toggle('active', !advisor);
-      document.getElementById('btn-advisor').classList.toggle('active', advisor);
-    }
-
-    function updateHUD() {
-      document.getElementById('hud-age').textContent = `· Age ${state.age}`;
-      document.getElementById('val-nw').textContent = state.nw >= 1000 ? `$${(state.nw/1000).toFixed(2)}M` : `$${state.nw.toFixed(1)}k`;
-      document.getElementById('bar-nw').style.width = `${Math.min(100, Math.max(5, (state.nw / 1600) * 100))}%`;
-
-      document.getElementById('val-cash').textContent = `${state.cashMonths.toFixed(1)} mo`;
-      const cashPct = Math.min(100, (state.cashMonths / 6) * 100);
-      const cashBar = document.getElementById('bar-cash');
-      cashBar.style.width = `${cashPct}%`;
-      cashBar.style.background = state.cashMonths >= 5 ? 'var(--emerald)' : state.cashMonths >= 2 ? 'var(--amber)' : 'var(--crimson)';
-
-      document.getElementById('val-retire').textContent = state.runsOutAt >= 91 ? 'Funded to 91' : `Runs out @ ${state.runsOutAt}`;
-      const retBar = document.getElementById('bar-retire');
-      retBar.style.width = `${state.runsOutAt >= 91 ? 100 : 65}%`;
-      retBar.style.background = state.runsOutAt >= 91 ? 'var(--emerald)' : 'var(--crimson)';
-
-      document.getElementById('val-score').textContent = `${state.score} / 100`;
-      const scBar = document.getElementById('bar-score');
-      scBar.style.width = `${state.score}%`;
-      scBar.style.background = state.score >= 70 ? 'var(--emerald)' : state.score >= 45 ? 'var(--amber)' : 'var(--crimson)';
-    }
-
-    function addEntry(tag, text, math, tone = '') {
-      const div = document.createElement('div');
-      div.className = `year-entry ${tone}`;
-      div.innerHTML = `
-        <div class="year-tag">${tag}</div>
-        <div class="year-text">${text}</div>
-        ${math ? `<div class="math-note">${math}</div>` : ''}
-      `;
-      feedEl.appendChild(div);
-      feedEl.scrollTop = feedEl.scrollHeight;
-    }
-
-    function showDecision(title, desc, options) {
-      state.waitingChoice = true;
-      ageBtn.disabled = true;
-      ageBtn.textContent = 'Make a choice above';
-
-      const card = document.createElement('div');
-      card.className = 'decision-card';
-      card.innerHTML = `<div class="decision-title">${title}</div><div class="decision-desc">${desc}</div><div class="choices"></div>`;
-      const choicesEl = card.querySelector('.choices');
-
-      options.forEach(opt => {
-        const btn = document.createElement('button');
-        btn.className = 'choice-btn';
-        btn.innerHTML = `<span class="choice-label">${opt.label}</span><span class="choice-hint">${opt.hint}</span>`;
-        btn.onclick = () => {
-          card.remove();
-          state.waitingChoice = false;
-          ageBtn.disabled = false;
-          opt.action();
-          updateHUD();
-        };
-        choicesEl.appendChild(btn);
-      });
-
-      feedEl.appendChild(card);
-      feedEl.scrollTop = feedEl.scrollHeight;
-    }
-
-    function showRealQuest() {
-      const card = document.createElement('div');
-      card.className = 'quest-card';
-      card.innerHTML = `
-        <h3>Real-Life Step 1 (3 min)</h3>
-        <p>You just saw how one sequence changes your 50s and 80s. Your first real move today: <strong>pay off the $3,500 Amex (20% APR)</strong> from your $27,000 bank cash.</p>
-        <div class="checkin-pills">
-          <span class="pill">Day 3 Check-in: Card paid?</span>
-          <span class="pill">Day 30: Boost 401(k) toward $24.5k</span>
-        </div>
-      `;
-      feedEl.appendChild(card);
-      feedEl.scrollTop = feedEl.scrollHeight;
-    }
-
-    function ageUp() {
-      if (state.waitingChoice || state.done) return;
-      state.step += 1;
-
-      if (state.step === 1) {
-        state.age = 38;
-        state.year = 2027;
-        showDecision(
-          'January 2027 · The $550,000 Austin Home',
-          'You have $30k accessible cash ($16.5k short of a 5-month reserve) and a $3,500 Amex at 20% APR. What do you do?',
-          [
-            {
-              label: 'Buy the $550k house now (Current Plan)',
-              hint: '$113,300 down + $9,464 closing costs · $3,015/mo mortgage (7%)',
-              action: () => {
-                state.boughtEarly = true;
-                state.cashMonths = 0.0;
-                state.nw = 228;
-                addEntry(
-                  'AGE 38 · 2027',
-                  'You bought the house! Investable assets dropped from $178.7k to $81.2k and your cash reserve hit 0 months.',
-                  'Mortgage $3,015/mo + $5,665/yr tax + $2,833/yr ins. Net cash flow: -$8,336/yr.',
-                  'crit'
-                );
-                ageBtn.textContent = '+ Age Up (2028)';
-              }
-            },
-            {
-              label: 'Kill 20% Amex + max 401(k), delay house 2 yrs',
-              hint: 'Save $1,800/yr in taxes + keep 5-month cash cushion intact',
-              action: () => {
-                state.boughtEarly = false;
-                state.cashMonths = 5.4;
-                state.nw = 272;
-                state.score = 62;
-                state.runsOutAt = 91;
-                addEntry(
-                  'AGE 38 · 2027',
-                  'Smart sequence: you wiped out the $3,500 Amex (20% APR), captured full $24.5k 401(k) room, and kept renting at $2,800/mo.',
-                  'Saved $700/yr interest + ~$1,800/yr tax shield. Cash reserve: 5.4 months.',
-                  'good'
-                );
-                ageBtn.textContent = '+ Age Up (2028)';
-              }
-            }
-          ]
-        );
-      } else if (state.step === 2) {
-        state.age = 45;
-        state.year = 2034;
-        if (state.boughtEarly) {
-          state.nw = 540;
-          state.cashMonths = 2.1;
-          addEntry(
-            'AGE 45 · 2034',
-            'Your income is strong, but tight cash flow and a $720k life-insurance gap keep your safety net fragile.',
-            'Whole life cover: $180k vs $900k-$1.8M recommended. No $1M umbrella policy.',
-            'warn'
-          );
-        } else {
-          state.nw = 710;
-          state.cashMonths = 6.0;
-          state.score = 76;
-          addEntry(
-            'AGE 45 · 2034',
-            'You bought your home with a full 6-month buffer and zero high-interest debt. Compounding is doing the heavy lifting.',
-            'Savings rate >25% of $180k income; emergency reserve fully funded ($55.8k).',
-            'good'
-          );
-        }
-        ageBtn.textContent = '+ Age Up (Age 58 · Target Retire)';
-      } else if (state.step === 3) {
-        state.age = 58;
-        state.year = 2047;
-        if (state.boughtEarly) {
-          state.nw = 1535;
-          addEntry(
-            'AGE 58 · RETIREMENT DAY',
-            'You reached $1.54M net worth ($1.07M liquid) and retired at 58. Looks great—let’s see if it lasts.',
-            'Social Security covers 34% of $89,649/yr need; portfolio draw is 5.6%/yr.',
-            'warn'
-          );
-        } else {
-          state.nw = 1980;
-          state.score = 84;
-          addEntry(
-            'AGE 58 · RETIREMENT DAY',
-            'You hit $1.98M net worth and retired at 58 with room to spare.',
-            'Lower draw rate + zero consumer debt keeps portfolio resilient through age 91.',
-            'good'
-          );
-        }
-        ageBtn.textContent = '+ Age Up (See Ending)';
-      } else if (state.step === 4) {
-        state.done = true;
-        if (state.boughtEarly) {
-          state.age = 85;
-          state.nw = 0;
-          addEntry(
-            'AGE 85 · SHORTFALL',
-            'Your savings ran out 6 years before age 91, leaving $32,439 of planned spending unpaid. Rewind to 2027 to test another sequence.',
-            'Plan shortfall at retirement: $1,177,586 in today’s dollars (+$20,231/yr needed).',
-            'crit'
-          );
-        } else {
-          state.age = 91;
-          state.nw = 620;
-          addEntry(
-            'AGE 91 · PLAN COMPLETE',
-            'You stayed funded all the way to 91 without giving up your retirement at 58.',
-            'Sequence impact: fixing cash flow & high-APR debt early closed the $1.18M gap.',
-            'good'
-          );
-        }
-        ageBtn.disabled = true;
-        ageBtn.textContent = 'Timeline Complete';
-        showRealQuest();
-      }
-      updateHUD();
-    }
-
-    function resetGame() {
-      state = {
-        age: 37,
-        year: 2026,
-        nw: 218.5,
-        cashMonths: 3.2,
-        runsOutAt: 85,
-        score: 26,
-        step: 0,
-        boughtEarly: true,
-        waitingChoice: false,
-        done: false
-      };
-      feedEl.innerHTML = '';
-      ageBtn.disabled = false;
-      ageBtn.textContent = '+ Age Up (2027)';
-      addEntry(
-        'AGE 37 · TODAY (2026)',
-        'You earn $180,000/yr in Austin and save $43,000/yr, yet your plan score is 26/100. Tap "+ Age Up" to play how your choices play out.',
-        'Assets $247k · Debts $28.5k (incl. $3.5k Amex @ 20%) · Cash $30k (3.2 mo).',
-        'warn'
-      );
-      updateHUD();
-    }
-
-    resetGame();
-  </script>
-</body>
-</html>
+function tl(fin){
+ const X=i=>70+i*190,EX=X(nodes.length)+150,cur=fin?nodes.length-1:S.step;
+ let g=`<line x1=20 x2=${EX+60} y1=150 y2=150 stroke="#0F172A" stroke-width=3 />`;
+ nodes.forEach((n,i)=>{const done=i<S.done.length;
+  g+=`<g opacity=${done||i==cur?1:.35} style="cursor:pointer" onclick="S.sel=${i};render()"><line x1=${X(i)} x2=${X(i)} y1=138 y2=162 stroke="#0F172A" stroke-width=3 />
+  <text x=${X(i)} y=180 font-size=11 font-weight=700 text-anchor=middle>${n.y}</text><text x=${X(i)} y=194 font-size=10 text-anchor=middle fill="#526075">${n.t.split(' ·')[0].slice(0,18)}</text></g>`;});
+ g+=`<circle cx=${X(cur)} cy=150 r=15 fill=none stroke="#EAB308" stroke-width=3 />`;
+ let k=0;
+ S.done.forEach((d,i)=>{if(!d.bad)return;const up=k++%2==0,y=up?60:240,dy=up?-1:1;
+  g+=`<g style="cursor:pointer" onclick="S.sel=${i};render()"><path d="M${X(i)},150 V${y-dy*14} Q${X(i)},${y} ${X(i)+16},${y} H${EX}" fill=none stroke="#9F1239" stroke-width=3 />
+  <text x=${X(i)+22} y=${y+(up?-8:16)} font-size=10 fill="#9F1239">You chose: ${d.c[0].slice(0,34)}</text>
+  <text x=${EX} y=${y+6} font-size=26 fill="#DC2626" text-anchor=middle font-weight=700>✕</text>
+  <text x=${EX-4} y=${y+(up?-12:26)} font-size=10 fill="#DC2626" text-anchor=end font-weight=700>2075 · −$38,276</text></g>`;});
+ const d=S.sel!=null&&S.done[S.sel];
+ const info=d?`<div class=sub style="margin-top:6px"><b>${d.n.y} · ${d.n.t}</b>: you chose “${d.c[0]}”. ${d.bad?'Branch ends 2075 (age 86): investable assets −$38,276; net worth $2.57M only because of the house. Trunk = Sherpas path ('+d.n.opts.find(o=>o[3])[0]+').':'On the trunk.'}</div>`:'<div class=sub style="margin-top:6px">Tap a tick or branch to inspect it.</div>';
+ return `<div style="overflow-x:auto;margin:10px 0;border:1px solid var(--line);border-radius:10px"><svg viewBox="0 0 ${EX+80} 300" width=${EX+80} height=300>${g}</svg></div>`+info;
+}
+function pick(i){const n=nodes[S.step],o=n.opts[i];
+ const bad=!n.event&&!o[3];if(!n.event&&o[3])S.score=Math.max(S.score,o[2]);
+ S.done.push({n,c:o,bad});S.step++;if(S.step>=nodes.length)S.step=nodes.length;render()}
+reset();
+</script></body></html>
