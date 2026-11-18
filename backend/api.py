@@ -197,7 +197,9 @@ def dispatch_request(method, path, body=None, query=None, store=None):
 
 def _json_response(status, data):
     """Serialize a response and add shared CORS headers."""
-    payload = json.dumps(data, default=str).encode("utf-8")
+    payload = b"" if status == 204 else json.dumps(
+        data, default=str
+    ).encode("utf-8")
     return payload, [
         ("Content-Type", "application/json"),
         ("Content-Length", str(len(payload))),

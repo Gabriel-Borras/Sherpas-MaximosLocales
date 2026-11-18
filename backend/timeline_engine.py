@@ -271,7 +271,8 @@ SEED_CASES = {
                       _option("keep_inertia", "Keep current course", 60, 60,
                               fails=True),
                   ],
-                  "combined_moves": [{"from_score": 60, "to_score": 78}]},
+                  "combined_moves": [{"from_score": 60, "to_score": 78}],
+                  "combined_target_score": 78},
         "combined_target_score": 78,
         "fears": [
             {"id": "O1", "label": "Proteger el futuro de sus hijos"},
@@ -353,7 +354,8 @@ SEED_CASES = {
                       _option("keep_inertia", "Keep current course", 52, 52,
                               fails=True),
                   ],
-                  "combined_moves": [{"from_score": 52, "to_score": 60}]},
+                  "combined_moves": [{"from_score": 52, "to_score": 60}],
+                  "combined_target_score": 60},
         "combined_target_score": 60,
         "fears": [
             {"id": "O1", "label": "Proteger a Oliver y Sophia"},
@@ -474,8 +476,53 @@ def _normalize_loaded_case(case_id, raw, source):
         result["subjective_concerns"] = _extract_persona_concerns(persona)
     result.setdefault("id", case_id)
     result["data_source"] = source
-    structural_fields = ("camps", "block", "dual", "partners", "d6_anchor")
     seed = SEED_CASES[case_id]
+    base_score = seed.get("score", {})
+    normalized_score = result.get("score")
+    if not isinstance(normalized_score, dict):
+        normalized_score = {}
+    for key in (
+        "status", "top_moves", "combined_moves", "combined_target_score"
+    ):
+        if key not in normalized_score and key in base_score:
+            normalized_score[key] = copy.deepcopy(base_score[key])
+    result["score"] = normalized_score
+    if "combined_target_score" not in result:
+        if "combined_target_score" in normalized_score:
+            result["combined_target_score"] = copy.deepcopy(
+                normalized_score["combined_target_score"]
+            )
+        elif "combined_target_score" in seed:
+            result["combined_target_score"] = copy.deepcopy(
+                seed["combined_target_score"]
+            )
+    if source in ("cases_dir", "backend.mcp_client", "case_provider"):
+        source_pillars = normalized_score.get("pillars") or []
+        if not isinstance(source_pillars, list):
+            source_pillars = []
+        base_pillars = base_score.get("pillars", [])
+        if case_id in SEED_CASES and len(source_pillars) < len(base_pillars):
+            published_by_name = {
+                pillar.get("name"): pillar
+                for pillar in source_pillars
+                if isinstance(pillar, dict) and pillar.get("name")
+            }
+            filled_pillars = []
+            for base_pillar in base_pillars:
+                pillar = copy.deepcopy(base_pillar)
+                published = published_by_name.get(base_pillar["name"])
+                if published is not None:
+                    pillar.update(copy.deepcopy(published))
+                    if "score" not in published:
+                        pillar["score"] = base_pillar.get("score")
+                    max_score = published.get(
+                        "max_score", published.get("max")
+                    )
+                    if max_score is not None:
+                        pillar["max_score"] = max_score
+                filled_pillars.append(pillar)
+            normalized_score["pillars"] = filled_pillars
+    structural_fields = ("camps", "block", "dual", "partners", "d6_anchor")
     if any(key not in result for key in structural_fields):
         for key in structural_fields:
             result.setdefault(key, copy.deepcopy(seed.get(key)))
@@ -847,12 +894,16 @@ class Expedition:
             self.completed = True
             self.phase = "summit"
             return {"completed": True, "phase": self.phase}
-        option = self._choice(camp, option_id) if option_id else None
-        if option is None and not partner_choices:
-            raise ValueError(f"Opción desconocida: {option_id}")
+        option = (self._choice(camp, option_id)
+                  if option_id is not None else None)
         if camp["kind"] == "transition_event":
-            question = advisor_question or option.get("label")
-            if option.get("advisor") or send_to_advisor_brief:
+            if option_id is not None and option is None:
+                raise ValueError(f"Opción desconocida: {option_id}")
+            question = advisor_question or (
+                option.get("label") if option is not None else None
+            )
+            if ((option is not None and option.get("advisor")) or
+                    send_to_advisor_brief) and question:
                 self.uncalculated_questions.append(question)
             self.decisions.append({
                 "camp_id": camp["id"], "option_id": option_id,
@@ -866,6 +917,8 @@ class Expedition:
                     "uncalculated_questions": list(
                         self.uncalculated_questions
                     )}
+        if option is None and not partner_choices:
+            raise ValueError(f"Opción desconocida: {option_id}")
         if isinstance(partner_choices, dict):
             choices = [
                 (self._partner_key(partner), choice)

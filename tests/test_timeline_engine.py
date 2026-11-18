@@ -1,5 +1,6 @@
 """Tests for verified cases, expeditions, and API adapters."""
 
+import copy
 import io
 import json
 import os
@@ -84,7 +85,9 @@ class TimelineEngineTests(unittest.TestCase):
         """Load custom and directory JSON with source provenance intact."""
         raw = {
             "financial_health": {
-                "score": {"value": 82, "status": "strong", "pillars": []},
+                "score": {"value": 82, "status": "strong", "pillars": [
+                    {"name": "Debt", "score": 7, "max": 10},
+                ]},
                 "projections": {"yearly": [{"year": 2053,
                                              "investable_assets": -227414}]},
             },
@@ -95,6 +98,8 @@ class TimelineEngineTests(unittest.TestCase):
             "samantha-lewis")
         self.assertEqual(case["data_source"], "custom_cases")
         self.assertEqual(case["score"]["value"], 82)
+        self.assertEqual(len(case["score"]["pillars"]), 1)
+        self.assertEqual(case["score"]["pillars"][0]["score"], 7)
         self.assertEqual(case["yearly"][0]["investable_assets"], -227414)
         self.assertEqual(case["events"][0]["id"], "storm")
         self.assertIn("O1", case["subjective_concerns"])
@@ -108,6 +113,7 @@ class TimelineEngineTests(unittest.TestCase):
             )
             self.assertEqual(loaded["data_source"], "cases_dir")
             self.assertEqual(loaded["score"]["value"], 82)
+            self.assertEqual(len(loaded["score"]["pillars"]), 5)
 
     def test_namespace_package_and_utf8_bom_handling(self):
         """Remove the package marker and read BOM files from env paths."""
@@ -145,8 +151,12 @@ class TimelineEngineTests(unittest.TestCase):
                     loaded = engine.load_case("samantha-lewis")
                 self.assertEqual(loaded["data_source"], "cases_dir")
                 self.assertEqual(loaded["score"]["value"], 71)
-                max_score = loaded["score"]["pillars"][0]["max_score"]
-                self.assertEqual(max_score, 10)
+                debt = next(
+                    pillar for pillar in loaded["score"]["pillars"]
+                    if pillar["name"] == "Debt"
+                )
+                self.assertEqual(debt["max_score"], 10)
+                self.assertEqual(debt["score"], 7)
                 self.assertIn("O1: retirement", loaded["subjective_concerns"])
 
     def test_real_score_shape_and_cases_directory_expedition(self):
@@ -168,7 +178,19 @@ class TimelineEngineTests(unittest.TestCase):
             loader.return_value.get_case.return_value = raw
             loaded = TimelineEngine().load_case("michael-carter")
         self.assertEqual(loaded["score"]["value"], 73)
-        self.assertEqual(loaded["score"]["pillars"][0]["max_score"], 10)
+        pillars = loaded["score"]["pillars"]
+        canonical = SEED_CASES["michael-carter"]["score"]["pillars"]
+        self.assertEqual(len(pillars), 5)
+        self.assertEqual(
+            [(pillar["name"], pillar["score"], pillar["max_score"])
+             for pillar in pillars],
+            [(pillar["name"], pillar["score"], pillar["max_score"])
+             for pillar in canonical],
+        )
+        debt = next(pillar for pillar in pillars
+                     if pillar["name"] == "Debt")
+        self.assertEqual(debt["max_score"], 10)
+        self.assertEqual(debt["score"], 8)
         self.assertIn("camps", loaded)
         self.assertIn("block", loaded)
         expedition = Expedition(loaded)
@@ -178,6 +200,54 @@ class TimelineEngineTests(unittest.TestCase):
         self.assertEqual(loaded["yearly"][0]["investable_assets"], 1234)
         self.assertEqual(loaded["events"][0]["year"], 2025)
         self.assertEqual(loaded["data_source"], "backend.mcp_client")
+
+    def test_case_provider_mcp_seed_format_normalizes_all_cases(self):
+        """Normalize the MCP _SEED financial, investment, and persona shape."""
+        _SEED = {}
+        for case_id, seed in SEED_CASES.items():
+            pillars = []
+            if case_id == "michael-carter":
+                pillars = [{"name": "Debt", "score": 8, "max": 10}]
+            _SEED[case_id] = {
+                "financial-health": {
+                    "score": {
+                        "overall": seed["score"]["value"],
+                        "status": seed["score"]["status"],
+                        "pillars": pillars,
+                    },
+                    "projections": {
+                        "yearly": copy.deepcopy(seed["yearly"]),
+                    },
+                },
+                "investment-analysis": {"analysis": {"events": []}},
+                "persona": "# Concerns\nNone recorded",
+            }
+        engine = TimelineEngine(
+            case_provider=lambda case_id: copy.deepcopy(_SEED[case_id])
+        )
+        loaded_cases = {
+            case_id: engine.load_case(case_id) for case_id in SEED_CASES
+        }
+        for case_id, loaded in loaded_cases.items():
+            self.assertEqual(loaded["data_source"], "case_provider")
+            self.assertEqual(len(loaded["score"]["pillars"]), 5)
+            self.assertEqual(
+                [(pillar["name"], pillar["score"], pillar["max_score"])
+                 for pillar in loaded["score"]["pillars"]],
+                [(pillar["name"], pillar["score"], pillar["max_score"])
+                 for pillar in SEED_CASES[case_id]["score"]["pillars"]],
+            )
+        for case_id, expected in (
+                ("timothy-melanie-weah", 78),
+                ("daniel-emily-johnson", 60)):
+            self.assertEqual(
+                loaded_cases[case_id]["score"]["combined_target_score"],
+                expected,
+            )
+            self.assertEqual(
+                loaded_cases[case_id]["combined_target_score"], expected
+            )
+        self.assertEqual(len(loaded_cases["michael-carter"]["yearly"]), 12)
 
     def test_michael_complete_score_route(self):
         """Carry Michael's score from 26 through 31 to 62."""
@@ -348,6 +418,25 @@ class TimelineEngineTests(unittest.TestCase):
             self.assertIn("¿Conviene retrasar?",
                           expedition.advisor_brief()["uncalculated_questions"])
 
+    def test_transition_event_accepts_missing_option_id(self):
+        """Allow an event without a selection and reject invalid option IDs."""
+        expedition = Expedition(self.engine.load_case("samantha-lewis"))
+        expedition.submit_quest([])
+        expedition.decide("home_insurance", "camp_2026_shield")
+        with self.assertRaises(ValueError):
+            expedition.decide("missing", "camp_2027_2030_transitions")
+        result = expedition.decide(
+            None, "camp_2027_2030_transitions",
+            send_to_advisor_brief=True,
+            advisor_question="¿Qué debemos planificar?",
+        )
+        self.assertFalse(result["blocked"])
+        self.assertIsNone(expedition.decisions[-1]["option_id"])
+        self.assertIn(
+            "¿Qué debemos planificar?",
+            result["uncalculated_questions"],
+        )
+
 
 class ApiTests(unittest.TestCase):
     """Verify dispatcher and real HTTP and WSGI adapters."""
@@ -377,12 +466,20 @@ class ApiTests(unittest.TestCase):
         def start_response(status_line, headers):
             """Capture WSGI response status."""
             captured["status"] = status_line
+            captured["headers"] = headers
 
         response = app({"REQUEST_METHOD": "GET", "PATH_INFO": "/health",
                         "CONTENT_LENGTH": "0", "wsgi.input": io.BytesIO()},
                        start_response)
         self.assertTrue(response[0])
         self.assertTrue(captured["status"].startswith("200"))
+        options_response = app({
+            "REQUEST_METHOD": "OPTIONS", "PATH_INFO": "/api/cases",
+            "CONTENT_LENGTH": "0", "wsgi.input": io.BytesIO(),
+        }, start_response)
+        self.assertTrue(captured["status"].startswith("204"))
+        self.assertEqual(options_response, [b""])
+        self.assertIn(("Content-Length", "0"), captured["headers"])
 
     def test_threaded_http_server(self):
         """Exercise the actual HTTP handler using urllib."""
@@ -393,6 +490,13 @@ class ApiTests(unittest.TestCase):
             url = f"http://127.0.0.1:{server.server_port}/health"
             with urllib.request.urlopen(url) as response:
                 self.assertEqual(json.load(response)["status"], "ok")
+            options_request = urllib.request.Request(
+                url, method="OPTIONS"
+            )
+            with urllib.request.urlopen(options_request) as response:
+                self.assertEqual(response.status, 204)
+                self.assertEqual(response.read(), b"")
+                self.assertEqual(response.headers["Content-Length"], "0")
         finally:
             server.shutdown()
             server.server_close()
