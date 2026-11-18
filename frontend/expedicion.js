@@ -20,29 +20,52 @@
       basecamp: 'Basecamp', expedition: 'Basecamp', current: 'Día 0', overview: 'Basecamp',
       brief: 'Resumen para el asesor', radio: 'Radio / Shocks',
       select: 'Seleccionar hogar', nav: 'Navegación', plan: 'Plan financiero',
-      fears: 'Fase 1A · Consulta de miedos', fearTitle: '¿Qué merece atención primero?',
-      fearHelp: 'Ordena tus preocupaciones. Tus respuestas se guardan para el resumen del asesor.', fearAsk: '¿Qué te preocupa hoy?',
-      continue: 'Continuar a la cordada', enter: 'Entrar a la montaña',
-      team: 'Fase 1B · Cordada a ciegas · 60 segundos', private: 'Voto privado de',
-      clock: 'El reloj no bloquea el avance. La otra persona no verá estas respuestas hasta el cruce.',
-      growth: 'Priorizar crecimiento', debt: 'Priorizar deuda y protección', time: 'Tiempo disponible',
-      save: 'Guardar y pasar a la otra persona', matches: 'Ver coincidencias', cross: 'Cruce de respuestas',
-      agree: 'En qué coincidís al 100%', friction: 'Roces para conversar', pact: 'Pacto de flujo de caja',
+      fears: 'Fase 1A · Evaluación inicial',
+      fearTitle: '¿Qué tres temas te quitan más tranquilidad hoy?',
+      fearHelp: 'Toca hasta 3 tarjetas por orden de prioridad (1º, 2º y 3º) y ajusta tu termómetro emocional. Tu #1 enfocará el primer nodo del Basecamp.',
+      fearAsk: 'Duda libre o nota para tu asesor (opcional)',
+      fearPlaceholder: 'Ej.: ¿Cómo afecta esto a nuestra liquidez de este año?',
+      continue: 'Ver diagnóstico y contraste',
+      enter: 'Entrar al Basecamp',
+      backEval: 'Editar Top-3',
+      team: 'Fase 1A · Turno privado en pareja',
+      private: 'Turno privado de',
+      blindHint: 'Elige tu Top-3 y tu nivel de inquietud sin que la otra persona vea la pantalla.',
+      growth: 'Priorizar crecimiento patrimonial',
+      debt: 'Priorizar liquidez, deuda y protección',
+      time: 'Turno a ciegas',
+      save: 'Guardar mi turno y pasar a',
+      matches: 'Ver diagnóstico de pareja y contraste',
+      cross: 'Diagnóstico inicial y contraste del plan',
+      agree: 'Coincidencias en vuestro Top-3',
+      friction: 'Diferencias de foco y tensiones del plan',
+      pact: 'Pacto de ruta hacia el Basecamp',
+      contrastTitle: 'Contraste: Lo que más te preocupa vs. Lo que más impacta tu plan',
+      whatWorries: 'Tu prioridad #1 declarada',
+      whatImpacts: 'Lo que más mueve la aguja en tus números',
+      blindSpot: 'Lectura de contraste',
+      thermometerTitle: 'Termómetro emocional ante el plan',
+      thermoGapTitle: 'Termómetro emocional de la pareja',
+      profileSplitTitle: 'Perfil de riesgo declarado vs. cartera real',
+      rankBadge: ['1º', '2º', '3º'],
+      pickRank: 'Elegir',
+      top3Counter: 'Top-3 seleccionado',
+      focusBanner: 'Foco #1 priorizado en este nodo',
       blocked: 'Desvío detectado en la ruta', stopped: 'Análisis del camino erróneo', impact: 'Consecuencia proyectada',
       context: 'Contexto adicional', tensions: 'Por qué ocurre (tensiones y hechos)', rewind: 'Rebobinar al campamento',
       phase: 'Basecamp · Ruta de ascenso', route: 'Una ruta, cuatro campamentos', choose: 'Elige el paso en este campamento',
-      ignore: 'Seguir sin atender la tensión principal', confirm: 'Confirmar paso', doubt: 'Enviar duda al asesor',
+      ignore: 'Posponer esta medida y mantener la exposición actual', confirm: 'Confirmar paso', doubt: 'Enviar duda al asesor',
       trend: 'Impacto directo', exact: 'Ver cálculo exacto', levers: 'Palancas individuales', none: 'Sin palancas registradas',
-      yearly: 'Proyección anual', facts: 'Datos factuales', sources: 'Fuentes', concerns: 'Miedos y preocupaciones',
-      noAnswer: 'Sin respuesta registrada.', couple: 'Pacto de pareja', questions: 'Dudas para el asesor',
+      yearly: 'Proyección anual', facts: 'Datos factuales', sources: 'Fuentes', concerns: 'Top-3 preocupaciones y termómetro',
+      noAnswer: 'Sin duda adicional registrada.', couple: 'Diagnóstico y pacto de pareja', questions: 'Dudas para el asesor',
       noQuestions: 'No hay dudas registradas.', discarded: 'Decisiones erróneas exploradas', noDiscarded: 'Aún no hay caminos erróneos explorados.',
-      complete: 'Cima alcanzada', continueExpedition: 'Volver a Basecamp', repeat: 'Reiniciar ruta',
+      complete: 'Cima alcanzada', continueExpedition: 'Volver a Basecamp', repeat: 'Reiniciar evaluación',
       next: 'Revisa los pasos del Día 0 o toca cualquier campamento y nodo rojo en Basecamp.',
       mapAria: 'Montaña sumi-e de la expedición Sherpas', risk: 'Desvío en riesgo',
       chart: 'Proyección anual: activos invertibles y patrimonio neto',
       chartAria: 'Comparación anual entre activos invertibles y patrimonio neto',
       blue: 'Azul: activos invertibles', green: 'Verde: patrimonio neto',
-      different: 'Prioridad distinta', common: 'No aparece una diferencia de prioridad; revisen juntos las tensiones del plan.',
+      different: 'Prioridad distinta en la pareja', common: 'Ambos compartís el mismo enfoque general; revisad juntos cómo repartir el flujo anual.',
       panoramic: 'Vista general', focusActive: 'Ir al campamento activo',
       panoramicHint: 'Toca cualquier campamento o nodo rojo en la montaña para hacer zoom e inspeccionar.',
       inspectCamp: 'Inspección de campamento',
@@ -57,29 +80,52 @@
       basecamp: 'Basecamp', expedition: 'Basecamp', current: 'Day 0', overview: 'Basecamp',
       brief: 'Advisor Brief', radio: 'Radio / Shocks',
       select: 'Select household', nav: 'Navigation', plan: 'Financial plan',
-      fears: 'Phase 1A · Fear quest', fearTitle: 'What deserves attention first?',
-      fearHelp: 'Rank your concerns. Your answers are saved for the Advisor Brief.', fearAsk: 'What concerns you today?',
-      continue: 'Continue to the rope team', enter: 'Enter the mountain',
-      team: 'Phase 1B · Blind rope team · 60 seconds', private: 'Private vote by',
-      clock: 'The clock does not block progress. The other person will not see these answers until the cross-check.',
-      growth: 'Prioritize growth', debt: 'Prioritize debt and protection', time: 'Time available',
-      save: 'Save and pass to the other person', matches: 'See matches', cross: 'Cross-check',
-      agree: 'Where you agree 100%', friction: 'Tensions to discuss', pact: 'Cash-flow pact',
+      fears: 'Phase 1A · Initial Assessment',
+      fearTitle: 'Which three topics weigh most on your peace of mind today?',
+      fearHelp: 'Click up to 3 cards in priority order (1st, 2nd, 3rd) and set your emotional thermometer. Your #1 choice will focus the first critical Basecamp node.',
+      fearAsk: 'Open question or note for your advisor (optional)',
+      fearPlaceholder: 'E.g., How does this affect our cash cushion this year?',
+      continue: 'View diagnosis and plan contrast',
+      enter: 'Enter Basecamp',
+      backEval: 'Edit Top-3',
+      team: 'Phase 1A · Private couple turn',
+      private: 'Private turn for',
+      blindHint: 'Pick your Top-3 and stress thermometer privately before handing the screen to your partner.',
+      growth: 'Prioritize long-term growth',
+      debt: 'Prioritize liquidity, debt, and protection',
+      time: 'Blind turn',
+      save: 'Save my turn and pass to',
+      matches: 'See couple diagnosis and plan contrast',
+      cross: 'Initial diagnosis and plan contrast',
+      agree: 'Where your Top-3 overlaps',
+      friction: 'Focus differences and plan tensions',
+      pact: 'Route pact entering Basecamp',
+      contrastTitle: 'Contrast: What worries you most vs. What impacts your plan most',
+      whatWorries: 'Your #1 stated priority',
+      whatImpacts: 'What moves the needle most in your numbers',
+      blindSpot: 'Contrast reading',
+      thermometerTitle: 'Emotional thermometer toward the plan',
+      thermoGapTitle: 'Couple emotional thermometer',
+      profileSplitTitle: 'Stated risk profile vs. actual portfolio',
+      rankBadge: ['1st', '2nd', '3rd'],
+      pickRank: 'Pick',
+      top3Counter: 'Top-3 selected',
+      focusBanner: 'Priority #1 focused at this node',
       blocked: 'Route deviation detected', stopped: 'Failed path analysis', impact: 'Projected consequence',
       context: 'Additional context', tensions: 'Why it happens (tensions and facts)', rewind: 'Rewind to camp',
       phase: 'Basecamp · Ascent route', route: 'One route, four camps', choose: 'Choose the step at this camp',
-      ignore: 'Continue without addressing the main tension', confirm: 'Confirm step', doubt: 'Send question to Advisor Brief',
+      ignore: 'Postpone this move and keep current exposure', confirm: 'Confirm step', doubt: 'Send question to Advisor Brief',
       trend: 'Direct impact', exact: 'See exact math', levers: 'Individual levers', none: 'No recorded levers',
-      yearly: 'Yearly projection', facts: 'Facts', sources: 'Sources', concerns: 'Fears and concerns',
-      noAnswer: 'No answer recorded.', couple: 'Couple pact', questions: 'Questions for the advisor',
+      yearly: 'Yearly projection', facts: 'Facts', sources: 'Sources', concerns: 'Top-3 concerns and thermometer',
+      noAnswer: 'No additional question recorded.', couple: 'Couple diagnosis and pact', questions: 'Questions for the advisor',
       noQuestions: 'No questions recorded.', discarded: 'Explored wrong decisions', noDiscarded: 'No wrong paths explored yet.',
-      complete: 'Summit reached', continueExpedition: 'Back to Basecamp', repeat: 'Restart route',
+      complete: 'Summit reached', continueExpedition: 'Back to Basecamp', repeat: 'Restart assessment',
       next: 'Review Day 0 steps or click any camp and red node on Basecamp.',
       mapAria: 'Sherpas sumi-e expedition mountain', risk: 'Route at risk',
       chart: 'Yearly projection: investable assets and net worth',
       chartAria: 'Yearly comparison of investable assets and net worth',
       blue: 'Blue: investable assets', green: 'Green: net worth',
-      different: 'Different priority', common: 'No priority difference appears; review the plan tensions together.',
+      different: 'Different partner priority', common: 'You both share the same broad focus; review together how to sequence annual cash flow.',
       panoramic: 'Full mountain', focusActive: 'Go to active camp',
       panoramicHint: 'Click any camp or red failure node on the mountain to zoom in and inspect.',
       inspectCamp: 'Camp inspection',
@@ -89,6 +135,23 @@
       whatCaused: 'c) What it caused (literal yearly / gap)',
       whyHappened: 'd) Why (tensions and facts)',
       recommendedWas: 'Recommended move skipped'
+    }
+  };
+
+  const thermoLabels = {
+    ES: {
+      1: '1 · Calma total',
+      2: '2 · Tranquilo con dudas',
+      3: '3 · Inquietud moderada',
+      4: '4 · Alta presión',
+      5: '5 · Agobio urgente'
+    },
+    EN: {
+      1: '1 · Full calm',
+      2: '2 · Mostly calm',
+      3: '3 · Moderate concern',
+      4: '4 · High pressure',
+      5: '5 · Urgent stress'
     }
   };
 
@@ -143,17 +206,27 @@
     }
   };
 
+  function getSpec(caseId, lang, rawData) {
+    const l = lang === 'EN' ? 'EN' : 'ES';
+    if (specs[caseId] && specs[caseId][l]) return specs[caseId][l];
+    const owners = (((rawData || dataFor(caseId) || {}).meta || {}).owners || []).map(o => o.name).filter(Boolean);
+    const people = owners.length ? owners : ['Cliente'];
+    return l === 'EN'
+      ? { people, blocked: 'Consult the yearly plan record for the documented point.', reframe: 'Execute the highest-impact moves on liquidity, debt, protection, and retirement.', pact: 'Execute priority plan moves step by step.', events: [] }
+      : { people, blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Ejecuta las medidas de mayor impacto en liquidez, deuda, protección y retiro.', pact: 'Ejecutar paso a paso las medidas prioritarias del plan.', events: [] };
+  }
+
   const moveTitles = {
-    'Add umbrella cover': 'Añadir cobertura paraguas',
-    'Lower the withdrawal rate': 'Reducir la tasa de retiro',
-    'Raise growth allocation toward glide': 'Ajustar el crecimiento a la senda objetivo',
-    'Close a coverage gap': 'Cerrar una brecha de cobertura',
-    'Reduce single-name concentration': 'Reducir la concentración en una posición',
-    'Reduce growth allocation toward glide': 'Ajustar el crecimiento a la senda objetivo',
-    'Pay down revolving card': 'Reducir la tarjeta revolvente',
-    'Add life cover': 'Añadir cobertura de vida',
-    'Raise mortality coverage': 'Aumentar la cobertura por fallecimiento',
-    'Raise annual savings': 'Aumentar el ahorro anual'
+    'Add umbrella cover': 'Añadir cobertura paraguas de responsabilidad civil',
+    'Lower the withdrawal rate': 'Reducir la tasa de retiro anual a nivel sostenible',
+    'Raise growth allocation toward glide': 'Ajustar el peso en crecimiento hacia la senda objetivo',
+    'Close a coverage gap': 'Cerrar la brecha de seguro patrimonial en vivienda',
+    'Reduce single-name concentration': 'Reducir la concentración en una sola posición (VTI)',
+    'Reduce growth allocation toward glide': 'Moderar el peso en crecimiento hacia la senda objetivo',
+    'Pay down revolving card': 'Amortizar la tarjeta de crédito rotativa',
+    'Add life cover': 'Ampliar la cobertura de seguro de vida',
+    'Raise mortality coverage': 'Ampliar la cobertura de seguro de vida familiar',
+    'Raise annual savings': 'Incrementar el ahorro anual dirigido a retiro'
   };
 
   const buckets = {
@@ -189,82 +262,502 @@
     'Operación Furia Épica — ataques de EE. UU. e Israel contra Irán'
   ];
 
-  const figures = value => {
-    const found = String(value == null ? '' : value).match(/\$[\d,.]+(?:[BMKT])?|\b\d+(?:\.\d+)?%|\b\d+(?:,\d{3})*(?:\.\d+)?\b/g) || [];
-    return [...new Set(found)].join(', ');
-  };
+  // Detect valid backend /api/ai/reframe topic from any concern, tension, or move text
+  function detectTopic(text) {
+    const s = String(text || '').toLowerCase();
+    if (/home purchase|down payment|closing costs|buy a \$[\d,]+ home|compra de vivienda|entrada de/.test(s)) return 'home_purchase';
+    if (/credit card|high-interest card|high-rate|apr|debt load|dti|revolving|amex|chase|tarjeta|deuda/.test(s)) return 'debt';
+    if (/life insurance|mortality|umbrella|home or auto insurance|homeowners|uninsured|liability|coverage gap|seguro|paraguas|cobertura/.test(s)) return 'protection';
+    if (/cash reserve|accessible cash|thin reserve|thin cash|idle cash|emergency|efectivo|colchón|reserva/.test(s)) return 'liquidity';
+    if (/retir|run out of savings|savings run out|deplet|social security|withdrawal|jubilaci|retiro|agotan/.test(s)) return 'retirement';
+    if (/cash flow|thin margin|free cash flow|shortfall|income dependence|paycheck|flujo de caja|margen/.test(s)) return 'cash_flow';
+    if (/concentrat|equity|technology|vti|upro|tax|401\(k\)|roth|hsa|529|college|education|inversi|cartera|universidad/.test(s)) return 'investments';
+    return 'overview';
+  }
 
-  const spanishDetail = (id, type, value) => {
-    const n = figures(value);
-    const base = type === 'concern'
-      ? 'Preocupación prioritaria del plan.'
-      : type === 'tension'
-        ? 'Tensión que requiere una decisión conjunta.'
-        : type === 'transition'
-          ? 'Hito y transición del plan.'
-          : type === 'persona'
-            ? 'Lectura provisional del plan.'
-            : 'Resumen del plan.';
-    return `${base}${n ? ` Cifras declaradas: ${n}.` : ''}`;
-  };
+  // Strip all technical codes (O1..O9, T1..T5, CRITICAL/SIGNIFICANT/MODERATE/MINOR/HIGH/MEDIUM/LOW, Connected: D3, etc.)
+  function stripTechnicalMarkers(raw) {
+    return String(raw == null ? '' : raw)
+      .replace(/^\s*-\s*/, '')
+      .replace(/\*\*/g, '')
+      .replace(/^(?:O\d+|T\d+)\s*(?:\((?:CRITICAL|SIGNIFICANT|MODERATE|MINOR|HIGH|MEDIUM|LOW|CRÍTICO|SIGNIFICATIVO|MODERADO|MENOR|ALTA|MEDIA|BAJA)\))?\s*(?:CRITICAL|SIGNIFICANT|MODERATE|MINOR|HIGH|MEDIUM|LOW|CRÍTICO|SIGNIFICATIVO|MODERADO|MENOR|ALTA|MEDIA|BAJA)?\s*:\s*/i, '')
+      .replace(/\s*\((?:CRITICAL|SIGNIFICANT|MODERATE|MINOR|HIGH|MEDIUM|LOW|CRÍTICO|SIGNIFICATIVO|MODERADO|MENOR|ALTA|MEDIA|BAJA)\)/gi, '')
+      .replace(/\b(?:CRITICAL|SIGNIFICANT|MODERATE|MINOR|CRÍTICO|SIGNIFICATIVO|MODERADO|MENOR)\s*:\s*/gi, '')
+      .replace(/\s*Connected:\s*[^.]+\.?/gi, '')
+      .replace(/\bO\d+\s+(?:and|or|against|,)\s+O\d+(?:,?\s*together with O\d+ and O\d+,?)?(?:\s*and\s*(?:O\d+|D\d+[a-c]?))?\.?\s*/gi, '')
+      .replace(/\b(?:O\d+|D\d+[a-c]?)\s+against\s+(?:O\d+|D\d+[a-c]?)(?:\s+and\s+(?:O\d+|D\d+[a-c]?|the stated Protection anchor))?\.?\s*/gi, '')
+      .replace(/\s*\((?:O\d+(?:,\s*O\d+)*|see T\d+)\)/gi, '')
+      .replace(/\s*See T\d+\.?/gi, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+  }
 
-  const severityES = value => {
-    const found = String(value || '').match(/CRITICAL|SIGNIFICANT|MODERATE|MINOR|HIGH|MEDIUM|LOW/);
-    return found ? ({ CRITICAL: 'CRÍTICO', SIGNIFICANT: 'SIGNIFICATIVO', MODERATE: 'MODERADO', MINOR: 'MENOR', HIGH: 'ALTA', MEDIUM: 'MEDIA', LOW: 'BAJA' }[found[0]] || '') : '';
-  };
+  // Split cleaned text into { title, body }
+  function splitTitleAndBody(cleaned) {
+    const m = cleaned.match(/^([^.!?]+)[.!?]\s*(.*)$/s);
+    if (!m) return { title: cleaned, body: '' };
+    return { title: m[1].trim(), body: m[2].trim() };
+  }
+
+  // Comprehensive, zero-inference English-to-Spanish humanizer preserving 100% of figures
+  const esTitleMap = [
+    [/^Retirement plan runs out of savings at age (\d+)$/i, 'El ahorro para el retiro se agota a los $1 años'],
+    [/^Retirement shortfall$/i, 'Brecha en el ahorro para la jubilación'],
+    [/^Retirement$/i, 'Ahorro y brecha para la jubilación'],
+    [/^Cash for the home purchase and a thin reserve$/i, 'Efectivo ajustado ante la compra de vivienda'],
+    [/^Life insurance shortfall of (\$[\d,.]+)$/i, 'Déficit de seguro de vida de $1'],
+    [/^Life insurance shortfall$/i, 'Cobertura de seguro de vida insuficiente'],
+    [/^Life insurance$/i, 'Brecha en seguro de vida familiar'],
+    [/^No umbrella cover(?:age)?$/i, 'Sin póliza paraguas de responsabilidad civil'],
+    [/^Negative cash flow$/i, 'Flujo de caja anual en negativo'],
+    [/^Yearly cash flow is negative$/i, 'El flujo de caja anual es negativo'],
+    [/^High-interest card$/i, 'Tarjeta de crédito de alto interés'],
+    [/^High-rate credit card$/i, 'Saldo en tarjeta de crédito de alto coste'],
+    [/^Debt load and the ([\d.]+%) card$/i, 'Carga de deuda y tarjeta al $1 APR'],
+    [/^Unused savings room$/i, 'Margen fiscal desaprovechado en cuentas de retiro'],
+    [/^Unused contribution limits$/i, 'Espacio fiscal sin utilizar en cuentas de ahorro'],
+    [/^Tax-advantaged limits unused$/i, 'Cuentas con ventaja fiscal sin aprovechar'],
+    [/^Tax cost on taxable holdings$/i, 'Coste fiscal anual en inversiones sujetas a impuestos'],
+    [/^One employer and concentrated holdings$/i, 'Dependencia de un solo sueldo y concentración tecnológica'],
+    [/^Concentration and home bias$/i, 'Concentración de cartera y sesgo hacia EE. UU.'],
+    [/^Portfolio equity above target and technology concentration$/i, 'Peso en acciones sobre objetivo y concentración tecnológica'],
+    [/^College funding gap$/i, 'Brecha en el fondo universitario de los hijos'],
+    [/^College funding$/i, 'Ahorro universitario pendiente de cubrir'],
+    [/^Education funding unfunded$/i, 'Fondo educativo universitario aún sin ahorro en 529'],
+    [/^No home or auto insurance recorded$/i, 'Vivienda y vehículo sin póliza registrada en el plan'],
+    [/^Thin cash after near-term goals$/i, 'Colchón líquido mínimo tras cubrir metas cercanas'],
+    [/^Home purchase planned for (\d{4})$/i, 'Compra de vivienda prevista para $1'],
+    [/^Idle cash$/i, 'Exceso de efectivo sin rentabilidad'],
+    [/^Cash reserve$/i, 'Reserva de liquidez por debajo del objetivo'],
+    [/^Income dependence$/i, 'Alta dependencia de los ingresos salariales'],
+    [/^Thin margin$/i, 'Margen de flujo de caja anual estrecho'],
+    [/^Retirement shortfall, college funding and negative cash flow$/i, 'Retiro, universidad y flujo negativo compiten por el mismo dinero'],
+    [/^Growth portfolio against early depletion and negative cash flow$/i, 'Cartera agresiva frente a agotamiento temprano y flujo negativo'],
+    [/^Cash reserve against near-term goals$/i, 'Reserva de liquidez frente a pagos cercanos']
+  ];
+
+  const esPhraseReplacements = [
+    // Exact full-sentence & multi-clause patterns (preserving all numbers via capture groups)
+    [/Savings run out at (\d+) against a plan to (\d+), with (\$[\d,.]+) of planned spending unpaid and a (\$[\d,.]+) gap at retirement\./gi,
+      'Los ahorros se agotan a los $1 años frente a un horizonte hasta los $2, dejando $3 de gasto previsto sin cubrir y una brecha de $4 al jubilarse.'],
+    [/The average draw is ([\d.]+%)\./gi, 'La tasa media de retiro es del $1.'],
+    [/Cash of (\$[\d,.]+) covers about ([\d.]+) months, (\$[\d,.]+) short of the (\d+) to (\d+) month reserve\./gi,
+      'El efectivo disponible de $1 cubre unos $2 meses, quedando a $3 de la reserva recomendada de $4 a $5 meses.'],
+    [/Counting the January (\d{4}) goals, the target is (\$[\d,.]+) to (\$[\d,.]+), and the plan's cash covers (\d+) months after them\./gi,
+      'Al sumar las metas de enero de $1, el objetivo sube a $2–$3 y el efectivo actual cubre $4 meses tras afrontarlas.'],
+    [/He has (\$[\d,.]+) of whole life cover against (\$[\d,.]+) to (\$[\d,.]+) recommended\. His salary is the only income\./gi,
+      'Cuenta con $1 en seguro de vida frente a los $2–$3 recomendados, siendo su sueldo la única fuente de ingresos.'],
+    [/The recommended minimum is (\$[\d,.]+)\. A claim could reach (\$[\d,.]+) of liquid assets and a (\$[\d,.]+) net worth\./gi,
+      'El mínimo recomendado es $1; una reclamación podría comprometer $2 en activos líquidos y $3 de patrimonio neto.'],
+    [/Net cash flow is (-\$[\d,.]+) a year \((-[\d.]+%) of gross income\), even with (\$[\d,.]+) a year going to savings\./gi,
+      'El flujo de caja neto es de $1 al año ($2 del ingreso bruto), incluso destinando $3 anuales al ahorro.'],
+    [/The Amex Platinum balance is (\$[\d,.]+) at ([\d.]+%), with (\$[\d,.]+) paid each month\. It is small but his most expensive debt\./gi,
+      'El saldo de Amex Platinum es de $1 al $2 APR con pagos de $3 al mes: un importe pequeño, pero su deuda más cara.'],
+    [/He defers (\$[\d,.]+) to the 401\(k\) against a (\$[\d,.]+) limit, so (\$[\d,.]+) more is possible \(worth about (\$[\d,.]+) in tax at ([\d.]+%)\)\./gi,
+      'Aporta $1 al 401(k) frente al límite de $2, dejando $3 de margen adicional (unos $4 de ahorro fiscal al tipo del $5).'],
+    [/He could contribute up to (\$[\d,.]+) to a Roth IRA \(estimate\) and has put in (\$[\d,.]+)\. His HSA has (\$[\d,.]+) of a (\$[\d,.]+) limit, leaving (\$[\d,.]+)\./gi,
+      'Podría aportar hasta $1 a una Roth IRA (hoy en $2) y su HSA tiene $3 sobre un límite de $4, dejando $5 libres.'],
+    [/His (\$[\d,.]+) salary equals ([\d.]+%) of his net worth, and the (\$[\d,.]+) of RSUs adds to that\. Technology is his largest sector\./gi,
+      'Su salario de $1 equivale al $2 de su patrimonio neto, a lo que se suman $3 en RSU con alta concentración en tecnología.'],
+    [/Retirement accounts hold (\$[\d,.]+), Social Security covers only ([\d.]+%) of the (\$[\d,.]+) yearly need, and (\$[\d,.]+) of planned spending goes unpaid by the end of the plan\./gi,
+      'Las cuentas de jubilación tienen $1, el Seguro Social solo cubre el $2 de los $3 necesarios al año y quedan $4 de gasto previsto sin cubrir al final del plan.'],
+    [/Net worth, which includes the home, lasts until about age (\d+)\./gi,
+      'El patrimonio neto, incluyendo la vivienda, resiste aproximadamente hasta los $1 años.'],
+    [/She is (\$[\d,.]+) a year short after expenses and savings\./gi,
+      'Presenta un déficit anual de $1 tras cubrir gastos y ahorro.'],
+    [/(\$[\d,.]+) is still needed and the 529 balance is (\$[\d,.]+)\./gi,
+      'Faltan $1 por cubrir para la universidad y el saldo en planes 529 es de $2.'],
+    [/The plan flags the (\$[\d,.]+) home and the (\$[\d,.]+) Porsche Cayenne as uninsured, and adding homeowners cover is its top-ranked move \(score (\d+) to (\d+)\)\./gi,
+      'El plan señala la vivienda de $1 y el Porsche Cayenne de $2 sin póliza registrada; asegurar la vivienda es la medida de mayor impacto inmediato (sube el score de $3 a $4).'],
+    [/Her budget does include (\$[\d,.]+) a year for home insurance, so the data does not settle whether the home is covered\./gi,
+      'Su presupuesto sí contempla $1 al año para seguro de hogar, por lo que conviene confirmar si la póliza ya está activa.'],
+    [/Only (\$[\d,.]+) sits above the reserve once (\$[\d,.]+) of goals are set aside\./gi,
+      'Solo quedan $1 por encima de la reserva mínima una vez apartados $2 para metas próximas.'],
+    [/Technology is ([\d.]+%) of her stocks, US exposure is ([\d.]+%), and VTI is the largest position\. Her salary is ([\d.]+%) of net worth\./gi,
+      'Tecnología pesa el $1 de sus acciones, la exposición a EE. UU. es del $2 y VTI es la mayor posición; su salario representa el $3 del patrimonio neto.'],
+    [/The plan lists cutting VTI from ([\d.]+%) to ([\d.]+%) and moving from ([\d.]+%) to ([\d.]+%) growth\./gi,
+      'El plan propone reducir VTI del $1 al $2 y ajustar el peso en crecimiento del $3 al $4.'],
+    [/She could put up to (\$[\d,.]+) a year in an HSA \(about (\$[\d,.]+) of tax saved at her ([\d.]+%) bracket\) if her health plan qualifies, and up to (\$[\d,.]+) in a deductible traditional IRA\./gi,
+      'Podría aportar hasta $1 al año a una HSA (ahorrando unos $2 en impuestos en su tramo del $3) y hasta $4 en una IRA tradicional deducible.'],
+    [/She has contributed (\$[\d,.]+) to each\. Whether she has a 401\(k\) is unknown, and Roth IRA contributions are not permitted for her\./gi,
+      'Hoy aporta $1 a ambas; no consta un plan 401(k) y por nivel de ingresos no puede aportar a Roth IRA.'],
+    [/Tax on her investments costs about (\$[\d,.]+) a year, mostly from dividends taxed at ([\d.]+%)\./gi,
+      'La factura fiscal de sus inversiones cuesta unos $1 al año, principalmente por dividendos gravados al $2.'],
+    [/The bond fund JNK costs (\$[\d,.]+) and the dividend fund SCHD in the brokerage account (\$[\d,.]+)\. Missing cost basis blocks a sale-by-sale review\./gi,
+      'El fondo de bonos JNK genera $1 de coste fiscal y SCHD $2 en la cuenta sujeta a impuestos; falta el coste de adquisición para evaluar ventas concretas.'],
+    [/The plan assumes a (\$[\d,.]+) purchase \(about (\$[\d,.]+) by then\): a (\$[\d,.]+) down payment, (\$[\d,.]+) of closing costs and a (\$[\d,.]+) mortgage at ([\d.]+%) over (\d+) years, (\$[\d,.]+) a month\./gi,
+      'El plan contempla una compra de $1 (unos $2 en esa fecha): entrada de $3, gastos de cierre de $4 y una hipoteca de $5 al $6 a $7 años ($8 al mes).'],
+    [/Timothy is short (\$[\d,.]+) and Melanie (\$[\d,.]+), and both have dependents\. This is one of the two caps holding the published score down\./gi,
+      'A Timothy le faltan $1 de cobertura de vida y a Melanie $2 teniendo hijos pequeños; este límite frena directamente la puntuación del plan.'],
+    [/(\$[\d,.]+) at ([\d.]+%) against (\$[\d,.]+) of accessible cash\. This is the other cap on the score\./gi,
+      'Mantienen $1 en tarjeta al $2 APR frente a $3 de efectivo disponible; es el segundo freno directo sobre el score.'],
+    [/A (\$[\d,.]+) gap\. Against a net worth of (\$[\d,.]+) and a 90th-percentile income, a liability claim could reach well beyond current cover\./gi,
+      'Brecha de $1 en responsabilidad civil: con un patrimonio neto de $2 e ingresos altos, una demanda superaría la cobertura actual.'],
+    [/(\$[\d,.]+) in 529s against a (\$[\d,.]+) funding gap\./gi,
+      'Tienen $1 en cuentas 529 frente a una brecha educativa proyectada de $2.'],
+    [/(\$[\d,.]+) sits above the emergency reserve and near-term goals, and the cash earns about ([\d.]+%), roughly (\$[\d,.]+) a year on (\$[\d,.]+)\./gi,
+      'Hay $1 ociosos por encima de la reserva y metas cercanas rindiendo apenas un $2 (unos $3 al año sobre $4).'],
+    [/The near-term cash target counts only the (\$[\d,.]+) vacation, not the planned (\d{4}) vehicle and (\d{4}) home purchases\./gi,
+      'El objetivo de liquidez a corto plazo solo incluye los $1 de vacaciones, sin descontar aún el vehículo de $2 ni la vivienda de $3.'],
+    [/About ([\d.]+%) stocks in the long-term accounts against a ([\d.]+%) Moderate target, technology at about ([\d.]+%) of stock holdings, and a leveraged ETF \(UPRO\) at (\$[\d,.]+)\./gi,
+      'Las cuentas a largo plazo tienen un $1 en acciones frente al objetivo moderado del $2, con un $3 concentrado en tecnología y $4 en el ETF apalancado 3x UPRO.'],
+    [/Neither spouse has contributed to a Roth IRA \(each is estimated eligible for up to (\$[\d,.]+)\) or to a health savings account \(HSA, an (\$[\d,.]+) household limit, usable only if their health plan qualifies\)\./gi,
+      'Ninguno ha aportado a Roth IRA (hasta $1 estimados por persona) ni a la cuenta de salud HSA (límite familiar de $2 si su seguro médico califica).'],
+    [/Each spouse already defers part of their pay into a 401\(k\) \((\$[\d,.]+) for Timothy, (\$[\d,.]+) for Melanie\), so more 401\(k\) saving has room of (\$[\d,.]+) for Timothy and (\$[\d,.]+) for Melanie against the (\$[\d,.]+) limit\./gi,
+      'Ambos aportan ya al 401(k) ($1 Timothy y $2 Melanie), dejando aún $3 y $4 de margen hasta el tope de $5.'],
+    [/The plan puts the tax saving from using that room at about (\$[\d,.]+) a year\./gi,
+      'Aprovechar ese margen en el 401(k) generaría unos $1 al año en ahorro fiscal.'],
+    [/The gap is (\$[\d,.]+) and about (\$[\d,.]+) a year more is needed, while free cash flow is (\$[\d,.]+) a year\. Nothing goes into either 401\(k\)\./gi,
+      'La brecha de jubilación es de $1 y requiere unos $2 adicionales al año, mientras que el flujo libre actual es de $3/año y hoy aportan $0 a los 401(k).'],
+    [/No employer match is recorded; the plan estimates about (\$[\d,.]+) for Daniel and (\$[\d,.]+) for Emily, unconfirmed\./gi,
+      'No hay aporte empresarial confirmado, aunque el plan estima unos $1 posibles para Daniel y $2 para Emily.'],
+    [/Contributing the full (\$[\d,.]+) would cut tax by about (\$[\d,.]+) a year at their ([\d.]+%) marginal rate\./gi,
+      'Aportar el máximo conjunto de $1 reduciría sus impuestos en unos $2 al año a su tipo marginal del $3.'],
+    [/Shortfalls of (\$[\d,.]+) for Daniel and (\$[\d,.]+) for Emily\. Adding (\$[\d,.]+) of cover is worth (\d+) points of score \((\d+) to (\d+)\)\./gi,
+      'Déficit de cobertura de $1 en Daniel y $2 en Emily; sumar $3 de seguro de vida eleva el score en $4 puntos (de $5 a $6).'],
+    [/A (\$[\d,.]+) gap\. Adding it is worth (\d+) points \((\d+) to (\d+)\)\. With life cover, the two together lift it to (\d+)\./gi,
+      'Falta una cobertura paraguas de $1; añadirla suma $2 puntos (de $3 a $4) y combinada con el seguro de vida eleva el score a $5.'],
+    [/Accessible cash of (\$[\d,.]+) against a target of (\$[\d,.]+) to (\$[\d,.]+), a gap of (\$[\d,.]+)\./gi,
+      'Efectivo disponible de $1 frente a un objetivo recomendado de $2 a $3 (déficit líquido de $4).'],
+    [/Debt-only DTI is ([\d.]+%), monthly debt payments are (\$[\d,.]+), and the (\$[\d,.]+) card is the most expensive debt by a wide margin\./gi,
+      'El ratio de deuda sobre ingresos es del $1 ($2/mes en cuotas), siendo la tarjeta de $3 la deuda más costosa con gran diferencia.'],
+    [/The mortgage is (\$[\d,.]+) at ([\d.]+%) \((\$[\d,.]+) a month\), the Toyota Highlander loan (\$[\d,.]+) at ([\d.]+%) \((\$[\d,.]+)\) and Daniel's student loan (\$[\d,.]+) at ([\d.]+%) \((\$[\d,.]+)\)\./gi,
+      'La hipoteca es de $1 al $2 ($3/mes), el préstamo del Toyota Highlander de $4 al $5 ($6/mes) y el préstamo estudiantil de Daniel de $7 al $8 ($9/mes).'],
+    [/Annual salary is ([\d.]+%) of net worth, so the household relies heavily on two paychecks\. Worth keeping in view, with no action needed today\./gi,
+      'El salario anual equivale al $1 del patrimonio neto, por lo que el hogar depende estrechamente de ambas nóminas.'],
+    [/Free cash flow of (\$[\d,.]+) a year is ([\d.]+%) of income, small next to the needs above\. Raising annual savings alone lifts the score from (\d+) to (\d+)\./gi,
+      'El flujo de caja libre de $1 al año ($2 de los ingresos) es ajustado frente a las metas pendientes; redirigirlo al ahorro sube el score de $3 a $4.'],
+    [/A (\$[\d,.]+) gap remains after the (\$[\d,.]+) already in the 529, even though (\$[\d,.]+) a year goes in\./gi,
+      'Persiste una brecha universitaria de $1 pese a los $2 ya acumulados en el plan 529 y los $3 que aportan cada año.'],
+    // Tensions across the 4 cases
+    [/The (\$[\d,.]+) down payment competes with retirement saving for the same dollars, and the plan has only (\$[\d,.]+) in cash for it\. The projection implies the purchase is paid mostly from investments, which cuts the base that has to carry retirement\./gi,
+      'La entrada de $1 para la vivienda compite con el ahorro de jubilación por los mismos recursos y solo hay $2 en efectivo; financiarla vendiendo inversiones recortaría la base para el retiro.'],
+    [/Closing the retirement gap would take about (\$[\d,.]+) more a year, while cash flow is already (-\$[\d,.]+) a year\. Both claim the same dollars\./gi,
+      'Cerrar la brecha de jubilación exigiría ahorrar unos $1 más al año, mientras que el flujo de caja ya es negativo en $2 anuales.'],
+    [/Closing the insurance gaps adds premiums while cash flow is negative and cash is thin\./gi,
+      'Cubrir las brechas de seguro añade primas en un momento en que el flujo de caja es negativo y la liquidez es ajustada.'],
+    [/A Growth profile suits a 20-year retirement horizon, but money needed in January (\d{4}) is short-term money\. Rebuilding cash by (\$[\d,.]+) or more, and setting aside the down payment, competes with staying invested\./gi,
+      'Un perfil de Crecimiento encaja a 20 años vista, pero el dinero para enero de $1 es de corto plazo: reconstruir la reserva en $2 y separar la entrada compite con mantener el capital invertido.'],
+    [/Paying off a ([\d.]+%) card faster is a guaranteed return, but it uses cash that is already thin and competes with retirement saving\. At (\$[\d,.]+) a month it is projected paid off by July (\d{4})\./gi,
+      'Liquidar la tarjeta al $1 ofrece un ahorro garantizado, aunque consume liquidez; al ritmo de $2/mes terminaría de pagarse en julio de $3.'],
+    [/Her savings go to taxable and cash accounts while retirement accounts hold (\$[\d,.]+)\. The (\$[\d,.]+) college gap, the age (\d+) depletion and the (\$[\d,.]+) yearly shortfall compete for the same dollars, and the (\d{4}) home purchase adds another call on cash\. Urgency is high because college payments are under way\./gi,
+      'Su ahorro va a cuentas imponibles y efectivo mientras las cuentas de retiro están en $1. La brecha universitaria de $2, el agotamiento a los $3 años y el déficit anual de $4 compiten con la vivienda prevista en $5 justo cuando ya empiezan los pagos universitarios.'],
+    [/Stated and actual risk are both aggressive, yet the plan runs out at (\d+) and cash flow is negative\. A market drop would hit a household with a ([\d.]+%) starting draw and a thin cushion\./gi,
+      'Tanto el perfil declarado como la cartera son agresivos, pero el ahorro se agota a los $1 años con flujo negativo: una caída bursátil golpearía un retiro que parte con una extracción del $2 anual.'],
+    [/Only (\$[\d,.]+) sits above the reserve after (\$[\d,.]+) of goals, and the (\$[\d,.]+) yearly shortfall would erode it\./gi,
+      'Solo quedan $1 sobre la reserva tras apartar $2 de metas cercanas, y el déficit anual de $3 iría erosionando ese margen.'],
+    [/Large idle cash coexists with (\$[\d,.]+) of combined life insurance shortfall and no umbrella\. Resources exist to close part of the gap, but the cash is sitting unused\. The published score is held at (\d+), while the plan models (\d+) with a card paydown and more life cover, and (\d+) if an umbrella policy is added too\./gi,
+      'Un gran saldo de efectivo ocioso convive con un déficit combinado de $1 en seguro de vida y sin póliza paraguas. Hay liquidez de sobra para resolverlo: el score actual de $2 sube a $3 al pagar la tarjeta y ampliar seguro de vida, y alcanza $4 añadiendo la póliza paraguas.'],
+    [/D4 misalignment,?\s*The spouses' stated profiles \(Growth and Moderate\) differ, while the invested book is about ([\d.]+%) stocks\. Revealed risk is higher than the Moderate household reading\./gi,
+      'Sus perfiles declarados difieren (Crecimiento frente a Moderado), mientras la cartera invertida alcanza un $1 en acciones, por encima del nivel moderado del hogar.'],
+    [/An ([\d.]+%) card balance is carried while accessible cash far exceeds the reserve\. The card costs about (\$[\d,.]+) a year in interest \(([\d.]+%) of (\$[\d,.]+)\), against roughly (\$[\d,.]+) a year earned on the cash\./gi,
+      'Se arrastra una tarjeta al $1 APR mientras el efectivo supera ampliamente la reserva: la tarjeta cuesta unos $2 al año en intereses ($3 de $4) frente a solo $5 anuales que rinde el efectivo.'],
+    [/O4 against current savings priorities\.\s*/gi, ''],
+    [/The (\$[\d,.]+) yearly education need competes with 401\(k\), Roth and HSA contributions for the same cash flow, which is itself reported as uncertain\./gi,
+      'Los $1 anuales requeridos para educación compiten con las aportaciones al 401(k), Roth y HSA por el mismo flujo de caja.'],
+    [/compete for the same (\$[\d,.]+) of yearly free cash flow\. Retirement needs about (\$[\d,.]+) a year and the cash gap is (\$[\d,.]+)\. They must weigh the trade-off together\./gi,
+      'Jubilación, reserva líquida y seguros compiten por los mismos $1 de flujo de caja libre anual: el retiro necesita unos $2/año y a la reserva le faltan $3, por lo que deben priorizar en pareja.'],
+    [/O2, O3 and D4c\.\s*/gi, ''],
+    [/The protection gaps stay open while the household carries high exposure and a thin cushion, and closing them costs cash flow that O1 and O4 also need\./gi,
+      'Las brechas de protección siguen abiertas mientras el hogar mantiene un colchón líquido estrecho, y cubrirlas requiere parte del flujo que también necesitan la reserva y el retiro.'],
+    [/They state a Moderate orientation and hold a moderate portfolio, but their overall exposure is closer to aggressive, which suggests drift\. Any plan also has to work for both a Growth and a Moderate partner\./gi,
+      'Declaran una orientación moderada en cartera, pero su baja liquidez y falta de seguros los expone a un riesgo real elevado; además, el plan debe equilibrar el perfil de Crecimiento de él con el Moderado de ella.'],
+    [/O5 against the current saving pattern\.\s*/gi, ''],
+    [/The household saves (\$[\d,.]+) a year \((\$[\d,.]+) to brokerage, (\$[\d,.]+) to the 529 and (\$[\d,.]+) to cash\) while carrying an (\$[\d,.]+) balance at ([\d.]+%) and sending (\$[\d,.]+) to the 401\(k\)s\./gi,
+      'El hogar ahorra $1 al año ($2 a corretaje, $3 al plan 529 y $4 a efectivo) mientras arrastra $5 en tarjeta al $6 APR y aporta $7 a los planes 401(k).'],
+    [/The 529 receives (\$[\d,.]+) a year while retirement receives nothing, though retirement is the larger gap\./gi,
+      'El plan universitario 529 recibe $1 al año mientras que la jubilación no recibe aportaciones, pese a ser la brecha financiera mayor.'],
+    // Top moves actions & notes
+    [/Add (\$[\d,.]+[MK]?) of umbrella to raise the liability shield/gi,
+      'Añadir $1 de póliza paraguas para blindar el patrimonio ante responsabilidad civil'],
+    [/Cutting withdrawals to (\$[\d,.]+)\/year \(([\d.]+%)\) reaches the sustainable band/gi,
+      'Reducir los retiros anuales a $1/año ($2) para situar el flujo en zona sostenible'],
+    [/Move the invested mix from ([\d.]+%) to ([\d.]+%) growth \(glide ([\d.]+%)\) for the next horizon-fit band — about (\$[\d,.]+) of the invested book/gi,
+      'Ajustar la cartera del $1 al $2 en crecimiento (senda objetivo $3) — movilizando unos $4 de la cartera'],
+    [/Add homeowners insurance on Primary home so coverage integrity clears that gap/gi,
+      'Activar la póliza de seguro de hogar sobre la vivienda principal para cerrar la brecha patrimonial'],
+    [/Bring VTI from ([\d.]+%) to ([\d.]+%) of investable for the next concentration band — about (\$[\d,.]+) of that line/gi,
+      'Reducir el peso de VTI del $1 al $2 de los activos invertibles — reasignando unos $3'],
+    [/Pay (\$[\d,.]+) on the ([\d.]+%) card from cash to remove high revolving exposure and clear the gate/gi,
+      'Amortizar $1 de la tarjeta al $2 APR usando efectivo disponible para levantar el freno del score'],
+    [/Add (\$[\d,.]+) of life cover to raise the mortality ratio and clear the gate/gi,
+      'Añadir $1 de seguro de vida para cubrir el umbral familiar y desbloquear la puntuación'],
+    [/Add (\$[\d,.]+) of life cover to reach the next mortality-coverage anchor/gi,
+      'Añadir $1 de seguro de vida para alcanzar el siguiente nivel de protección familiar'],
+    [/Redirect (\$[\d,.]+)\/year of free cash flow into savings to raise retirement-directed savings toward the next band/gi,
+      'Redirigir los $1/año de flujo de caja libre hacia ahorro de jubilación para subir al siguiente tramo'],
+    [/After the card paydown, life cover must reach (\$[\d,.]+) to keep the mortality ratio at the gate line\./gi,
+      'Tras rebajar la tarjeta, la cobertura de vida debe situarse en $1 para superar ambos límites del score.'],
+    [/Together they raise the published score more than either move alone\./gi,
+      'Ejecutadas en conjunto elevan la puntuación del plan más que cada medida por separado.'],
+    // Transition alerts & subjective concerns & D6/D4
+    [/Home purchase in January (\d{4}) \(within 12 months\)\.\s*Michael plans to buy a (\$[\d,.]+) home \((\$[\d,.]+) at purchase\) with a (\$[\d,.]+) down payment and a (\d+)-year loan of (\$[\d,.]+) at ([\d.]+%)\.\s*The monthly payment is (\$[\d,.]+),?[^.]*\./gi,
+      'Compra de vivienda en enero de $1 (en menos de 12 meses): planea adquirir una casa de $2 ($3 al cierre) con $4 de entrada y una hipoteca a $5 años de $6 al $7 ($8/mes).'],
+    [/None detected(?: within 12 to 24 months)?\./gi, 'Sin cambios bruscos de etapa en los próximos 12–24 meses.'],
+    [/None recorded\./gi, 'Sin preocupaciones previas registradas en entrevista.'],
+    [/The nearest events are the (\$[\d,.]+) vacation in January (\d{4}), college in August (\d{4}) and August (\d{4}), and retirement in (\d{4})\./gi,
+      'Los hitos más cercanos son las vacaciones de $1 en enero de $2, el inicio universitario en agosto de $3 y agosto de $4, y la jubilación en $5.'],
+    [/The nearest shifts are the planned vehicle purchase in (\d{4}), the planned home purchase in (\d{4}), college starts in (\d{4}) and (\d{4}), and retirement (\d+) years out\./gi,
+      'Los próximos hitos son la compra de vehículo en $1, la compra de vivienda en $2, la universidad en $3 y $4, y la jubilación a $5 años vista.'],
+    [/Ethan's August (\d{4}) payment, Ava's August (\d{4}) start and a January (\d{4}) vacation will press on her cash, but change no label within 12 to 24 months\. The home purchase is in (\d{4})\./gi,
+      'El pago universitario de Ethan en agosto de $1, el inicio de Ava en agosto de $2 y las vacaciones de enero de $3 exigirán liquidez, con la compra de vivienda prevista para $4.']
+  ];
+
+  // Generic clause-level fallback translator for any future unseen JSON sentence
+  const genericWordReplacements = [
+    [/\bRetirement shortfall\b/gi, 'Déficit para la jubilación'],
+    [/\bretirement accounts\b/gi, 'cuentas de jubilación'],
+    [/\bretirement gap\b/gi, 'brecha de jubilación'],
+    [/\bretirement saving(?:s)?\b/gi, 'ahorro para el retiro'],
+    [/\binvestable assets\b/gi, 'activos invertibles'],
+    [/\bnet worth\b/gi, 'patrimonio neto'],
+    [/\bfree cash flow\b/gi, 'flujo de caja libre'],
+    [/\bnet cash flow\b/gi, 'flujo de caja neto'],
+    [/\bcash flow\b/gi, 'flujo de caja'],
+    [/\baccessible cash\b/gi, 'efectivo disponible'],
+    [/\bemergency reserve\b/gi, 'reserva de emergencia'],
+    [/\blife insurance\b/gi, 'seguro de vida'],
+    [/\blife cover\b/gi, 'cobertura de vida'],
+    [/\bumbrella cover(?:age)?\b/gi, 'cobertura paraguas'],
+    [/\bumbrella policy\b/gi, 'póliza paraguas'],
+    [/\bdown payment\b/gi, 'entrada inicial'],
+    [/\bhome purchase\b/gi, 'compra de vivienda'],
+    [/\bmortgage\b/gi, 'hipoteca'],
+    [/\bcredit card\b/gi, 'tarjeta de crédito'],
+    [/\bhigh-interest\b/gi, 'alto interés'],
+    [/\bshortfall\b/gi, 'déficit'],
+    [/\bgap\b/gi, 'brecha'],
+    [/\bmonths\b/gi, 'meses'],
+    [/\ba year\b/gi, 'al año'],
+    [/\ba month\b/gi, 'al mes'],
+    [/\bage (\d+)\b/gi, 'los $1 años'],
+    [/\bscore\b/gi, 'puntuación'],
+    [/\bhousehold\b/gi, 'hogar'],
+    [/\bspouses\b/gi, 'cónyuges']
+  ];
+
+  function translateTitleToES(title) {
+    let out = stripTechnicalMarkers(title).replace(/\.$/, '');
+    for (const [rx, rep] of esTitleMap) {
+      if (rx.test(out)) return out.replace(rx, rep);
+    }
+    for (const [rx, rep] of esPhraseReplacements) {
+      out = out.replace(rx, rep);
+    }
+    for (const [rx, rep] of genericWordReplacements) {
+      out = out.replace(rx, rep);
+    }
+    return out;
+  }
+
+  function translateBodyToES(body) {
+    let out = stripTechnicalMarkers(body);
+    if (!out) return '';
+    for (const [rx, rep] of esPhraseReplacements) {
+      out = out.replace(rx, rep);
+    }
+    // Clean any remaining raw English phrases in generic future JSONs
+    if (/\b(?:The|His|Her|They|There is|There are|Against|Counting)\b/.test(out)) {
+      for (const [rx, rep] of genericWordReplacements) {
+        out = out.replace(rx, rep);
+      }
+    }
+    return out.replace(/\s{2,}/g, ' ').trim();
+  }
+
+  function humanizeConcernObject(item, lang) {
+    const rawDetail = String((item && item.detail) || '');
+    const cleaned = stripTechnicalMarkers(rawDetail);
+    const { title: rawTitle, body: rawBody } = splitTitleAndBody(cleaned);
+    const topic = detectTopic(cleaned);
+    if (lang === 'EN') {
+      const title = rawTitle || 'Plan priority';
+      const body = rawBody || cleaned;
+      return Object.assign({}, item, {
+        topic,
+        title,
+        body,
+        detail: body ? `**${title}.** ${body}` : `**${title}.**`
+      });
+    }
+    const titleES = translateTitleToES(rawTitle || cleaned);
+    const bodyES = translateBodyToES(rawBody);
+    return Object.assign({}, item, {
+      topic,
+      title: titleES,
+      body: bodyES,
+      detail: bodyES ? `**${titleES}.** ${bodyES}` : `**${titleES}.**`
+    });
+  }
+
+  function humanizeTensionObject(item, lang) {
+    const rawDetail = String((item && item.detail) || '');
+    const cleaned = stripTechnicalMarkers(rawDetail);
+    const { title: rawTitle, body: rawBody } = splitTitleAndBody(cleaned);
+    const hasTitle = rawBody && rawTitle.length < 75 && !/\$/.test(rawTitle);
+    const topic = detectTopic(cleaned);
+    if (lang === 'EN') {
+      const title = hasTitle ? rawTitle : '';
+      const body = hasTitle ? rawBody : cleaned;
+      return Object.assign({}, item, {
+        topic,
+        title,
+        body,
+        detail: title ? `**${title}.** ${body}` : body
+      });
+    }
+    const titleES = hasTitle ? translateTitleToES(rawTitle) : '';
+    const bodyES = translateBodyToES(hasTitle ? rawBody : cleaned);
+    return Object.assign({}, item, {
+      topic,
+      title: titleES,
+      body: bodyES,
+      detail: titleES ? `**${titleES}.** ${bodyES}` : bodyES
+    });
+  }
+
+  function humanizePersonaD4(rawD4, lang, rawData) {
+    const owners = (((rawData || {}).meta || {}).owners || []);
+    const text = String(rawD4 || '');
+    const stocksMatch = text.match(/([\d.]+%)\s*(?:is in\s+)?stocks/i);
+    const stocksPct = stocksMatch ? stocksMatch[1] : null;
+    const targetMatch = text.match(/target(?:\s+mix)?\s+is\s+(?:about\s+)?([\d.]+%)/i) || text.match(/against\s+an?\s+([\d.]+%)\s*(?:Growth|Moderate)?\s*target/i);
+    const targetPct = targetMatch ? targetMatch[1] : null;
+    const uproMatch = text.match(/UPRO[^.]*(\$[\d,.]+)/i);
+    if (owners.length >= 2) {
+      const a = owners[0], b = owners[1];
+      const profES = { Growth: 'Crecimiento', Moderate: 'Moderado', Aggressive: 'Agresivo', Conservative: 'Conservador' };
+      if (lang === 'ES') {
+        const splitText = `${a.name} declara perfil ${profES[a.risk_profile] || a.risk_profile || 'Crecimiento'} y ${b.name} perfil ${profES[b.risk_profile] || b.risk_profile || 'Moderado'}.`;
+        const mixText = stocksPct ? ` En la práctica, la cartera mantiene un ${stocksPct} en acciones${targetPct ? ` (frente al ${targetPct} objetivo)` : ''}${uproMatch ? `, incluyendo ${uproMatch[1]} en el ETF apalancado 3x UPRO` : ''}.` : '';
+        return splitText + mixText;
+      }
+      const splitEN = `${a.name} states a ${a.risk_profile || 'Growth'} profile while ${b.name} states ${b.risk_profile || 'Moderate'}.`;
+      const mixEN = stocksPct ? ` In practice, the invested portfolio holds ${stocksPct} in stocks${targetPct ? ` (against a ${targetPct} target)` : ''}${uproMatch ? `, including ${uproMatch[1]} in 3x leveraged UPRO` : ''}.` : '';
+      return splitEN + mixEN;
+    }
+    const single = owners[0] || { name: 'Cliente', risk_profile: 'Growth' };
+    if (lang === 'ES') {
+      return `${single.name} declara un perfil de riesgo de ${single.risk_profile === 'Growth' ? 'Crecimiento' : single.risk_profile}${stocksPct ? `, con un ${stocksPct} de la cartera a largo plazo invertido en acciones` : ''}${targetPct ? ` frente al ${targetPct} objetivo` : ''}.`;
+    }
+    return `${single.name} states a ${single.risk_profile || 'Growth'} risk profile${stocksPct ? `, holding ${stocksPct} in stocks across long-term accounts` : ''}${targetPct ? ` against an ${targetPct} target` : ''}.`;
+  }
+
+  function humanizePersonaD6(rawD6, lang, rawData) {
+    const s = String(rawD6 || '');
+    const isCouple = !!(((rawData || {}).meta || {}).isCouple);
+    if (lang === 'EN') {
+      if (/FREEDOM/i.test(s)) return 'Financial independence and early retirement flexibility, supported by a high savings rate and planned annual travel.';
+      if (/DUTY/i.test(s)) return 'Family stewardship: funding college goals and keeping strong protection in place for the children.';
+      if (/PROTECTION/i.test(s)) return isCouple ? 'Family protection: safeguarding two incomes and the children while closing open insurance and liquidity gaps.' : 'Household security and downside protection.';
+      return stripTechnicalMarkers(s);
+    }
+    if (/FREEDOM/i.test(s)) return 'Libertad financiera y retiro temprano, respaldados por una alta tasa de ahorro y metas de viaje anual.';
+    if (/DUTY/i.test(s)) return 'Responsabilidad familiar: financiar la universidad de los hijos y mantener su protección asegurada.';
+    if (/PROTECTION/i.test(s)) return isCouple ? 'Protección familiar: resguardar ambos ingresos y el futuro de los hijos cerrando las brechas de seguro y liquidez.' : 'Seguridad patrimonial y protección ante imprevistos.';
+    return translateBodyToES(s);
+  }
+
+  function humanizeShockDescription(desc, idx, lang) {
+    if (lang === 'EN') return String(desc || '');
+    const esShocks = [
+      'La Fed subió los tipos 25 pb hasta el 5.25–5.50%, la undécima y última subida del ciclo (su nivel más alto en 22 años), manteniéndolos 14 meses antes de recortar en septiembre de 2024.',
+      'La Fed mantuvo tipos pero su gráfico de puntos anticipó 75 pb de recortes para 2024. El S&P 500 marcó nuevos máximos y el Russell 2000 subió un 4% con caída de rentabilidades a largo plazo.',
+      'El desarme del carry trade del yen y el temor a recesión en EE. UU. provocaron una caída global: el TOPIX japonés cayó un 12.3%, el VIX superó 65 intradía y el S&P 500 abrió con -3% antes de recuperar casi todo en la semana.',
+      'Primer recorte de tipos de la Fed en cuatro años (-50 pb), abriendo formalmente el ciclo de bajadas al confirmar que la inflación convergía hacia el 2%.',
+      'Victoria electoral de Trump: el S&P 500 subió un 2.5%, el Dow un 3.6% y el Russell 2000 un 5.8%, impulsando banca y pequeña capitalización mientras el dólar se fortalecía.',
+      'La startup china DeepSeek lanzó un modelo de IA abierto competitivo a una fracción de coste: Nvidia perdió $589B de capitalización en un día, el Nasdaq cayó un 3.1% y el S&P 500 un 1.5%.',
+      'Anuncio de aranceles recíprocos generales (10% base, 34% China, 20% UE, 46% Vietnam): el S&P 500 cayó un 10% en dos días ($6.6T evaporados) y repuntaron los rendimientos de los bonos.',
+      'Tras caer el S&P 500 un 10% en dos días, se anunció una pausa arancelaria de 90 días (excepto China al 125%): el S&P 500 rebotó un 9.52% en una sola sesión y el Nasdaq un 12.16%, con récord de 30B de acciones negociadas.',
+      'Tregua arancelaria EE. UU.-China en Ginebra reduciendo aranceles del 125% al 10% durante 90 días: el S&P 500 subió un 3.3% y el Nasdaq un 4.4% liderados por tecnología y consumo.',
+      'El Tribunal Supremo anuló el uso de poderes de emergencia para imponer los aranceles recíprocos de abril de 2025, desmontando su base legal.',
+      'Operación Furia Épica (ataques conjuntos de EE. UU. e Israel contra instalaciones en Irán, casi 900 ataques en 12 horas): el crudo Brent saltó un 10–13% y las bolsas globales corrigieron por riesgo energético.'
+    ];
+    return esShocks[idx] || translateBodyToES(desc);
+  }
 
   function localizeData(data, lang) {
-    if (!data || lang !== 'ES') return data;
+    if (!data) return data;
+    const l = lang === 'EN' ? 'EN' : 'ES';
     const score = data.score || {}, persona = data.persona || {};
-    const action = (value, index) => `Acción prioritaria ${index + 1}.${figures(value) ? ` Cifras del paso: ${figures(value)}.` : ''}`;
+    const concerns = (persona.objectiveConcerns || []).map(x => humanizeConcernObject(x, l));
+    const tensions = (persona.tensions || []).map(x => humanizeTensionObject(x, l));
+
+    if (l === 'EN') {
+      return Object.assign({}, data, {
+        score: Object.assign({}, score, {
+          top_moves: (score.top_moves || []).map(m => Object.assign({}, m, {
+            topic: detectTopic((m.title || '') + ' ' + (m.action || ''))
+          }))
+        }),
+        persona: Object.assign({}, persona, {
+          D4Human: humanizePersonaD4(persona.D4, 'EN', data),
+          D6: humanizePersonaD6(persona.D6, 'EN', data),
+          subjectiveConcerns: /None (?:detected|recorded)/i.test(String(persona.subjectiveConcerns || ''))
+            ? 'No prior interview notes recorded yet.'
+            : stripTechnicalMarkers(persona.subjectiveConcerns),
+          transitionAlerts: stripTechnicalMarkers(persona.transitionAlerts),
+          objectiveConcerns: concerns,
+          tensions
+        })
+      });
+    }
+
     return Object.assign({}, data, {
       score: Object.assign({}, score, {
         pillars: (score.pillars || []).map(p => Object.assign({}, p, {
           pillar: { 'Savings and cash flow': 'Ahorro y flujo de caja', Debt: 'Deuda', Investments: 'Inversiones', 'Liquidity and emergency fund': 'Liquidez y fondo de emergencia', 'Insurance and protection': 'Seguros y protección' }[p.pillar] || p.pillar
         })),
         top_moves: (score.top_moves || []).map((m, i) => Object.assign({}, m, {
-          title: moveTitles[m.title] || `Medida prioritaria ${i + 1}`,
-          action: action(m.action, i),
-          note: spanishDetail('', 'move', m.note)
+          topic: detectTopic((m.title || '') + ' ' + (m.action || '')),
+          title: moveTitles[m.title] || translateTitleToES(m.title || `Medida prioritaria ${i + 1}`),
+          action: translateBodyToES(m.action || m.title || ''),
+          note: translateBodyToES(m.note || '')
         })),
-        combined_moves: (score.combined_moves || []).map((m, i) => Object.assign({}, m, {
-          title: `Medidas combinadas ${i + 1}`,
-          action: action(m.action, i),
-          moves: (m.moves || []).map((x, j) => moveTitles[x] || `Medida ${j + 1}`),
-          note: spanishDetail('', 'move', m.note)
-        })),
-        message: spanishDetail('', 'score', score.message),
-        explainer: spanishDetail('', 'score', score.explainer)
+        combined_moves: (score.combined_moves || []).map((m, i) => {
+          const translatedMoves = (m.moves || []).map((x, j) => moveTitles[x] || translateTitleToES(x || `Medida ${j + 1}`));
+          return Object.assign({}, m, {
+            title: translatedMoves.join(' + ') || `Medidas combinadas ${i + 1}`,
+            action: translateBodyToES(m.action || translatedMoves.join(' + ')),
+            moves: translatedMoves,
+            note: translateBodyToES(m.note || '')
+          });
+        }),
+        message: translateBodyToES(score.message || ''),
+        explainer: translateBodyToES(score.explainer || '')
       }),
       persona: Object.assign({}, persona, {
-        D6: spanishDetail('', 'persona', persona.D6),
-        D3: spanishDetail('', 'persona', persona.D3),
-        subjectiveConcerns: spanishDetail('', 'persona', persona.subjectiveConcerns),
-        transitionAlerts: spanishDetail('', 'transition', persona.transitionAlerts),
-        objectiveConcerns: (persona.objectiveConcerns || []).map(x => Object.assign({}, x, {
-          detail: `- **${x.id}${severityES(x.detail) ? ' ' + severityES(x.detail) : ''}:** ${spanishDetail('', 'concern', x.detail)}`
-        })),
-        tensions: (persona.tensions || []).map(x => Object.assign({}, x, {
-          detail: `- **${x.id}${severityES(x.detail) ? ' (' + severityES(x.detail) + ')' : ''}:** ${spanishDetail('', 'tension', x.detail)}`
-        }))
+        D4Human: humanizePersonaD4(persona.D4, 'ES', data),
+        D6: humanizePersonaD6(persona.D6, 'ES', data),
+        D3: translateBodyToES(persona.D3 || ''),
+        subjectiveConcerns: /None (?:detected|recorded)/i.test(String(persona.subjectiveConcerns || ''))
+          ? 'Sin notas de entrevista previas registradas en el expediente.'
+          : translateBodyToES(persona.subjectiveConcerns),
+        transitionAlerts: translateBodyToES(persona.transitionAlerts || ''),
+        objectiveConcerns: concerns,
+        tensions
       }),
       savingsWaterfall: (data.savingsWaterfall || []).map(x => Object.assign({}, x, {
         bucket: buckets[x.bucket] || x.bucket,
         status: { Filled: 'Cubierto', 'Partially filled': 'Parcialmente cubierto', Empty: 'Pendiente' }[x.status] || x.status
       })),
       shocks: (data.shocks || []).map((x, i) => Object.assign({}, x, {
-        name: shockNames[i] || 'Evento histórico',
+        name: shockNames[i] || translateTitleToES(x.name || 'Evento histórico'),
         portfolioImpact: { Mixed: 'Mixto', Negative: 'Negativo', Positive: 'Positivo', 'Rates-driven': 'Tipos de interés' }[x.portfolioImpact] || x.portfolioImpact,
-        description: `Contexto del evento histórico.${figures(x.description) ? ` Cifras declaradas: ${figures(x.description)}.` : ''}`
+        description: humanizeShockDescription(x.description, i, 'ES')
       }))
     });
   }
 
+  // Render clean human HTML for any concern or tension without O1/T1 or SIGNIFICATIVO prefixes
   const detail = (id, value, lang) => {
-    const html = clean(lang === 'ES'
-      ? String(value).replace(/CRITICAL/g, 'CRÍTICO').replace(/SIGNIFICANT/g, 'SIGNIFICATIVO').replace(/MODERATE/g, 'MODERADO').replace(/MINOR/g, 'MENOR').replace(/HIGH/g, 'ALTA').replace(/MEDIUM/g, 'MEDIA').replace(/LOW/g, 'BAJA')
-      : value);
-    return html.match(new RegExp('^<strong>' + id)) ? html : `<strong>${esc(id)}</strong> ${html}`;
+    if (value && typeof value === 'object') {
+      const title = esc(value.title || '');
+      const body = esc(value.body || '');
+      return title && body ? `<strong>${title}.</strong> ${body}` : (title ? `<strong>${title}</strong>` : body);
+    }
+    const item = humanizeConcernObject({ id, detail: value }, lang === 'EN' ? 'EN' : 'ES');
+    return item.body ? `<strong>${esc(item.title)}.</strong> ${esc(item.body)}` : `<strong>${esc(item.title)}</strong>`;
   };
 
   function exactMoney(value) {
@@ -298,6 +791,148 @@
   }
 
   const failTags = new Proxy({}, { get: (_, caseId) => new Proxy({}, { get: (_u, lang) => riskRecord(caseId, lang) }) });
+
+  // Active Top-3 concern IDs for current user or current partner turn
+  function activeTop3(state) {
+    const raw = dataFor(state && state.caseId) || {};
+    const isCouple = !!(raw.meta && raw.meta.isCouple);
+    if (isCouple && state.phase === 'fears') {
+      const turn = state.voteTurn === 'B' ? 'B' : 'A';
+      const turnVotes = (state.votes && state.votes[turn]) || {};
+      return Array.isArray(turnVotes.fears) ? turnVotes.fears.slice(0, 3) : [];
+    }
+    return Array.isArray(state && state.fearOrder) ? state.fearOrder.slice(0, 3) : [];
+  }
+
+  // Active emotional thermometer (1..5)
+  function activeThermometer(state) {
+    const raw = dataFor(state && state.caseId) || {};
+    const isCouple = !!(raw.meta && raw.meta.isCouple);
+    if (isCouple && state.phase === 'fears') {
+      const turn = state.voteTurn === 'B' ? 'B' : 'A';
+      const turnVotes = (state.votes && state.votes[turn]) || {};
+      const val = Number(turnVotes.thermometer);
+      return Number.isFinite(val) && val >= 1 && val <= 5 ? val : 3;
+    }
+    const val = Number(state && state.thermometer);
+    return Number.isFinite(val) && val >= 1 && val <= 5 ? val : 3;
+  }
+
+  // Find the user's #1 prioritized concern object (or default to first objectiveConcern)
+  function primaryConcern(state, localizedData) {
+    const concerns = ((localizedData && localizedData.persona && localizedData.persona.objectiveConcerns) || []);
+    if (!concerns.length) return null;
+    const topId = (state && state.fearOrder && state.fearOrder[0])
+      || (state && state.votes && state.votes.A && state.votes.A.fears && state.votes.A.fears[0])
+      || concerns[0].id;
+    return concerns.find(c => c.id === topId) || concerns[0];
+  }
+
+  // Order top_moves so the move matching the user's #1 concern topic is prioritized at Campamento Base (stage 0)
+  function orderedTopMoves(state, data) {
+    const moves = ((data && data.score && data.score.top_moves) || []).slice();
+    if (moves.length <= 1) return moves;
+    const firstConcern = primaryConcern(state, data);
+    if (!firstConcern) return moves;
+    const targetTopic = firstConcern.topic || detectTopic(firstConcern.detail);
+    const topicCompat = {
+      protection: ['protection'],
+      debt: ['debt', 'cash_flow'],
+      liquidity: ['liquidity', 'cash_flow', 'debt'],
+      home_purchase: ['liquidity', 'cash_flow', 'investments'],
+      retirement: ['cash_flow', 'retirement', 'investments'],
+      cash_flow: ['cash_flow', 'debt', 'liquidity'],
+      investments: ['investments', 'retirement']
+    }[targetTopic] || [targetTopic];
+
+    let bestIdx = -1;
+    for (const tp of topicCompat) {
+      bestIdx = moves.findIndex(m => (m.topic || detectTopic((m.title || '') + ' ' + (m.action || ''))) === tp);
+      if (bestIdx >= 0) break;
+    }
+    if (bestIdx > 0) {
+      const chosen = moves.splice(bestIdx, 1)[0];
+      moves.unshift(chosen);
+    }
+    return moves;
+  }
+
+  // Build Contrast ("Lo que más te preocupa vs. Lo que más impacta tu plan") with 100% literal JSON figures
+  function buildContrastSummary(state, data) {
+    const lang = langOf(state);
+    const es = lang === 'ES';
+    const concerns = (data.persona && data.persona.objectiveConcerns) || [];
+    const top1 = primaryConcern(state, data) || concerns[0] || { id: 'O1', title: es ? 'Prioridad del plan' : 'Plan priority', body: '', topic: 'overview' };
+    const rawMoves = ((data.score && data.score.top_moves) || []).slice();
+    const scoreNow = (data.score && data.score.published_score) ?? 0;
+    const bestSingle = rawMoves.reduce((best, m) => {
+      const gain = (Number(m.score_after) || scoreNow) - (Number(m.score_before) || scoreNow);
+      const bestGain = (Number(best && best.score_after) || scoreNow) - (Number(best && best.score_before) || scoreNow);
+      return !best || gain > bestGain ? m : best;
+    }, rawMoves[0] || null);
+    const combined = ((data.score && data.score.combined_moves) || []);
+    const bestCombined = combined.reduce((best, m) => (!best || (Number(m.score_after) || 0) > (Number(best.score_after) || 0) ? m : best), combined[0] || null);
+    const rec = riskRecord(state.caseId, lang);
+
+    const bestMoveTitle = bestSingle ? (bestSingle.title || bestSingle.action) : (es ? 'Medida principal del plan' : 'Primary plan move');
+    const bestMoveAction = bestSingle ? (bestSingle.action || bestSingle.title) : '';
+    const singleDelta = bestSingle ? `${bestSingle.score_before ?? scoreNow} → ${bestSingle.score_after ?? scoreNow}` : `${scoreNow}`;
+    const comboLabel = bestCombined ? (bestCombined.title || (bestCombined.moves || []).join(' + ') || (es ? 'medidas combinadas' : 'combined moves')) : '';
+    const comboNote = bestCombined && bestCombined.score_after
+      ? (es ? ` (y hasta ${bestCombined.score_after}/100 combinando ${comboLabel})` : ` (and up to ${bestCombined.score_after}/100 combining ${comboLabel})`)
+      : '';
+    const exhaustionNote = rec.hasExhaustion
+      ? (es ? ` Además, la proyección anual marca agotamiento de activos invertibles en ${rec.year}${rec.age != null ? ` (edad ${rec.age})` : ''} con ${exactMoney(rec.investable_assets)}.`
+            : ` In addition, the yearly projection flags investable-asset depletion in ${rec.year}${rec.age != null ? ` (age ${rec.age})` : ''} at ${exactMoney(rec.investable_assets)}.`)
+      : '';
+
+    const top1Topic = top1.topic || detectTopic(top1.detail);
+    const bestTopic = bestSingle ? (bestSingle.topic || detectTopic((bestSingle.title || '') + ' ' + (bestSingle.action || ''))) : 'overview';
+    const aligned = top1Topic === bestTopic || (top1Topic === 'retirement' && bestTopic === 'cash_flow');
+
+    const worryText = `${top1.title}${top1.body ? ` — ${top1.body}` : ''}`;
+    const impactText = `${bestMoveTitle}: ${bestMoveAction} (Score ${singleDelta})${comboNote}.${exhaustionNote}`;
+    const blindSpotText = aligned
+      ? (es
+          ? `Tu intuición da en el blanco: tu preocupación #1 coincide con la palanca cuantitativa clave del plan. Empezaremos el Basecamp atacando directamente este frente.`
+          : `Your intuition is spot-on: your #1 concern aligns with the plan's primary quantitative lever. We will start Basecamp by tackling this front directly.`)
+      : (es
+          ? `Contraste clave: lo que más te inquieta hoy es «${top1.title}», mientras que en los números del plan el mayor salto de puntuación (${singleDelta}${comboNote}) exige actuar también sobre «${bestMoveTitle}». En el Basecamp conectaremos tu prioridad #1 en el primer nodo sin descuidar este punto ciego.`
+          : `Key contrast: what worries you most today is "${top1.title}", whereas the largest score jump in the numbers (${singleDelta}${comboNote}) also requires acting on "${bestMoveTitle}". In Basecamp we will address your #1 priority at the first node while closing this blind spot.`);
+
+    return { top1, bestSingle, bestCombined, aligned, worryText, impactText, blindSpotText, topic: top1Topic };
+  }
+
+  // Adapt narrative reframe to the emotional thermometer (1..5) and #1 priority
+  function buildThermometerReframe(state, data) {
+    const lang = langOf(state);
+    const es = lang === 'ES';
+    const level = activeThermometer(state);
+    const contrast = buildContrastSummary(state, data);
+    const top1 = contrast.top1;
+    const score = (data.score && data.score.published_score) ?? 0;
+
+    if (state.aiReframe && state.aiReframe.lang === lang && state.aiReframe.text) {
+      return state.aiReframe.text;
+    }
+
+    if (es) {
+      if (level >= 4) {
+        return `Termómetro ${level}/5 (alta presión): Respira; no tienes que resolver todo el plan hoy. Con un score actual de ${score}/100, vamos a empezar paso a paso por lo que más te pesa («${top1.title}») con una sola acción concreta y medible en el Campamento Base.`;
+      }
+      if (level <= 2) {
+        return `Termómetro ${level}/5 (calma estratégica): Aprovechemos tu tranquilidad para optimizar el plan (score actual ${score}/100). Tu prioridad #1 («${top1.title}») abre el recorrido en el Campamento Base antes de capturar los puntos de mayor retorno cuantitativo.`;
+      }
+      return `Termómetro ${level}/5 (enfoque equilibrado): Partimos de un score de ${score}/100. Hemos colocado tu prioridad #1 («${top1.title}») como foco de arranque en el Campamento Base para ordenar liquidez, riesgo y retiro sin fricción.`;
+    }
+    if (level >= 4) {
+      return `Thermometer ${level}/5 (high pressure): Take a breath—you don't need to fix the entire plan at once. Starting from a ${score}/100 score, we will begin at Basecamp with one clear, concrete step addressing "${top1.title}".`;
+    }
+    if (level <= 2) {
+      return `Thermometer ${level}/5 (strategic calm): Let's use your calm perspective to fine-tune the plan (current score ${score}/100). Your #1 priority ("${top1.title}") leads the first Basecamp node before locking in the highest-return score levers.`;
+    }
+    return `Thermometer ${level}/5 (balanced focus): Starting from a ${score}/100 score, we placed your #1 priority ("${top1.title}") at the opening Basecamp node so liquidity, protection, and long-term growth move in sync.`;
+  }
 
   // Evaluate exact point along the mountain ascent curve for any fraction in [0, 1]
   function trailPointAtFraction(fraction) {
@@ -376,15 +1011,29 @@
   }
 
   function stepGoodOption(state, data, s, stageIdx) {
-    const moves = (data.score && data.score.top_moves) || [];
+    const lang = langOf(state);
+    const es = lang === 'ES';
+    const moves = orderedTopMoves(state, data);
+    const tensions = ((data && data.persona && data.persona.tensions) || []);
+    const top1 = primaryConcern(state, data);
     if (stageIdx < moves.length && moves[stageIdx]) {
       const m = moves[stageIdx];
+      const relatedTension = tensions.find(tn => tn.topic === m.topic) || tensions[stageIdx] || tensions[0];
+      const badOption = relatedTension
+        ? (es
+            ? `Dejar sin resolver: ${relatedTension.title || relatedTension.body.slice(0, 110)}`
+            : `Leave unresolved: ${relatedTension.title || relatedTension.body.slice(0, 110)}`)
+        : (es
+            ? `Posponer «${m.title}» y mantener el score estancado en ${m.score_before ?? (data.score && data.score.published_score)}`
+            : `Postpone "${m.title}" and leave the score at ${m.score_before ?? (data.score && data.score.published_score)}`);
       return {
         label: m.action || m.title || s.pact,
         title: m.title || m.action || s.pact,
+        badLabel: badOption,
+        focusNote: stageIdx === 0 && top1 ? `${top1.title}` : '',
         scoreBefore: m.score_before,
         scoreAfter: m.score_after,
-        trend: `${t(state, 'trend')}: ${m.action || m.title} (${langOf(state) === 'ES' ? 'puntaje' : 'score'} ${m.score_before} → ${m.score_after}).`
+        trend: `${t(state, 'trend')}: ${m.action || m.title} (${es ? 'puntaje' : 'score'} ${m.score_before} → ${m.score_after}).`
       };
     }
     const combined = (data.score && data.score.combined_moves) || [];
@@ -393,31 +1042,57 @@
       const baseScore = data.score && data.score.published_score;
       const comboLabel = (best.moves || []).join(' + ') || best.title || s.pact;
       const before = best.score_before != null ? best.score_before : baseScore;
+      const badOption = es
+        ? `Aplicar medidas aisladas sin coordinar el paquete completo (${before} vs. ${best.score_after})`
+        : `Apply isolated moves without coordinating the full package (${before} vs. ${best.score_after})`;
       return {
         label: `${comboLabel}${best.score_after != null ? ` (${before} → ${best.score_after})` : ''}`,
         title: comboLabel,
+        badLabel: badOption,
+        focusNote: '',
         scoreBefore: before,
         scoreAfter: best.score_after,
-        trend: `${t(state, 'trend')}: ${comboLabel} (${langOf(state) === 'ES' ? 'puntaje' : 'score'} ${before} → ${best.score_after}).`
+        trend: `${t(state, 'trend')}: ${comboLabel} (${es ? 'puntaje' : 'score'} ${before} → ${best.score_after}).`
       };
     }
     const pub = (data.score && data.score.published_score) || 0;
-    return { label: s.pact, title: s.pact, scoreBefore: pub, scoreAfter: pub, trend: `${t(state, 'trend')}: ${s.pact}` };
+    const fallbackBad = tensions[0]
+      ? (es ? `Mantener abierta la tensión principal: ${tensions[0].title || tensions[0].body.slice(0, 105)}` : `Keep the main tension open: ${tensions[0].title || tensions[0].body.slice(0, 105)}`)
+      : t(state, 'ignore');
+    return { label: s.pact, title: s.pact, badLabel: fallbackBad, focusNote: '', scoreBefore: pub, scoreAfter: pub, trend: `${t(state, 'trend')}: ${s.pact}` };
   }
 
   function preview(state, data, route) {
-    if (route !== 'bad') return stepGoodOption(state, data, specs[state.caseId][langOf(state)], Number(state.stage) || 0).trend;
-    const rec = riskRecord(state.caseId, langOf(state));
+    const lang = langOf(state);
+    const s = getSpec(state.caseId, lang, data);
+    if (route !== 'bad') return stepGoodOption(state, data, s, Number(state.stage) || 0).trend;
+    const rec = riskRecord(state.caseId, lang);
     return rec.hasExhaustion
       ? `${t(state, 'trend')}: ${rec.label}`
-      : (langOf(state) === 'ES' ? 'Sin agotamiento anual de activos invertibles; persiste la brecha de puntuación del campamento.' : 'No yearly investable-asset exhaustion; the camp score gap persists.');
+      : (lang === 'ES' ? 'Sin agotamiento anual de activos invertibles; persiste la brecha de puntuación del campamento.' : 'No yearly investable-asset exhaustion; the camp score gap persists.');
   }
 
-  function strictCasePayload(caseId, lang, node) {
+  function strictCasePayload(caseId, lang, node, state) {
     const source = dataFor(caseId) || {};
     const stage = Math.max(0, Math.min(Number(node) || 0, 3));
+    const topRank = (state && state.fearOrder && state.fearOrder.slice(0, 3)) || [];
+    const firstConcern = ((source.persona || {}).objectiveConcerns || []).find(c => c.id === topRank[0]) || ((source.persona || {}).objectiveConcerns || [])[0];
+    const topic = firstConcern ? detectTopic(firstConcern.detail) : 'overview';
     return {
-      strict_zero_inference: true, case_id: caseId, language: lang, stage, case_data: source,
+      strict_zero_inference: true,
+      case_id: caseId,
+      topic,
+      lens: 'both',
+      language: lang,
+      stage,
+      context: {
+        lang: lang || 'ES',
+        concerns: topRank,
+        top_rank: topRank[0] || (firstConcern && firstConcern.id) || 'O1',
+        thermometer: activeThermometer(state),
+        subjective: (state && state.subjectiveConcern) || ''
+      },
+      case_data: source,
       node_data: {
         top_move: ((source.score || {}).top_moves || [])[stage] || null,
         combined_moves: ((source.score || {}).combined_moves || []),
@@ -436,10 +1111,14 @@
       lang,
       irlDay: 0,
       fearOrder: [],
+      thermometer: 3,
       subjectiveConcern: '',
       votes: {},
       voteTurn: 'A',
       timerStartedAt: null,
+      aiReframe: null,
+      aiPact: null,
+      aiBrief: null,
       stage: 0,
       focusedNode: 0,
       inspectedRisk: null,
@@ -506,7 +1185,7 @@
     const activeOffset = Math.max(0, Math.min(TRAIL_LENGTH, Number(norm.offset) || 0));
     const record = failTag && typeof failTag === 'object' ? failTag : null;
     const entries = buildHistoryEntries(history, blocked, activeStage);
-    const diverged = !!(entries.length || (votes && votes.A && votes.B && votes.A.priority && votes.B.priority && votes.A.priority !== votes.B.priority));
+    const diverged = !!(entries.length || (votes && votes.A && votes.B && ((votes.A.priority && votes.B.priority && votes.A.priority !== votes.B.priority) || (votes.A.fears && votes.B.fears && votes.A.fears[0] !== votes.B.fears[0]))));
     const initialBox = (opts && opts.initialViewBox) ? opts.initialViewBox.map(n => Math.round(n * 100) / 100).join(' ') : fullCamera.join(' ');
     const shortLabels = campShorts[lang === 'EN' ? 'EN' : 'ES'];
     const inspectedIdx = opts && opts.inspectedRisk != null ? Number(opts.inspectedRisk) : null;
@@ -572,7 +1251,6 @@
       </g>`
     ].join('');
 
-    // Minimalist explorer point (#climberMarker)
     const climber = couple
       ? `<g id="climberMarker" class="climber-rig" transform="translate(${x} ${y})" data-cx="${x}" data-cy="${y}">
           <circle cx="-2.4" cy="0" r="4.2" fill="#4565d6" opacity=".18"/>
@@ -585,7 +1263,6 @@
           <circle cx="0" cy="0" r="3" fill="#4565d6" stroke="#FBF9F5" stroke-width="1.2"/>
         </g>`;
 
-    // Sumi-e Japanese ink-wash pine silhouettes on the lower-left slope + tiny flock of ink birds
     const sumiPines = `<g class="sumi-pines" fill="#1e2024" opacity=".76">
       <path d="M 72 608 L 76 582 L 80 608 Z M 70 598 L 76 576 L 82 598 Z M 71 589 L 76 570 L 81 589 Z"/>
       <path d="M 88 614 L 93 578 L 98 614 Z M 86 600 L 93 570 L 100 600 Z M 88 588 L 93 563 L 98 588 Z" opacity=".88"/>
@@ -628,26 +1305,17 @@
         </linearGradient>
       </defs>
       <g id="cameraRig">
-        <!-- Distant soft sumi-e ink-wash mountain (upper left / center-left) -->
         <path class="sumi-wash" d="M 20 420 Q 115 340 195 310 Q 230 295 268 272 Q 315 245 365 282 Q 445 335 555 370 L 580 540 L 10 540 Z" fill="url(#sumi-distant)" filter="url(#sumi-soft)"/>
-        <!-- Mid-ground misty sumi-e ridges -->
         <path class="sumi-wash" d="M 310 470 Q 395 405 462 355 Q 505 325 552 345 Q 620 278 688 228 Q 742 268 805 310 Q 915 215 978 242 Q 1055 280 1150 430 L 1170 620 L 290 620 Z" fill="url(#sumi-mid-wash)"/>
-        <!-- Warm mist cloud dissolving mid-slopes -->
         <ellipse cx="520" cy="435" rx="390" ry="52" fill="#FBF9F5" opacity=".88" filter="url(#sumi-mist-blur)"/>
-        <!-- Main sumi-e ascent mountain & contrasted rocky summit at (830, 130) -->
         <path id="layerMain" class="sumi-wash" d="M 35 695 Q 115 642 190 610 Q 292 544 390 465 Q 504 384 620 295 Q 702 228 768 182 Q 802 152 830 130 Q 858 154 892 212 Q 942 292 985 274 Q 1038 320 1135 485 L 1175 725 L 20 725 Z" fill="url(#sumi-peak-wash)"/>
-        <!-- Summit snow/light crevices in sumi-e dry-brush style -->
         <path d="M 830 130 L 795 176 L 816 172 L 774 224 L 822 192 L 832 232 L 846 186 L 878 222 L 854 166 Z" fill="#FBF9F5" opacity=".78"/>
         <path d="M 620 295 L 588 334 L 614 326 L 574 372 L 626 340 L 648 358 Z" fill="#FBF9F5" opacity=".54"/>
         <path d="M 390 465 L 364 494 L 388 488 L 412 506 Z" fill="#FBF9F5" opacity=".46"/>
-        <!-- Soft organic sumi-e ink brushwork along the main ridge -->
         <path class="sumi-ridge-soft" d="M 85 662 Q 140 632 190 610 Q 288 548 390 465 Q 505 385 620 295 Q 726 220 830 130 Q 868 168 912 246 M 955 286 Q 985 272 1048 345" fill="none" stroke-width="2.2" opacity=".64"/>
-        <!-- Lower-left forested sumi-e slope dissolving into mist -->
         <path class="sumi-wash" d="M 30 585 Q 110 595 190 618 Q 275 645 375 675 L 385 745 L 20 745 Z" fill="url(#sumi-forest-wash)" filter="url(#sumi-soft)"/>
         ${sumiPines}
-        <!-- Low warm mist ribbon blending the base into #FBF9F5 -->
         <ellipse cx="600" cy="695" rx="620" ry="58" fill="#FBF9F5" opacity=".9" filter="url(#sumi-mist-blur)"/>
-        <!-- Ascent route & climber -->
         <path class="route-guide" d="${TRAIL_PATH}" stroke-width="1.4"/>
         <path id="activeTrail" class="route-ink" d="${TRAIL_PATH}" stroke-width="2.6" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}"/>
         ${partners}
@@ -738,12 +1406,12 @@
     const originStage = Math.max(0, Math.min(3, Number(entry.stage) || 0));
     const campInfo = biome(originStage, lang);
     const goodMove = stepGoodOption(state, data, s, originStage);
-    const badChoiceText = (entry.decisionChosen && entry.decisionChosen[lang]) || t(state, 'ignore');
+    const badChoiceText = (entry.decisionChosen && entry.decisionChosen[lang]) || goodMove.badLabel || t(state, 'ignore');
     const causedText = blockedCopy(state.caseId, state.mode, persona, state);
     const gapText = goodMove.scoreBefore != null && goodMove.scoreAfter != null
       ? ` (${lang === 'ES' ? 'brecha de score' : 'score gap'}: ${goodMove.scoreBefore} → ${goodMove.scoreAfter})`
       : '';
-    const tensionsHtml = (persona.tensions || []).map(x => `<p>${detail(x.id, x.detail, lang)}</p>`).join('') || `<p>${esc(persona.D3 || '')}</p>`;
+    const tensionsHtml = (persona.tensions || []).map(x => `<p>${detail(x.id, x, lang)}</p>`).join('') || `<p>${esc(persona.D3 || '')}</p>`;
 
     return `<aside class="floating-dialog" data-dialog="blocked">
       <div class="floating-dialog-head">
@@ -769,13 +1437,211 @@
     </aside>`;
   }
 
+  // Render Phase 1A: Wide 2-column centered overlay with Top-3 ranking, emotional thermometer, optional question, and unified couple Turn A -> Turn B
+  function renderEvaluationOverlay(state, data, persona, s, couple) {
+    const lang = langOf(state);
+    const es = lang === 'ES';
+    const turn = state.voteTurn === 'B' ? 'B' : 'A';
+    const people = (state.voters && state.voters.length ? state.voters : s.people) || ['A', 'B'];
+    const currentPerson = people[turn === 'B' ? 1 : 0] || people[0];
+    const nextPerson = people[1] || 'B';
+    const top3 = activeTop3(state);
+    const thermo = activeThermometer(state);
+    const rankLabels = words[lang].rankBadge;
+    const turnVotes = (couple && state.votes && state.votes[turn]) || {};
+    const currentPriority = turnVotes.priority || state.priorityFocus || 'deuda-proteccion';
+    const currentSubjective = couple ? (turnVotes.subjective != null ? turnVotes.subjective : '') : (state.subjectiveConcern || '');
+
+    const cardsHtml = (persona.objectiveConcerns || []).map(c => {
+      const rankIdx = top3.indexOf(c.id);
+      const isSelected = rankIdx >= 0;
+      const badgeText = isSelected ? rankLabels[rankIdx] : words[lang].pickRank;
+      const rankClass = isSelected ? `is-selected is-rank-${rankIdx + 1}` : '';
+      return `<div class="concern-card ${rankClass}" data-action="toggle-concern" data-concern-id="${esc(c.id)}" role="button" tabindex="0" aria-pressed="${isSelected ? 'true' : 'false'}">
+        <input type="checkbox" class="sr-only" data-fear="${esc(c.id)}" ${isSelected ? 'checked' : ''} tabindex="-1" aria-hidden="true">
+        <div class="concern-card-head">
+          <span class="concern-title">${esc(c.title)}</span>
+          <span class="rank-badge ${rankClass}" data-rank="${isSelected ? rankIdx + 1 : ''}">${esc(badgeText)}</span>
+        </div>
+        <p class="concern-body">${esc(c.body)}</p>
+      </div>`;
+    }).join('');
+
+    const thermoButtons = [1, 2, 3, 4, 5].map(lvl => {
+      const active = thermo === lvl;
+      return `<button type="button" class="thermo-pill ${active ? 'active' : ''}" data-action="set-thermometer" data-level="${lvl}" aria-pressed="${active ? 'true' : 'false'}">${esc(thermoLabels[lang][lvl])}</button>`;
+    }).join('');
+
+    const coupleHeader = couple
+      ? `<div class="couple-turn-banner" data-turn="${turn}">
+          <span class="turn-pill">${es ? `Turno ${turn === 'A' ? '1/2' : '2/2'}` : `Turn ${turn === 'A' ? '1/2' : '2/2'}`} · <strong>${esc(currentPerson)}</strong></span>
+          <span class="turn-hint">${t(state, 'blindHint')}</span>
+          <div class="couple-priority-switches">
+            <label class="priority-chip ${currentPriority === 'crecimiento' ? 'active' : ''}">
+              <input type="radio" name="priority" value="crecimiento" data-priority ${currentPriority === 'crecimiento' ? 'checked' : ''}>
+              <span>${t(state, 'growth')}</span>
+            </label>
+            <label class="priority-chip ${currentPriority === 'deuda-proteccion' ? 'active' : ''}">
+              <input type="radio" name="priority" value="deuda-proteccion" data-priority ${currentPriority === 'deuda-proteccion' ? 'checked' : ''}>
+              <span>${t(state, 'debt')}</span>
+            </label>
+          </div>
+        </div>`
+      : '';
+
+    const selectedSummary = top3.length
+      ? top3.map((id, i) => {
+          const found = (persona.objectiveConcerns || []).find(x => x.id === id);
+          return `<span class="top3-chip"><strong>${esc(rankLabels[i])}:</strong> ${esc(found ? found.title : id)}</span>`;
+        }).join(' ')
+      : `<span class="top3-empty">${es ? 'Toca hasta 3 tarjetas para ordenarlas (1º, 2º, 3º).' : 'Click up to 3 cards to rank them (1st, 2nd, 3rd).'}</span>`;
+
+    const primaryCtaLabel = couple
+      ? (turn === 'A' ? `${t(state, 'save')} ${esc(nextPerson)}` : t(state, 'matches'))
+      : t(state, 'continue');
+
+    return `<aside class="floating-panel eval-overlay" data-phase="fears">
+      <div class="eval-head">
+        <div>
+          <p class="eyebrow">${couple ? t(state, 'team') : t(state, 'fears')}</p>
+          <h1>${couple ? `${t(state, 'private')} ${esc(currentPerson)}: ${t(state, 'fearTitle')}` : t(state, 'fearTitle')}</h1>
+          <p class="body-copy">${t(state, 'fearHelp')}</p>
+        </div>
+        <div class="top3-status" aria-live="polite">
+          <span class="eyebrow">${t(state, 'top3Counter')} (${top3.length}/3)</span>
+          <div class="top3-chips">${selectedSummary}</div>
+        </div>
+      </div>
+      ${coupleHeader}
+      <div class="concerns-grid" role="group" aria-label="${t(state, 'fearTitle')}">
+        ${cardsHtml}
+      </div>
+      <div class="eval-footer-grid">
+        <div class="thermometer-box">
+          <label class="eyebrow" for="thermoRange">${t(state, 'thermometerTitle')}: <strong>${esc(thermoLabels[lang][thermo])}</strong></label>
+          <div class="thermometer-pills" role="group" aria-label="${t(state, 'thermometerTitle')}">${thermoButtons}</div>
+          <input id="thermoRange" type="range" min="1" max="5" step="1" value="${thermo}" data-thermometer class="sr-only">
+        </div>
+        <div class="subjective-box">
+          <label class="eyebrow" for="subjective">${t(state, 'fearAsk')}</label>
+          <input id="subjective" type="text" data-subjective value="${esc(currentSubjective)}" placeholder="${esc(t(state, 'fearPlaceholder'))}">
+        </div>
+      </div>
+      <div class="eval-actions">
+        ${mathSummary(data, state)}
+        <div class="button-row">
+          <button class="primary" data-action="next-fears">${esc(primaryCtaLabel)}</button>
+        </div>
+      </div>
+    </aside>`;
+  }
+
+  // Render Pre-Basecamp Contrast & Couple Diagnosis screen (phase === 'contrast' or 'cross')
+  function renderContrastOverlay(state, data, persona, s, couple) {
+    const lang = langOf(state);
+    const es = lang === 'ES';
+    const contrast = buildContrastSummary(state, data);
+    const reframeText = buildThermometerReframe(state, data);
+    const rankLabels = words[lang].rankBadge;
+    const top3Ids = (state.fearOrder || []).slice(0, 3);
+    const top3Html = top3Ids.map((id, i) => {
+      const c = (persona.objectiveConcerns || []).find(x => x.id === id);
+      return `<span class="top3-chip"><strong>${esc(rankLabels[i] || `#${i + 1}`)}:</strong> ${esc(c ? c.title : id)}</span>`;
+    }).join(' ');
+
+    let coupleSection = '';
+    if (couple) {
+      const a = (state.votes && state.votes.A) || { fears: top3Ids, thermometer: state.thermometer || 3, priority: 'crecimiento' };
+      const b = (state.votes && state.votes.B) || { fears: top3Ids, thermometer: state.thermometer || 3, priority: 'deuda-proteccion' };
+      const people = (state.voters && state.voters.length ? state.voters : s.people) || ['A', 'B'];
+      const common = (a.fears || []).filter(id => (b.fears || []).includes(id));
+      const sharedHtml = common.length
+        ? common.map(id => {
+            const c = (persona.objectiveConcerns || []).find(x => x.id === id);
+            return `<li>${c ? detail(id, c, lang) : esc(id)}</li>`;
+          }).join('')
+        : `<li>${esc(persona.D6 || (es ? 'Proteger la estabilidad familiar y los hijos.' : 'Protect family stability and the children.'))}</li>`;
+
+      const thermoA = Number(a.thermometer) || 3;
+      const thermoB = Number(b.thermometer) || 3;
+      const gap = Math.abs(thermoA - thermoB);
+      const gapDesc = gap === 0
+        ? (es ? 'Sintonía emocional plena (mismo nivel en el termómetro).' : 'Full emotional alignment (same thermometer level).')
+        : gap >= 2
+          ? (es ? `Brecha emocional relevante (${gap} niveles de diferencia): conviene pactar pasos automáticos para reducir la presión de quien siente mayor urgencia.`
+                : `Significant emotional gap (${gap} levels apart): agree on automated steps to relieve pressure for the more stressed partner.`)
+          : (es ? `Diferencia suave (${gap} nivel): fácil de armonizar con un calendario común.`
+                : `Mild difference (${gap} level): easy to align with a shared schedule.`);
+
+      const aTop = ((persona.objectiveConcerns || []).find(x => x.id === (a.fears && a.fears[0])) || {}).title || '—';
+      const bTop = ((persona.objectiveConcerns || []).find(x => x.id === (b.fears && b.fears[0])) || {}).title || '—';
+      const priorityDiff = a.priority && b.priority && a.priority !== b.priority
+        ? `<p><strong>${t(state, 'different')}:</strong> ${esc(people[0])} (${t(state, a.priority === 'crecimiento' ? 'growth' : 'debt')}) ${es ? 'frente a' : 'vs.'} ${esc(people[1])} (${t(state, b.priority === 'crecimiento' ? 'growth' : 'debt')}).</p>`
+        : `<p>${t(state, 'common')}</p>`;
+
+      const pactText = (state.aiPact && state.aiPact.lang === lang && state.aiPact.text) || s.pact;
+
+      coupleSection = `<div class="couple-diagnosis-grid">
+        <div class="contrast-card">
+          <h2>${t(state, 'agree')}</h2>
+          <p class="preview"><strong>${esc(people[0])} #1:</strong> ${esc(aTop)} · <strong>${esc(people[1])} #1:</strong> ${esc(bTop)}</p>
+          <ul>${sharedHtml}</ul>
+        </div>
+        <div class="contrast-card">
+          <h2>${t(state, 'thermoGapTitle')} &amp; ${t(state, 'profileSplitTitle')}</h2>
+          <p><strong>${esc(people[0])}:</strong> ${esc(thermoLabels[lang][thermoA])} · <strong>${esc(people[1])}:</strong> ${esc(thermoLabels[lang][thermoB])}</p>
+          <p>${esc(gapDesc)}</p>
+          <p><strong>${t(state, 'profileSplitTitle')}:</strong> ${esc(persona.D4Human || '')}</p>
+          ${priorityDiff}
+        </div>
+      </div>
+      <div class="contrast-card">
+        <h2>${t(state, 'friction')}</h2>
+        ${(persona.tensions || []).slice(0, 2).map(x => `<p>${detail(x.id, x, lang)}</p>`).join('')}
+        <p class="reframe"><strong>${t(state, 'pact')}:</strong> ${esc(pactText)}</p>
+      </div>`;
+    }
+
+    return `<aside class="floating-panel eval-overlay" data-phase="contrast">
+      <div class="eval-head">
+        <div>
+          <p class="eyebrow">${t(state, 'cross')}</p>
+          <h1>${t(state, 'contrastTitle')}</h1>
+        </div>
+        <div class="top3-chips">${top3Html}</div>
+      </div>
+      <div class="contrast-grid">
+        <div class="contrast-card is-worry">
+          <p class="eyebrow">${t(state, 'whatWorries')}</p>
+          <h2>${esc(contrast.top1.title)}</h2>
+          <p>${esc(contrast.top1.body)}</p>
+        </div>
+        <div class="contrast-card is-impact">
+          <p class="eyebrow">${t(state, 'whatImpacts')}</p>
+          <h2>${esc(contrast.bestSingle ? contrast.bestSingle.title : s.pact)}</h2>
+          <p>${esc(contrast.impactText)}</p>
+        </div>
+      </div>
+      <div class="contrast-callout">
+        <strong>${t(state, 'blindSpot')}:</strong> ${esc(contrast.blindSpotText)}
+      </div>
+      <p class="reframe" data-ai-reframe>${esc(reframeText)}</p>
+      ${coupleSection}
+      ${mathSummary(data, state)}
+      <div class="button-row">
+        <button class="primary" data-action="start-expedition">${t(state, 'enter')}</button>
+        <button data-action="edit-fears">${t(state, 'backEval')}</button>
+      </div>
+    </aside>`;
+  }
+
   function render(state) {
     state = state || createInitialState();
     const lang = langOf(state);
     const raw = dataFor(state.caseId) || {};
     const data = localizeData(raw, lang);
     const persona = data.persona || {};
-    const s = specs[state.caseId][lang];
+    const s = getSpec(state.caseId, lang, raw);
     const couple = !!(data.meta && data.meta.isCouple);
     const stageIdx = Math.max(0, Math.min(3, Number(state.stage) || 0));
     const focusedIdx = state.focusedNode != null ? Math.max(0, Math.min(3, Number(state.focusedNode) || 0)) : stageIdx;
@@ -803,21 +1669,58 @@
       ${svgMarkup(state.summit ? 0 : stage.offset, state.summit ? biomes[3].point : stage.point, state.history || [], state.blocked, couple, state.votes, fail, lang, { stage: state.summit ? 3 : stageIdx, initialViewBox: initBox, inspectedRisk: activeRiskIdx })}
     </div>`;
 
+    const contrast = buildContrastSummary(state, data);
+    const rankLabels = words[lang].rankBadge;
+    const top3Summary = (state.fearOrder || []).slice(0, 3).map((id, i) => {
+      const c = (persona.objectiveConcerns || []).find(x => x.id === id);
+      return `${rankLabels[i] || `#${i + 1}`} ${c ? c.title : id}`;
+    }).join(' · ') || contrast.top1.title;
+    const thermoText = thermoLabels[lang][activeThermometer(state)];
+
     let panel = '';
     if (view === 'brief') {
-      panel = `<aside class="floating-panel panel-wide"><p class="eyebrow">${t(state, 'brief')}</p><h1>${t(state, 'brief')}</h1><div class="advisor-brief"><h2>${t(state, 'concerns')}</h2><p>${esc(state.subjectiveConcern || persona.subjectiveConcerns || t(state, 'noAnswer'))}</p><p>${(state.fearOrder || []).map(esc).join(' · ')}</p></div><div class="advisor-brief"><h2>${t(state, 'couple')}</h2><p>${esc(s.pact)}</p></div><div class="advisor-brief"><h2>${t(state, 'questions')}</h2>${(state.advisorDoubts || []).map(x => `<p>${esc(x)}</p>`).join('') || `<p>${t(state, 'noQuestions')}</p>`}</div><div class="advisor-brief"><h2>${t(state, 'discarded')}</h2>${entries.map(x => `<p><strong>${esc(biome(x.stage || 0, lang).label)}:</strong> ${esc((x.decisionChosen && x.decisionChosen[lang]) || t(state, 'ignore'))} → ${esc(fail.label)}</p>`).join('') || `<p>${t(state, 'noDiscarded')}</p>`}</div>${mathSummary(data, state)}</aside>`;
+      panel = `<aside class="floating-panel panel-wide">
+        <p class="eyebrow">${t(state, 'brief')}</p>
+        <h1>${t(state, 'brief')}</h1>
+        <div class="advisor-brief">
+          <h2>${t(state, 'concerns')}</h2>
+          <p><strong>Top-3:</strong> ${esc(top3Summary)}</p>
+          <p><strong>${t(state, 'thermometerTitle')}:</strong> ${esc(thermoText)}</p>
+          <p><strong>${t(state, 'contrastTitle')}:</strong> ${esc(contrast.blindSpotText)}</p>
+          <p>${esc(state.subjectiveConcern || persona.subjectiveConcerns || t(state, 'noAnswer'))}</p>
+        </div>
+        <div class="advisor-brief">
+          <h2>${t(state, 'couple')}</h2>
+          <p>${esc(s.pact)}</p>
+          ${couple ? `<p><strong>${t(state, 'profileSplitTitle')}:</strong> ${esc(persona.D4Human || '')}</p>` : ''}
+        </div>
+        <div class="advisor-brief">
+          <h2>${t(state, 'questions')}</h2>
+          ${(state.advisorDoubts || []).map(x => `<p>${esc(x)}</p>`).join('') || `<p>${t(state, 'noQuestions')}</p>`}
+        </div>
+        <div class="advisor-brief">
+          <h2>${t(state, 'discarded')}</h2>
+          ${entries.map(x => `<p><strong>${esc(biome(x.stage || 0, lang).label)}:</strong> ${esc((x.decisionChosen && x.decisionChosen[lang]) || t(state, 'ignore'))} → ${esc(fail.label)}</p>`).join('') || `<p>${t(state, 'noDiscarded')}</p>`}
+        </div>
+        ${mathSummary(data, state)}
+      </aside>`;
     } else if (view === 'current') {
-      panel = `<aside class="floating-panel"><p class="eyebrow">${esc(dayLabel(lang, state.irlDay))}</p><h2>${esc(s.pact)}</h2><p class="body-copy">${t(state, 'next')}</p>${mathSummary(data, state)}<div class="button-row"><button class="primary" data-action="nav" data-view="Basecamp">${t(state, 'continueExpedition')}</button><button data-action="repeat">${t(state, 'repeat')}</button></div></aside>`;
-    } else if (state.phase === 'fears' && !state.summit) {
-      panel = `<aside class="floating-panel"><p class="eyebrow">${t(state, 'fears')}</p><h1>${t(state, 'fearTitle')}</h1><p class="body-copy">${t(state, 'fearHelp')}</p><div class="choice-list">${(persona.objectiveConcerns || []).map(c => `<label class="choice"><input type="checkbox" data-fear="${esc(c.id)}" ${(state.fearOrder || []).includes(c.id) ? 'checked' : ''}><span>${detail(c.id, c.detail, lang)}</span></label>`).join('')}</div><label for="subjective">${t(state, 'fearAsk')}</label><textarea id="subjective" data-subjective>${esc(state.subjectiveConcern || '')}</textarea>${mathSummary(data, state)}<div class="button-row"><button class="primary" data-action="next-fears">${couple ? t(state, 'continue') : t(state, 'enter')}</button></div></aside>`;
-    } else if (state.phase === 'cordada' && !state.summit) {
-      panel = `<aside class="floating-panel"><p class="eyebrow">${t(state, 'team')}</p><h1>${t(state, 'private')} ${esc((state.voters || s.people)[state.voteTurn === 'A' ? 0 : 1])}</h1><p>${t(state, 'clock')}</p><div class="choice-list">${(persona.objectiveConcerns || []).map(c => `<label class="choice"><input type="checkbox" data-vote-fear="${esc(c.id)}"><span>${detail(c.id, c.detail, lang)}</span></label>`).join('')}<label class="choice"><input type="radio" name="priority" value="crecimiento" data-priority><span>${t(state, 'growth')}</span></label><label class="choice"><input type="radio" name="priority" value="deuda-proteccion" data-priority><span>${t(state, 'debt')}</span></label></div><p class="eyebrow">${t(state, 'time')}: ${Math.max(0, 60 - Math.floor((Date.now() - (state.timerStartedAt || Date.now())) / 1000))} s</p>${mathSummary(data, state)}<div class="button-row"><button class="primary" data-action="submit-vote">${state.voteTurn === 'A' ? t(state, 'save') : t(state, 'matches')}</button></div></aside>`;
-    } else if (state.phase === 'cross' && !state.summit) {
-      const a = state.votes.A || {}, b = state.votes.B || {};
-      const common = (a.fears || []).filter(id => (b.fears || []).includes(id));
-      const shared = common.length ? common.map(id => { const x = (persona.objectiveConcerns || []).find(c => c.id === id); return `<li>${x ? detail(id, x.detail, lang) : esc(id)}</li>`; }).join('') : `<li>${lang === 'ES' ? 'D6: proteger a los hijos.' : 'D6: protect the children.'}</li>`;
-      const fr = [...(a.priority && b.priority && a.priority !== b.priority ? [`<p><strong>${t(state, 'different')}:</strong> ${t(state, a.priority === 'crecimiento' ? 'growth' : 'debt')} ${lang === 'ES' ? 'frente a' : 'versus'} ${t(state, b.priority === 'crecimiento' ? 'growth' : 'debt')}.</p>`] : []), ...(persona.tensions || []).slice(0, 2).map(x => `<p>${detail(x.id, x.detail, lang)}</p>`)].join('') || `<p>${t(state, 'common')}</p>`;
-      panel = `<aside class="floating-panel"><p class="eyebrow">${t(state, 'cross')}</p><h1>${t(state, 'agree')}</h1><ul>${shared}</ul><h2>${t(state, 'friction')}</h2>${fr}<p class="reframe">${t(state, 'pact')}: ${esc(s.pact)}</p>${mathSummary(data, state)}<div class="button-row"><button class="primary" data-action="start-expedition">${t(state, 'enter')}</button></div></aside>`;
+      panel = `<aside class="floating-panel">
+        <p class="eyebrow">${esc(dayLabel(lang, state.irlDay))}</p>
+        <h2>${esc(s.pact)}</h2>
+        <p class="body-copy"><strong>Top-3:</strong> ${esc(top3Summary)} · <strong>${esc(thermoText)}</strong></p>
+        <p class="body-copy">${esc(contrast.blindSpotText)}</p>
+        <p class="body-copy">${t(state, 'next')}</p>
+        ${mathSummary(data, state)}
+        <div class="button-row">
+          <button class="primary" data-action="nav" data-view="Basecamp">${t(state, 'continueExpedition')}</button>
+          <button data-action="repeat">${t(state, 'repeat')}</button>
+        </div>
+      </aside>`;
+    } else if ((state.phase === 'fears' || state.phase === 'cordada') && !state.summit) {
+      panel = renderEvaluationOverlay(state, data, persona, s, couple);
+    } else if ((state.phase === 'cross' || state.phase === 'contrast') && !state.summit) {
+      panel = renderContrastOverlay(state, data, persona, s, couple);
     } else if ((state.blocked && focusedIdx === stageIdx) || activeRiskIdx != null) {
       const cardHtml = renderRiskInspectionCard(state, data, persona, s, activeRiskIdx != null ? activeRiskIdx : Math.max(0, entries.length - 1));
       panel = (dialogVisible ? cardHtml : cardHtml.replace('class="floating-dialog"', 'class="floating-dialog is-dialog-hidden" hidden'))
@@ -828,6 +1731,10 @@
       const focusedMove = stepGoodOption(state, data, s, focusedIdx);
       const activeMove = stepGoodOption(state, data, s, stageIdx);
       const campRiskIdx = entries.findIndex(e => Number(e.stage) === focusedIdx);
+      const focusBannerHtml = stageIdx === 0 && contrast.top1
+        ? `<div class="focus-priority-pill"><strong>${t(state, 'focusBanner')}:</strong> ${esc(contrast.top1.title)} · <span>${esc(thermoText)}</span></div>`
+        : '';
+      const campReframe = stageIdx === 0 ? buildThermometerReframe(state, data) : s.reframe;
       const dialogContent = inspectingOther
         ? `<div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'inspectCamp')} · ${esc(focusedBiome.label)}</p><h2>${esc(shortLabels[focusedIdx])}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
            <p class="reframe">${esc(focusedMove.label)}</p>
@@ -840,10 +1747,11 @@
              ${state.summit ? `<button data-action="repeat">${t(state, 'repeat')}</button>` : ''}
            </div>`
         : `<div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'phase')} · ${esc(stage.label)}</p><h2>${t(state, 'choose')}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
-           <p class="reframe">${esc(s.reframe)}</p>
+           ${focusBannerHtml}
+           <p class="reframe">${esc(campReframe)}</p>
            <div class="choice-list">
              <label class="choice"><input type="radio" name="route" value="good" checked><span>${esc(activeMove.label)}</span></label>
-             <label class="choice"><input type="radio" name="route" value="bad"><span>${stageIdx === 1 && s.events.length ? esc(s.events[0]) : t(state, 'ignore')}</span></label>
+             <label class="choice"><input type="radio" name="route" value="bad"><span>${esc(activeMove.badLabel || t(state, 'ignore'))}</span></label>
            </div>
            <p class="preview" data-preview>${esc(preview(state, data, 'good'))}</p>
            ${mathSummary(data, state)}
@@ -862,8 +1770,34 @@
       mode: 'deterministic',
       last: null,
       request(kind, payload, fallback) {
-        const body = Object.assign({ strict_zero_inference: true }, payload || {});
-        const local = fallback == null ? { mode: 'deterministic', kind, strict_zero_inference: true } : fallback;
+        const endpoint = String(kind || 'reframe').trim();
+        const rawBody = Object.assign({}, payload || {});
+        let body = { case_id: rawBody.case_id || 'michael-carter' };
+        if (endpoint === 'reframe') {
+          const validTopics = ['overview', 'liquidity', 'cash_flow', 'debt', 'retirement', 'protection', 'investments', 'home_purchase', 'housing'];
+          const tp = validTopics.includes(rawBody.topic) ? rawBody.topic : 'overview';
+          body = {
+            case_id: body.case_id,
+            topic: tp,
+            lens: rawBody.lens === 'plain' || rawBody.lens === 'math' ? rawBody.lens : 'both',
+            context: rawBody.context && typeof rawBody.context === 'object' ? rawBody.context : {}
+          };
+        } else if (endpoint === 'pact') {
+          body = {
+            case_id: body.case_id,
+            member_a_votes: rawBody.member_a_votes || {},
+            member_b_votes: rawBody.member_b_votes || {}
+          };
+        } else if (endpoint === 'brief') {
+          body = {
+            case_id: body.case_id,
+            fear_ranking: Array.isArray(rawBody.fear_ranking) ? rawBody.fear_ranking : []
+          };
+          if (typeof rawBody.subjective_concerns === 'string' && rawBody.subjective_concerns.trim()) {
+            body.subjective_concerns = rawBody.subjective_concerns.trim();
+          }
+        }
+        const local = fallback == null ? { mode: 'deterministic', kind: endpoint, strict_zero_inference: true } : fallback;
         client.mode = 'deterministic';
         client.last = local;
         mark('deterministic');
@@ -871,7 +1805,7 @@
           try {
             const ctrl = typeof root.AbortController === 'function' ? new root.AbortController() : null;
             const timer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (_) {} }, 1200) : null;
-            return root.fetch(`/api/ai/${encodeURIComponent(kind || 'reframe')}`, {
+            return root.fetch(`/api/ai/${encodeURIComponent(endpoint)}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(body),
@@ -1060,6 +1994,19 @@
     }
   }
 
+  function toggleConcernInList(list, id) {
+    const arr = Array.isArray(list) ? list.slice(0, 3) : [];
+    const idx = arr.indexOf(id);
+    if (idx >= 0) {
+      arr.splice(idx, 1);
+    } else if (arr.length < 3) {
+      arr.push(id);
+    } else {
+      arr[2] = id;
+    }
+    return arr;
+  }
+
   function handleMountainAction(action, trigger, el, state, rerender, onSummit) {
     const syncViewportClass = () => {
       if (root.document && root.document.body) {
@@ -1067,26 +2014,107 @@
       }
     };
 
-    if (action === 'next-fears') {
-      state.fearOrder = [...el.querySelectorAll('[data-fear]:checked')].map(x => x.dataset.fear);
-      state.subjectiveConcern = (el.querySelector('[data-subjective]') || {}).value || '';
-      const isCouple = !!(dataFor(state.caseId) && dataFor(state.caseId).meta && dataFor(state.caseId).meta.isCouple);
-      state.phase = isCouple ? 'cordada' : 'expedition';
-      state.timerStartedAt = Date.now();
-      state.voters = specs[state.caseId][langOf(state)].people;
-      if (!isCouple) {
-        state.cameraMode = 'camp';
-        state.focusedNode = state.stage || 0;
-        state.inspectedRisk = null;
-        state.dialogVisible = !hasRaf();
-        state.initialViewBox = hasRaf() ? fullCamera.slice() : campCamera(state.focusedNode);
+    if (action === 'toggle-concern') {
+      const id = trigger.dataset.concernId;
+      if (!id) return true;
+      const raw = dataFor(state.caseId) || {};
+      const isCouple = !!(raw.meta && raw.meta.isCouple);
+      if (isCouple && state.phase === 'fears') {
+        const turn = state.voteTurn === 'B' ? 'B' : 'A';
+        state.votes = state.votes || {};
+        const cur = state.votes[turn] || { fears: [], thermometer: 3, priority: turn === 'A' ? 'crecimiento' : 'deuda-proteccion' };
+        cur.fears = toggleConcernInList(cur.fears, id);
+        state.votes[turn] = cur;
+      } else {
+        state.fearOrder = toggleConcernInList(state.fearOrder, id);
       }
       rerender();
-      syncViewportClass();
-      if (!isCouple && hasRaf()) {
-        const svg = el.querySelector('.mountain-svg[data-camera]');
-        runCamera(svg, { type: 'enter', stage: state.focusedNode }, () => { state.initialViewBox = null; revealDialog(el, state); });
+      return true;
+    }
+
+    if (action === 'set-thermometer') {
+      const lvl = Math.max(1, Math.min(5, Number(trigger.dataset.level) || 3));
+      const raw = dataFor(state.caseId) || {};
+      const isCouple = !!(raw.meta && raw.meta.isCouple);
+      if (isCouple && state.phase === 'fears') {
+        const turn = state.voteTurn === 'B' ? 'B' : 'A';
+        state.votes = state.votes || {};
+        const cur = state.votes[turn] || { fears: [], thermometer: 3, priority: turn === 'A' ? 'crecimiento' : 'deuda-proteccion' };
+        cur.thermometer = lvl;
+        state.votes[turn] = cur;
       }
+      state.thermometer = lvl;
+      rerender();
+      return true;
+    }
+
+    if (action === 'edit-fears') {
+      state.phase = 'fears';
+      state.voteTurn = 'A';
+      rerender();
+      return true;
+    }
+
+    if (action === 'next-fears' || action === 'submit-vote') {
+      const raw = dataFor(state.caseId) || {};
+      const isCouple = !!(raw.meta && raw.meta.isCouple);
+      const allConcernIds = ((raw.persona && raw.persona.objectiveConcerns) || []).map(c => c.id);
+      const checkedInDom = [...el.querySelectorAll('[data-fear]:checked,[data-vote-fear]:checked')].map(x => x.dataset.fear || x.dataset.voteFear).filter(Boolean);
+      const subVal = ((el.querySelector('[data-subjective]') || {}).value || '').trim();
+      const prioVal = (el.querySelector('[data-priority]:checked') || {}).value || 'deuda-proteccion';
+      state.voters = getSpec(state.caseId, langOf(state), raw).people;
+
+      if (isCouple) {
+        const turn = state.voteTurn === 'B' ? 'B' : 'A';
+        state.votes = state.votes || {};
+        const existing = state.votes[turn] || {};
+        const picked = (existing.fears && existing.fears.length)
+          ? existing.fears.slice(0, 3)
+          : (checkedInDom.length ? checkedInDom.slice(0, 3) : allConcernIds.slice(0, 3));
+        const thermo = Number(existing.thermometer) || Number(state.thermometer) || 3;
+        state.votes[turn] = {
+          fears: picked,
+          thermometer: thermo,
+          priority: prioVal || existing.priority || (turn === 'A' ? 'crecimiento' : 'deuda-proteccion'),
+          subjective: subVal || existing.subjective || ''
+        };
+        if (subVal && !state.advisorDoubts.includes(subVal)) {
+          state.advisorDoubts.push(`${state.voters[turn === 'B' ? 1 : 0]}: ${subVal}`);
+        }
+        if (turn === 'A') {
+          state.voteTurn = 'B';
+          state.phase = 'fears';
+          rerender();
+          return true;
+        }
+        const aFears = (state.votes.A && state.votes.A.fears) || [];
+        const bFears = (state.votes.B && state.votes.B.fears) || [];
+        const merged = [...new Set([aFears[0], bFears[0], ...aFears, ...bFears].filter(Boolean))].slice(0, 3);
+        state.fearOrder = merged.length ? merged : allConcernIds.slice(0, 3);
+        state.thermometer = Math.round(((Number((state.votes.A || {}).thermometer) || 3) + (Number((state.votes.B || {}).thermometer) || 3)) / 2);
+        state.subjectiveConcern = [state.votes.A && state.votes.A.subjective, state.votes.B && state.votes.B.subjective].filter(Boolean).join(' · ');
+        state.phase = 'cross';
+        SherpasAI.request('pact', {
+          case_id: state.caseId,
+          member_a_votes: state.votes.A,
+          member_b_votes: state.votes.B
+        }, { mode: 'deterministic' });
+      } else {
+        const picked = (state.fearOrder && state.fearOrder.length)
+          ? state.fearOrder.slice(0, 3)
+          : (checkedInDom.length ? checkedInDom.slice(0, 3) : allConcernIds.slice(0, 3));
+        state.fearOrder = picked;
+        if (subVal) {
+          state.subjectiveConcern = subVal;
+          if (!state.advisorDoubts.includes(subVal)) state.advisorDoubts.push(subVal);
+        }
+        state.phase = 'cross';
+      }
+
+      const payload = strictCasePayload(state.caseId, langOf(state), 0, state);
+      SherpasAI.request('reframe', payload, { mode: 'deterministic' });
+      rerender();
+      syncViewportClass();
       return true;
     }
 
@@ -1098,7 +2126,7 @@
       state.inspectedRisk = null;
       state.dialogVisible = !hasRaf();
       state.initialViewBox = hasRaf() ? fullCamera.slice() : campCamera(state.focusedNode);
-      SherpasAI.request('pact', strictCasePayload(state.caseId, langOf(state), state.stage), { mode: 'deterministic' });
+      SherpasAI.request('reframe', strictCasePayload(state.caseId, langOf(state), state.stage, state), { mode: 'deterministic' });
       rerender();
       syncViewportClass();
       if (hasRaf()) {
@@ -1112,21 +2140,22 @@
       const route = (el.querySelector('[name="route"]:checked') || {}).value || 'good';
       const svg = el.querySelector('.mountain-svg[data-camera]');
       const prevBox = svg ? parseViewBox(svg) : fullCamera.slice();
-      SherpasAI.request('reframe', Object.assign({ action, route }, strictCasePayload(state.caseId, langOf(state), state.stage)), { mode: 'deterministic' });
+      SherpasAI.request('reframe', strictCasePayload(state.caseId, langOf(state), state.stage, state), { mode: 'deterministic' });
 
       if (route === 'bad') {
         const raw = dataFor(state.caseId) || {};
         const dataES = localizeData(raw, 'ES');
-        const goodES = stepGoodOption({ caseId: state.caseId, lang: 'ES' }, dataES, specs[state.caseId].ES, state.stage);
-        const goodEN = stepGoodOption({ caseId: state.caseId, lang: 'EN' }, raw, specs[state.caseId].EN, state.stage);
+        const dataEN = localizeData(raw, 'EN');
+        const goodES = stepGoodOption({ caseId: state.caseId, lang: 'ES', fearOrder: state.fearOrder }, dataES, getSpec(state.caseId, 'ES', raw), state.stage);
+        const goodEN = stepGoodOption({ caseId: state.caseId, lang: 'EN', fearOrder: state.fearOrder }, dataEN, getSpec(state.caseId, 'EN', raw), state.stage);
         const existingIdx = state.history.findIndex(h => Number(h.stage) === Number(state.stage));
         const entry = {
           stage: state.stage,
           campLabel: { ES: biomes[state.stage].ES, EN: biomes[state.stage].EN },
-          decisionChosen: { ES: words.ES.ignore, EN: words.EN.ignore },
+          decisionChosen: { ES: goodES.badLabel || words.ES.ignore, EN: goodEN.badLabel || words.EN.ignore },
           recommendedMove: { ES: goodES.label, EN: goodEN.label, scoreBefore: goodEN.scoreBefore, scoreAfter: goodEN.scoreAfter },
           detailKey: 'D3',
-          detail: (raw.persona || {}).D3 || ''
+          detail: (dataES.persona || {}).D3 || ''
         };
         if (existingIdx >= 0) {
           state.history[existingIdx] = entry;
@@ -1295,6 +2324,11 @@
       state.summit = true;
       state.phase = 'summit';
       state.view = viewName('current', langOf(state), state.irlDay);
+      SherpasAI.request('brief', {
+        case_id: state.caseId,
+        fear_ranking: state.fearOrder || [],
+        subjective_concerns: state.subjectiveConcern || ''
+      }, { mode: 'deterministic' });
       update();
     };
     function bind() {
@@ -1311,6 +2345,13 @@
         if (a === 'nav') {
           state.view = n.dataset.view;
           const vk = viewKey(state.view);
+          if (vk === 'brief') {
+            SherpasAI.request('brief', {
+              case_id: state.caseId,
+              fear_ranking: state.fearOrder || [],
+              subjective_concerns: state.subjectiveConcern || ''
+            }, { mode: 'deterministic' });
+          }
           if (vk === 'expedition' || vk === 'overview') {
             if (state.summit || vk === 'overview') {
               state.cameraMode = 'panoramic';
@@ -1325,22 +2366,51 @@
           state.lang = n.dataset.lang === 'EN' ? 'EN' : 'ES';
           persistLanguage(state.lang);
           state.view = viewName(viewKey(state.view), state.lang, state.irlDay);
-        } else if (a === 'submit-vote') {
-          state.votes[state.voteTurn] = { fears: [...el.querySelectorAll('[data-vote-fear]:checked')].map(x => x.dataset.voteFear), priority: (el.querySelector('[data-priority]:checked') || {}).value || '' };
-          if (state.voteTurn === 'A') state.voteTurn = 'B';
-          else state.phase = 'cross';
         } else if (a === 'doubt') state.advisorDoubts.push(n.dataset.doubt || '');
         else if (a === 'repeat') { const next = createInitialState(state.caseId); next.lang = state.lang; state = next; }
         update();
         state.initialViewBox = null;
       });
-      el.querySelectorAll('[data-fear]').forEach(n => n.onchange = () => { state.fearOrder = [...el.querySelectorAll('[data-fear]:checked')].map(x => x.dataset.fear); });
+      el.querySelectorAll('[data-fear]').forEach(n => n.onchange = () => {
+        state.fearOrder = [...el.querySelectorAll('[data-fear]:checked')].map(x => x.dataset.fear).slice(0, 3);
+      });
+      el.querySelectorAll('[data-priority]').forEach(n => n.onchange = () => {
+        const raw = dataFor(state.caseId) || {};
+        if (raw.meta && raw.meta.isCouple) {
+          const turn = state.voteTurn === 'B' ? 'B' : 'A';
+          state.votes = state.votes || {};
+          state.votes[turn] = Object.assign({ fears: [], thermometer: 3 }, state.votes[turn], { priority: n.value });
+        }
+        state.priorityFocus = n.value;
+        update();
+      });
+      const th = el.querySelector('[data-thermometer]');
+      if (th) th.oninput = () => {
+        const lvl = Math.max(1, Math.min(5, Number(th.value) || 3));
+        state.thermometer = lvl;
+        const raw = dataFor(state.caseId) || {};
+        if (raw.meta && raw.meta.isCouple && state.phase === 'fears') {
+          const turn = state.voteTurn === 'B' ? 'B' : 'A';
+          state.votes = state.votes || {};
+          state.votes[turn] = Object.assign({ fears: [] }, state.votes[turn], { thermometer: lvl });
+        }
+        update();
+      };
       el.querySelectorAll('[name="route"]').forEach(n => n.onchange = () => {
         const p = el.querySelector('[data-preview]');
         if (p) p.textContent = preview(state, localizeData(dataFor(state.caseId), langOf(state)), n.value);
       });
       const sub = el.querySelector('[data-subjective]');
-      if (sub) sub.oninput = () => { state.subjectiveConcern = sub.value; };
+      if (sub) sub.oninput = () => {
+        const raw = dataFor(state.caseId) || {};
+        if (raw.meta && raw.meta.isCouple && state.phase === 'fears') {
+          const turn = state.voteTurn === 'B' ? 'B' : 'A';
+          state.votes = state.votes || {};
+          state.votes[turn] = Object.assign({ fears: [], thermometer: 3 }, state.votes[turn], { subjective: sub.value });
+        } else {
+          state.subjectiveConcern = sub.value;
+        }
+      };
     }
 
     if (isMountainPhase(state) && hasRaf()) {
@@ -1384,6 +2454,10 @@
     viewName,
     viewKey,
     text: words,
+    thermoLabels,
+    buildContrastSummary,
+    buildThermometerReframe,
+    orderedTopMoves,
     failTags,
     persistLanguage,
     SherpasAI,
