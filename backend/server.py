@@ -1,0 +1,481 @@
+"""Servidor HTTP unificado y determinista de Sherpa Basecamp x Run IRL.
+
+La capa HTTP no calcula recomendaciones ni genera datos: entrega los casos y
+delega cada transición a los motores deterministas ya verificados del
+repositorio.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import mimetypes
+import sys
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+from typing import Any
+from urllib.parse import unquote, urlsplit
+
+# ``python -m backend.server`` is the preferred invocation.  Adding the
+# repository root also keeps the documented ``python backend/server.py`` CLI
+# usable without turning ``backend`` into a regular package.
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from backend.api import SessionStore, dispatch_request
+from backend.irl_engine import IRLEngine, create_irl_run
+from backend.mcp_client import CaseNotFoundError, get_case, list_cases
+from backend.notifications import NotificationEngine
+from backend.timeline_engine import TimelineEngine
+
+
+REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
+DEFAULT_FRONTEND_DIR = REPOSITORY_ROOT / "frontend"
+
+
+class BadRequestError(ValueError):
+    """The HTTP payload or route parameters are not usable by an engine."""
+
+
+class IRLRunStore:
+    """Thread-safe, in-memory store for deterministic Run IRL instances."""
+
+    def __init__(self, cases_dir: str | Path | None = None) -> None:
+        self.cases_dir = cases_dir
+        self._runs: dict[str, IRLEngine] = {}
+        self._notifications: dict[str, NotificationEngine] = {}
+        self._next_run_number = 1
+        self.lock = threading.RLock()
+
+    def create(self, case_id: str) -> tuple[str, IRLEngine]:
+        if not isinstance(case_id, str) or not case_id:
+            raise BadRequestError("case_id es obligatorio")
+        with self.lock:
+            engine = create_irl_run(case_id, cases_dir=self.cases_dir)
+            notification_engine = NotificationEngine(
+                case_id, cases_dir=self.cases_dir
+            )
+            run_id = f"irl-{self._next_run_number}"
+            self._next_run_number += 1
+            self._runs[run_id] = engine
+            self._notifications[run_id] = notification_engine
+            return run_id, engine
+
+    def get(self, run_id: str) -> tuple[IRLEngine, NotificationEngine]:
+        with self.lock:
+            try:
+                return self._runs[run_id], self._notifications[run_id]
+            except KeyError as error:
+                raise KeyError(run_id) from error
+
+
+class ServerState:
+    """Dependencies shared by all request handler instances of one server."""
+
+    def __init__(
+        self,
+        *,
+        session_store: SessionStore | None = None,
+        cases_dir: str | Path | None = None,
+    ) -> None:
+        self.cases_dir = cases_dir
+
+        def case_provider(case_id: str) -> Any:
+            return get_case(case_id, cases_dir=cases_dir)
+
+        self.case_provider = case_provider
+        # The case provider makes the existing MCP/local/seed client the single
+        # input for the expedition endpoints as well.
+        self.session_store = session_store or SessionStore(
+            engine=TimelineEngine(case_provider=case_provider, cases_dir=cases_dir)
+        )
+        self.runs = IRLRunStore(cases_dir=cases_dir)
+
+
+def _validate_mode(value: str | None) -> str | None:
+    if value is None:
+        return None
+    if value not in ("plain", "math"):
+        raise BadRequestError("mode debe ser plain o math")
+    return value
+
+
+def _query_value(parsed, name: str) -> str | None:
+    values = parsed.query.split("&") if parsed.query else []
+    for value in values:
+        key, separator, raw_value = value.partition("=")
+        if key == name:
+            return unquote(raw_value) if separator else ""
+    return None
+
+
+def _response_data_for_case(path: str, parsed, state: ServerState) -> tuple[int, Any]:
+    """Serve official case summaries and timeline-engine case views."""
+    mode = _validate_mode(_query_value(parsed, "mode"))
+    parts = [part for part in parsed.path.split("/") if part]
+    if parts == ["api", "cases"]:
+        # list_cases is the canonical MCP/local/seed catalogue; it contains no
+        # presentation text and therefore does not need a display mode.
+        return 200, {"cases": list_cases(cases_dir=state.cases_dir)}
+    if len(parts) == 3 and parts[:2] == ["api", "cases"]:
+        # Resolve through the same official client before the existing timeline
+        # adapter constructs its plain/math presentation.
+        state.case_provider(parts[2])
+        return dispatch_request("GET", path, store=state.session_store)
+    raise KeyError("Ruta de caso no encontrada")
+
+
+def _expedition_target(path: str) -> str | None:
+    """Translate the public expedition aliases to backend.api session routes."""
+    parsed = urlsplit(path)
+    parts = [part for part in parsed.path.split("/") if part]
+    if not parts[:2] == ["api", "expedition"]:
+        return None
+    tail = parts[2:]
+    target: str | None = None
+    if not tail:
+        target = "/api/sessions"
+    elif len(tail) >= 1:
+        session_id = tail[0]
+        rest = tail[1:]
+        route_map = {
+            (): "",
+            ("quest",): "/quest",
+            ("cordada",): "/cordada",
+            ("preview",): "/mountain/preview",
+            ("decide",): "/mountain/decide",
+            ("rewind",): "/mountain/rewind",
+            ("restart",): "/mountain/restart",
+            ("overview",): "/mountain/overview",
+            ("advisor-brief",): "/advisor-brief",
+        }
+        suffix = route_map.get(tuple(rest))
+        if suffix is not None:
+            target = f"/api/sessions/{session_id}{suffix}"
+    if target is None:
+        return None
+    return f"{target}?{parsed.query}" if parsed.query else target
+
+
+def _get_radio_context(
+    identifier: str,
+    state: ServerState,
+) -> tuple[str | None, IRLEngine, NotificationEngine]:
+    """Use an existing run when possible, otherwise build a case-only view."""
+    try:
+        engine, notifications = state.runs.get(identifier)
+        return identifier, engine, notifications
+    except KeyError:
+        engine = create_irl_run(identifier, cases_dir=state.runs.cases_dir)
+        notifications = NotificationEngine(
+            identifier, cases_dir=state.runs.cases_dir
+        )
+        return None, engine, notifications
+
+
+def _radio_payload(
+    run_id: str | None,
+    engine: IRLEngine,
+    notifications: NotificationEngine,
+) -> dict[str, Any]:
+    return {
+        "run_id": run_id,
+        "case_id": engine.case_id,
+        "current_day": engine.current_day,
+        "milestones": notifications.generate_milestone_notifications(engine),
+        "macro_shocks": notifications.list_historical_shocks(),
+    }
+
+
+def _handle_irl(
+    method: str,
+    parsed,
+    body: dict[str, Any],
+    state: ServerState,
+) -> tuple[int, Any]:
+    parts = [part for part in parsed.path.split("/") if part]
+    if method == "POST" and parts == ["api", "irl"]:
+        run_id, engine = state.runs.create(body.get("case_id"))
+        return 201, {
+            "run_id": run_id,
+            "case_id": engine.case_id,
+            "focus_mode_view": engine.get_focus_mode_view(),
+        }
+    if len(parts) < 3 or parts[:2] != ["api", "irl"]:
+        raise KeyError("Ruta Run IRL no encontrada")
+
+    run_id = parts[2]
+    suffix = parts[3:]
+    engine, _ = state.runs.get(run_id)
+    with state.runs.lock:
+        if method == "GET" and not suffix:
+            mountain = engine.get_mountain_overview()
+            timeline = engine.get_timeline_view()
+            focus = engine.get_focus_mode_view()
+            return 200, {
+                "run_id": run_id,
+                "case_id": engine.case_id,
+                "focus_mode_view": focus,
+                "timeline_view": timeline,
+                "mountain_overview": mountain,
+            }
+        if method == "POST" and suffix == ["check"]:
+            step_id = body.get("step_id")
+            if not step_id:
+                raise BadRequestError("step_id es obligatorio")
+            result = engine.check_step(
+                step_id,
+                member=body.get("member"),
+                completed_day=body.get("completed_day"),
+            )
+            return 200, {"run_id": run_id, **result}
+        if method == "POST" and suffix == ["uncheck"]:
+            step_id = body.get("step_id")
+            if not step_id:
+                raise BadRequestError("step_id es obligatorio")
+            result = engine.uncheck_step(step_id, member=body.get("member"))
+            return 200, {"run_id": run_id, **result}
+        if method == "POST" and suffix == ["advance"]:
+            day = body.get("day", body.get("current_day"))
+            if day is None:
+                raise BadRequestError("day es obligatorio")
+            result = engine.advance_day(int(day))
+            return 200, {"run_id": run_id, **result}
+        if method == "POST" and suffix == ["repeat"]:
+            reset_irl = body.get("reset_irl", False)
+            if not isinstance(reset_irl, bool):
+                raise BadRequestError("reset_irl debe ser booleano")
+            result = engine.repeat_expedition(reset_irl=reset_irl)
+            return 200, {"run_id": run_id, **result}
+        if method == "GET" and suffix == ["inertia"]:
+            return 200, {"run_id": run_id, **engine.compute_inertia_cost()}
+    raise KeyError("Ruta Run IRL no encontrada")
+
+
+def _handle_radio(
+    method: str,
+    parsed,
+    body: dict[str, Any],
+    state: ServerState,
+) -> tuple[int, Any, str | None]:
+    """Return status, payload and an optional non-JSON content type."""
+    parts = [part for part in parsed.path.split("/") if part]
+    if method == "GET" and parts == ["api", "radio"]:
+        # The historical series is portfolio-specific.  The canonical first
+        # supported case gives the complete official 11-event series without
+        # fabricating a cross-household aggregate.
+        notifications = NotificationEngine(
+            "michael-carter", cases_dir=state.runs.cases_dir
+        )
+        return 200, {"historical_shocks": notifications.list_historical_shocks()}, None
+    if len(parts) < 3 or parts[:2] != ["api", "radio"]:
+        raise KeyError("Ruta Radio no encontrada")
+
+    identifier = parts[2]
+    suffix = parts[3:]
+    run_id, engine, notifications = _get_radio_context(identifier, state)
+    if method == "GET" and not suffix:
+        return 200, _radio_payload(run_id, engine, notifications), None
+    if method == "POST" and suffix == ["shock"]:
+        event_name = body.get("event_name")
+        if event_name is not None and not isinstance(event_name, str):
+            raise BadRequestError("event_name debe ser texto")
+        for key in ("alert_type", "headline"):
+            if key in body and body[key] is not None and not isinstance(body[key], str):
+                raise BadRequestError(f"{key} debe ser texto")
+        market_drop_pct = body.get("market_drop_pct")
+        if market_drop_pct is not None:
+            try:
+                market_drop_pct = float(market_drop_pct)
+            except (TypeError, ValueError) as error:
+                raise BadRequestError("market_drop_pct debe ser numerico") from error
+
+        kwargs = {
+            key: body[key]
+            for key in ("alert_type", "headline")
+            if key in body and body[key] is not None
+        }
+        if market_drop_pct is not None:
+            kwargs["market_drop_pct"] = market_drop_pct
+        if event_name:
+            notification = notifications.generate_macro_shock_notification(
+                **kwargs, event_name=event_name
+            )
+        else:
+            matched = notifications.match_macro_shock(**kwargs)
+            notification = notifications.generate_macro_shock_notification(
+                **kwargs, event_name=matched["name"]
+            )
+        return 200, {"run_id": run_id, **notification}, None
+    if method == "GET" and suffix == ["ics"]:
+        if run_id is None:
+            raise KeyError(identifier)
+        return 200, engine.export_ics(), "text/calendar; charset=utf-8"
+    raise KeyError("Ruta Radio no encontrada")
+
+
+def _json_bytes(data: Any) -> bytes:
+    return json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
+
+
+def create_server(
+    host: str = "127.0.0.1",
+    port: int = 8000,
+    *,
+    store: SessionStore | None = None,
+    cases_dir: str | Path | None = None,
+    frontend_dir: str | Path | None = None,
+) -> ThreadingHTTPServer:
+    """Create the standard-library threaded API server without starting it."""
+    state = ServerState(session_store=store, cases_dir=cases_dir)
+    static_root = Path(frontend_dir) if frontend_dir is not None else DEFAULT_FRONTEND_DIR
+
+    class Handler(BaseHTTPRequestHandler):
+        """HTTP adapter for static files and the unified deterministic API."""
+
+        server_version = "SherpaBasecamp/1.0"
+
+        def _cors_headers(self) -> None:
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, PATCH, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+
+        def _send(self, status: int, data: Any = None, content_type: str | None = None) -> None:
+            if content_type is None:
+                content_type = "application/json; charset=utf-8"
+                payload = b"" if status == 204 else _json_bytes(data)
+            elif isinstance(data, bytes):
+                payload = data
+            elif isinstance(data, str):
+                payload = data.encode("utf-8")
+            else:
+                payload = _json_bytes(data)
+            self.send_response(status)
+            self.send_header("Content-Type", content_type)
+            self.send_header("Content-Length", str(len(payload)))
+            self._cors_headers()
+            self.end_headers()
+            if payload:
+                self.wfile.write(payload)
+
+        def _read_body(self) -> dict[str, Any]:
+            raw_length = self.headers.get("Content-Length", "0")
+            try:
+                content_length = int(raw_length)
+            except ValueError as error:
+                raise BadRequestError("Content-Length invalido") from error
+            if content_length < 0:
+                raise BadRequestError("Content-Length invalido")
+            if content_length == 0:
+                return {}
+            try:
+                value = json.loads(self.rfile.read(content_length).decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                raise BadRequestError("JSON invalido") from error
+            if not isinstance(value, dict):
+                raise BadRequestError("El cuerpo JSON debe ser un objeto")
+            return value
+
+        def _serve_static(self, parsed) -> bool:
+            if self.command != "GET":
+                return False
+            relative_url = unquote(parsed.path).lstrip("/")
+            relative_path = Path("index.html") if not relative_url else Path(relative_url)
+            try:
+                root = static_root.resolve()
+                candidate = (root / relative_path).resolve()
+                candidate.relative_to(root)
+            except (OSError, ValueError):
+                self._send(404, {"error": "not_found", "message": "Ruta no encontrada"})
+                return True
+            if not candidate.is_file():
+                self._send(404, {"error": "not_found", "message": "Ruta no encontrada"})
+                return True
+            mime_type, _ = mimetypes.guess_type(candidate.name)
+            if mime_type is None:
+                mime_type = "application/octet-stream"
+            if mime_type.startswith("text/") or mime_type in {"application/javascript", "application/json"}:
+                mime_type = f"{mime_type}; charset=utf-8"
+            self._send(200, candidate.read_bytes(), mime_type)
+            return True
+
+        def _dispatch(self) -> None:
+            if self.command == "OPTIONS":
+                self._send(204)
+                return
+            parsed = urlsplit(self.path)
+            if not parsed.path.startswith("/api/") and parsed.path != "/health":
+                if not self._serve_static(parsed):
+                    self._send(404, {"error": "not_found", "message": "Ruta no encontrada"})
+                return
+            try:
+                body = self._read_body() if self.command in ("POST", "PATCH") else {}
+                if self.command == "GET" and parsed.path.startswith("/api/cases"):
+                    status, data = _response_data_for_case(self.path, parsed, state)
+                    self._send(status, data)
+                    return
+
+                expedition_path = _expedition_target(self.path)
+                if expedition_path is not None:
+                    status, data = dispatch_request(
+                        self.command,
+                        expedition_path,
+                        body,
+                        store=state.session_store,
+                    )
+                    self._send(status, data)
+                    return
+
+                if parsed.path.startswith("/api/sessions") or parsed.path == "/health":
+                    status, data = dispatch_request(
+                        self.command,
+                        self.path,
+                        body,
+                        store=state.session_store,
+                    )
+                    self._send(status, data)
+                    return
+                if parsed.path == "/api/irl" or parsed.path.startswith("/api/irl/"):
+                    status, data = _handle_irl(self.command, parsed, body, state)
+                    self._send(status, data)
+                    return
+                if parsed.path == "/api/radio" or parsed.path.startswith("/api/radio/"):
+                    status, data, content_type = _handle_radio(
+                        self.command, parsed, body, state
+                    )
+                    self._send(status, data, content_type)
+                    return
+                self._send(404, {"error": "not_found", "message": "Ruta no encontrada"})
+            except (BadRequestError, ValueError, TypeError) as error:
+                self._send(400, {"error": "bad_request", "message": str(error)})
+            except (KeyError, FileNotFoundError, CaseNotFoundError) as error:
+                self._send(404, {"error": "not_found", "message": str(error)})
+            except Exception:
+                self._send(500, {"error": "internal_error", "message": "Error interno"})
+
+        do_GET = _dispatch
+        do_POST = _dispatch
+        do_PATCH = _dispatch
+        do_OPTIONS = _dispatch
+
+        def log_message(self, format_string: str, *args: Any) -> None:
+            """Keep the library server quiet; callers may add their own logging."""
+
+    httpd = ThreadingHTTPServer((host, port), Handler)
+    httpd.state = state  # type: ignore[attr-defined]
+    httpd.frontend_dir = static_root  # type: ignore[attr-defined]
+    return httpd
+
+
+def main(argv: list[str] | None = None) -> None:
+    """Start the unified server from the command line."""
+    parser = argparse.ArgumentParser(description="Sherpa Basecamp x Run IRL API")
+    parser.add_argument("--host", default="127.0.0.1")
+    parser.add_argument("--port", type=int, default=8000)
+    args = parser.parse_args(argv)
+    create_server(args.host, args.port).serve_forever()
+
+
+if __name__ == "__main__":
+    main()
