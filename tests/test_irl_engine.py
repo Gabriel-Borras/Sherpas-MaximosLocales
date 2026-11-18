@@ -8,6 +8,7 @@ from pathlib import Path
 import re
 import tempfile
 import unittest
+from unittest import mock
 
 from backend.irl_engine import (
     DEFAULT_FALLBACK_CASES_DIR,
@@ -88,6 +89,47 @@ class TestCaseResolution(unittest.TestCase):
     def test_unknown_case_raises_file_not_found(self) -> None:
         with self.assertRaises(FileNotFoundError):
             load_case_data("non-existent-case")
+
+    def test_embedded_fallback_works_without_cases_dir_on_disk(self) -> None:
+        with tempfile.TemporaryDirectory() as empty_workspace, tempfile.TemporaryDirectory() as isolated_tmp:
+            empty_repo = Path(empty_workspace) / "repo"
+            empty_repo.mkdir()
+            empty_cwd = Path(empty_workspace) / "cwd"
+            empty_cwd.mkdir()
+
+            clean_env = {
+                k: v
+                for k, v in os.environ.items()
+                if k not in ("SHERPAS_CASES_DIR", "CASES_DIR")
+            }
+            with (
+                mock.patch.dict(os.environ, clean_env, clear=True),
+                mock.patch("backend.irl_engine._repo_root", return_value=empty_repo),
+                mock.patch("backend.irl_engine.DEFAULT_FALLBACK_CASES_DIR", empty_repo / "missing_cases"),
+                mock.patch("pathlib.Path.cwd", return_value=empty_cwd),
+                mock.patch("tempfile.gettempdir", return_value=isolated_tmp),
+            ):
+                available = list_available_cases()
+                self.assertEqual(available, list(SUPPORTED_CASES))
+
+                for cid in SUPPORTED_CASES:
+                    data = load_case_data(cid)
+                    self.assertTrue(
+                        Path(data["case_dir"]).is_relative_to(Path(isolated_tmp) / "sherpas_canonical_cases_v1")
+                    )
+                    eng = IRLEngine(cid)
+                    ne = NotificationEngine(cid)
+                    self.assertEqual(len(ne.list_historical_shocks()), 11)
+                    self.assertIsNotNone(eng.get_focus_mode_view(0)["focus_step"])
+
+                mc_eng = IRLEngine("michael-carter")
+                mc10 = mc_eng.advance_day(10)
+                levers = {lv["key"]: lv for lv in mc10["inertia_cost"]["active_levers"]}
+                self.assertEqual(levers["high_apr_card"]["annual_cost_usd"], 700.0)
+                self.assertEqual(levers["401k_tax_delay"]["annual_cost_usd"], 1800.0)
+
+                with self.assertRaises(FileNotFoundError):
+                    load_case_data("non-existent-case")
 
 
 class TestIRLEngineTimelineAndFocus(unittest.TestCase):
