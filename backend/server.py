@@ -8,10 +8,12 @@ repositorio.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import mimetypes
 import sys
 import threading
+import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -108,6 +110,84 @@ class ServerState:
             cases_dir=cases_dir,
             llm_client=self.llm_client,
         )
+        # Rooms are intentionally independent from expedition sessions.  They
+        # only synchronize the blind inputs sent by two devices, and can be
+        # used with any case accepted by ``case_provider``.
+        self.rooms: dict[str, dict[str, Any]] = {}
+        self.rooms_lock = threading.RLock()
+
+    def create_room(self, case_id: str) -> dict[str, Any]:
+        """Create a room after the canonical provider has accepted its case."""
+        # Validate before allocating an id, so invalid case ids cannot create
+        # orphaned rooms.  ``case_provider`` also keeps this generic as the
+        # catalogue gains cases from local files or MCP.
+        self.case_provider(case_id)
+        with self.rooms_lock:
+            room_id = f"room-{uuid.uuid4().hex}"
+            room = {
+                "room_id": room_id,
+                "case_id": case_id,
+                "share_query": f"?case={case_id}&room={room_id}&member=B",
+                "evaluation": {"A": None, "B": None},
+                "evaluation_ready": False,
+                "decisions": {},
+            }
+            self.rooms[room_id] = room
+            return copy.deepcopy(room)
+
+    def get_room(self, room_id: str) -> dict[str, Any]:
+        """Return an immutable-to-callers snapshot of one synchronized room."""
+        with self.rooms_lock:
+            try:
+                return copy.deepcopy(self.rooms[room_id])
+            except KeyError as error:
+                raise KeyError(room_id) from error
+
+    def submit_room_evaluation(
+        self,
+        room_id: str,
+        member: str,
+        evaluation: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Save one member's blind evaluation and return the updated room."""
+        with self.rooms_lock:
+            try:
+                room = self.rooms[room_id]
+            except KeyError as error:
+                raise KeyError(room_id) from error
+            room["evaluation"][member] = copy.deepcopy(evaluation)
+            room["evaluation_ready"] = all(
+                room["evaluation"][participant] is not None
+                for participant in ("A", "B")
+            )
+            return copy.deepcopy(room)
+
+    def submit_room_decision(
+        self,
+        room_id: str,
+        member: str,
+        stage: str,
+        vote: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Save one stage vote and derive its pair readiness and alignment."""
+        with self.rooms_lock:
+            try:
+                room = self.rooms[room_id]
+            except KeyError as error:
+                raise KeyError(room_id) from error
+            decision = room["decisions"].setdefault(
+                stage,
+                {"A": None, "B": None, "ready": False, "aligned": False},
+            )
+            decision[member] = copy.deepcopy(vote)
+            decision["ready"] = all(
+                decision[participant] is not None for participant in ("A", "B")
+            )
+            decision["aligned"] = bool(
+                decision["ready"]
+                and decision["A"]["route"] == decision["B"]["route"]
+            )
+            return copy.deepcopy(room)
 
 
 def _validate_mode(value: str | None) -> str | None:
@@ -184,6 +264,70 @@ def _response_data_for_case(path: str, parsed, state: ServerState) -> tuple[int,
             overview_path = f"{overview_path}?{parsed.query}"
         return dispatch_request("GET", overview_path, store=state.session_store)
     raise KeyError("Ruta de caso no encontrada")
+
+
+def _room_member(body: dict[str, Any]) -> str:
+    """Return a room participant while keeping the public A/B contract strict."""
+    member = body.get("member")
+    if member not in {"A", "B"}:
+        raise BadRequestError("member debe ser A o B")
+    return member
+
+
+def _room_stage(value: Any) -> str:
+    """Validate a four-stage decision and expose its canonical string key."""
+    if isinstance(value, bool):
+        raise BadRequestError("stage debe ser un entero entre 0 y 3")
+    if isinstance(value, int):
+        stage = value
+    elif isinstance(value, str) and value in {"0", "1", "2", "3"}:
+        stage = int(value)
+    else:
+        raise BadRequestError("stage debe ser un entero entre 0 y 3")
+    if not 0 <= stage <= 3:
+        raise BadRequestError("stage debe ser un entero entre 0 y 3")
+    return str(stage)
+
+
+def _handle_rooms(
+    method: str,
+    parsed,
+    body: dict[str, Any],
+    state: ServerState,
+) -> tuple[int, Any]:
+    """Handle lightweight, case-agnostic synchronization rooms for two devices."""
+    parts = [part for part in parsed.path.split("/") if part]
+    if method == "POST" and parts == ["api", "rooms"]:
+        case_id = body.get("case_id")
+        if not isinstance(case_id, str) or not case_id.strip():
+            raise BadRequestError("case_id es obligatorio")
+        return 201, state.create_room(case_id.strip())
+
+    if len(parts) < 3 or parts[:2] != ["api", "rooms"]:
+        raise KeyError("Ruta de sala no encontrada")
+    room_id = parts[2]
+    suffix = parts[3:]
+    if method == "GET" and not suffix:
+        return 200, state.get_room(room_id)
+
+    if method == "POST" and suffix == ["evaluation"]:
+        member = _room_member(body)
+        evaluation = {
+            field: body.get(field)
+            for field in ("top_fears", "thermometer", "priority", "subjective")
+        }
+        return 200, state.submit_room_evaluation(room_id, member, evaluation)
+
+    if method == "POST" and suffix == ["decision"]:
+        member = _room_member(body)
+        route = body.get("route")
+        if route not in {"good", "bad"}:
+            raise BadRequestError("route debe ser good o bad")
+        stage = _room_stage(body.get("stage"))
+        vote = {"route": route, "label": body.get("label")}
+        return 200, state.submit_room_decision(room_id, member, stage, vote)
+
+    raise KeyError("Ruta de sala no encontrada")
 
 
 def _expedition_target(path: str) -> str | None:
@@ -642,6 +786,11 @@ def create_server(
                 body = self._read_body() if self.command in ("POST", "PATCH") else {}
                 if self.command == "GET" and parsed.path.startswith("/api/cases"):
                     status, data = _response_data_for_case(self.path, parsed, state)
+                    self._send(status, data)
+                    return
+
+                if parsed.path == "/api/rooms" or parsed.path.startswith("/api/rooms/"):
+                    status, data = _handle_rooms(self.command, parsed, body, state)
                     self._send(status, data)
                     return
 

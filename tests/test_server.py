@@ -17,7 +17,13 @@ from backend.behavioral_narrator import (
 )
 from backend.llm_proxy import LLMProxyClient
 from backend.mcp_client import CaseNotFoundError
-from backend.server import BadRequestError, ServerState, _handle_ai, create_server
+from backend.server import (
+    BadRequestError,
+    ServerState,
+    _handle_ai,
+    _handle_rooms,
+    create_server,
+)
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -428,6 +434,151 @@ class NarrativeRouteUnitTests(unittest.TestCase):
         for path, payload in invalid_payloads:
             with self.subTest(path=path, payload=payload):
                 status, body = self.post(path, payload)
+                self.assertEqual(status, 400)
+                self.assertEqual(body["error"], "bad_request")
+
+
+class RoomRouteUnitTests(unittest.TestCase):
+    """Exercise two-device room synchronization without binding a TCP socket."""
+
+    case_id = "timothy-melanie-weah"
+
+    def setUp(self) -> None:
+        self.state = ServerState(
+            llm_client=LLMProxyClient(team_key="", transport="urllib")
+        )
+
+        def only_test_case(case_id: str) -> dict[str, str]:
+            if case_id != self.case_id:
+                raise CaseNotFoundError(f"Caso no encontrado: {case_id}")
+            return {"id": case_id}
+
+        # Isolate the unit tests from MCP/local I/O while retaining the same
+        # generic case-provider seam used by ServerState in production.
+        self.state.case_provider = only_test_case
+
+    def room_request(
+        self,
+        method: str,
+        path: str,
+        payload: dict[str, object] | None = None,
+    ) -> tuple[int, object]:
+        """Match the HTTP adapter's 400/404 exception-to-response contract."""
+        try:
+            return _handle_rooms(
+                method, urlsplit(path), payload or {}, self.state
+            )
+        except (BadRequestError, ValueError, TypeError) as exc:
+            return 400, {"error": "bad_request", "message": str(exc)}
+        except (KeyError, FileNotFoundError, CaseNotFoundError) as exc:
+            return 404, {"error": "not_found", "message": str(exc)}
+
+    def test_room_syncs_evaluations_and_all_four_decision_stages(self) -> None:
+        status, room = self.room_request("POST", "/api/rooms", {"case_id": self.case_id})
+        self.assertEqual(status, 201)
+        self.assertIsInstance(room, dict)
+        room_id = room["room_id"]
+        self.assertEqual(
+            room,
+            {
+                "room_id": room_id,
+                "case_id": self.case_id,
+                "share_query": f"?case={self.case_id}&room={room_id}&member=B",
+                "evaluation": {"A": None, "B": None},
+                "evaluation_ready": False,
+                "decisions": {},
+            },
+        )
+
+        evaluation_a = {
+            "member": "A",
+            "top_fears": ["O1", "O3"],
+            "thermometer": 7,
+            "priority": "liquidity",
+            "subjective": "No quedarnos sin colchón.",
+        }
+        status, after_a = self.room_request(
+            "POST", f"/api/rooms/{room_id}/evaluation", evaluation_a
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(after_a["evaluation"]["A"], {key: value for key, value in evaluation_a.items() if key != "member"})
+        self.assertIsNone(after_a["evaluation"]["B"])
+        self.assertFalse(after_a["evaluation_ready"])
+
+        evaluation_b = {
+            "member": "B",
+            "top_fears": ["O2", "O1"],
+            "thermometer": 4,
+            "priority": "debt",
+            "subjective": "El interés de la tarjeta.",
+        }
+        status, after_b = self.room_request(
+            "POST", f"/api/rooms/{room_id}/evaluation", evaluation_b
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(after_b["evaluation"]["B"], {key: value for key, value in evaluation_b.items() if key != "member"})
+        self.assertTrue(after_b["evaluation_ready"])
+
+        stage_votes = (
+            (0, "good", "good", True),
+            (1, "bad", "bad", True),
+            (2, "good", "good", True),
+            (3, "good", "bad", False),
+        )
+        for stage, route_a, route_b, aligned in stage_votes:
+            with self.subTest(stage=stage):
+                status, after_vote_a = self.room_request(
+                    "POST",
+                    f"/api/rooms/{room_id}/decision",
+                    {"member": "A", "stage": stage, "route": route_a, "label": "A"},
+                )
+                self.assertEqual(status, 200)
+                self.assertFalse(after_vote_a["decisions"][str(stage)]["ready"])
+
+                status, after_vote_b = self.room_request(
+                    "POST",
+                    f"/api/rooms/{room_id}/decision",
+                    {"member": "B", "stage": str(stage), "route": route_b, "label": "B"},
+                )
+                self.assertEqual(status, 200)
+                decision = after_vote_b["decisions"][str(stage)]
+                self.assertTrue(decision["ready"])
+                self.assertEqual(decision["aligned"], aligned)
+                self.assertEqual(decision["A"]["route"], route_a)
+                self.assertEqual(decision["B"]["route"], route_b)
+
+        status, current = self.room_request("GET", f"/api/rooms/{room_id}")
+        self.assertEqual(status, 200)
+        self.assertEqual(current, after_vote_b)
+
+    def test_room_validation_returns_400_or_404(self) -> None:
+        for payload, expected_status in (
+            ({}, 400),
+            ({"case_id": "missing-case"}, 404),
+        ):
+            with self.subTest(create=payload):
+                status, body = self.room_request("POST", "/api/rooms", payload)
+                self.assertEqual(status, expected_status)
+                self.assertEqual(
+                    body["error"],
+                    "bad_request" if expected_status == 400 else "not_found",
+                )
+
+        status, body = self.room_request("GET", "/api/rooms/missing-room")
+        self.assertEqual(status, 404)
+        self.assertEqual(body["error"], "not_found")
+
+        _, room = self.room_request("POST", "/api/rooms", {"case_id": self.case_id})
+        room_id = room["room_id"]
+        invalid_requests = (
+            (f"/api/rooms/{room_id}/evaluation", {"member": "C"}),
+            (f"/api/rooms/{room_id}/decision", {"member": "C", "stage": 0, "route": "good"}),
+            (f"/api/rooms/{room_id}/decision", {"member": "A", "stage": 0, "route": "sideways"}),
+            (f"/api/rooms/{room_id}/decision", {"member": "A", "stage": 4, "route": "good"}),
+        )
+        for path, payload in invalid_requests:
+            with self.subTest(path=path, payload=payload):
+                status, body = self.room_request("POST", path, payload)
                 self.assertEqual(status, 400)
                 self.assertEqual(body["error"], "bad_request")
 
