@@ -69,7 +69,7 @@
       pathCompareTitle: 'Comparativa de caminos',
       safeRoute: 'Camino seguro',
       riskRoute: 'Desvío de riesgo',
-      agreeAdvance: 'Acordar camino seguro y avanzar',
+      agreeAdvance: 'Reunir cordada y avanzar',
       seeRedBranch: 'Ver desvío rojo',
       redoEval: 'Rehacer evaluación',
       blocked: 'Desvío detectado en la ruta', stopped: 'Análisis del camino erróneo', impact: 'Consecuencia proyectada',
@@ -150,7 +150,7 @@
       pathCompareTitle: 'Path comparison',
       safeRoute: 'Safe path',
       riskRoute: 'Risk deviation',
-      agreeAdvance: 'Agree on safe path & advance',
+      agreeAdvance: 'Reunite rope team & advance',
       seeRedBranch: 'Inspect red deviation',
       redoEval: 'Redo evaluation',
       blocked: 'Route deviation detected', stopped: 'Failed path analysis', impact: 'Projected consequence',
@@ -1889,8 +1889,8 @@
       </g>`;
     }).join('');
 
-    const partners = couple && activeOffset < TRAIL_LENGTH
-      ? `<path id="partnerRopeA" class="partner-rope" d="${TRAIL_PATH}" transform="translate(-1.4 -1)" stroke="#141414" stroke-width="1.2" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity=".62"/><path id="partnerRopeB" class="partner-rope" d="${TRAIL_PATH}" transform="translate(1.4 1)" stroke="#525252" stroke-width="1.2" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity=".52"/>`
+    const partners = couple
+      ? `<path id="partnerRopeA" class="partner-rope" d="${TRAIL_PATH}" transform="translate(-1.4 -1)" stroke="var(--partner-a)" stroke-width="1.35" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity="${activeOffset < TRAIL_LENGTH ? '.72' : '0'}"/><path id="partnerRopeB" class="partner-rope" d="${TRAIL_PATH}" transform="translate(1.4 1)" stroke="var(--partner-b)" stroke-width="1.35" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity="${activeOffset < TRAIL_LENGTH ? '.72' : '0'}"/>`
       : '';
 
     const campNodes = [
@@ -1925,12 +1925,21 @@
       </g>`
     ].join('');
 
+    const peopleInit = (opts && Array.isArray(opts.people) && opts.people.length >= 2)
+      ? [String(opts.people[0] || 'A').charAt(0).toUpperCase(), String(opts.people[1] || 'B').charAt(0).toUpperCase()]
+      : ['A', 'B'];
     const climber = couple
-      ? `<g id="climberMarker" class="climber-rig" transform="translate(${x} ${y})" data-cx="${x}" data-cy="${y}">
-          <circle cx="-2.4" cy="0" r="4.6" fill="#141414" opacity=".14"/>
-          <circle cx="2.4" cy="0" r="4.6" fill="#141414" opacity=".12"/>
-          <circle cx="-2.4" cy="0" r="2.6" fill="#141414" stroke="#ffffff" stroke-width="1.15"/>
-          <circle cx="2.4" cy="0" r="2.6" fill="#525252" stroke="#ffffff" stroke-width="1.15"/>
+      ? `<g id="climberMarker" class="climber-rig" data-cx="${x}" data-cy="${y}">
+          <g id="climberMarkerA" class="climber-member" transform="translate(${x - 4} ${y})">
+            <circle cx="0" cy="0" r="6" fill="var(--partner-a)" opacity=".18"/>
+            <circle cx="0" cy="0" r="4" fill="var(--partner-a)" stroke="#ffffff" stroke-width="1.15"/>
+            <text x="0" y="1.3" text-anchor="middle" fill="#ffffff" font-size="3.6" font-weight="700" font-family="system-ui">${esc(peopleInit[0])}</text>
+          </g>
+          <g id="climberMarkerB" class="climber-member" transform="translate(${x + 4} ${y})">
+            <circle cx="0" cy="0" r="6" fill="var(--partner-b)" opacity=".18"/>
+            <circle cx="0" cy="0" r="4" fill="var(--partner-b)" stroke="#ffffff" stroke-width="1.15"/>
+            <text x="0" y="1.3" text-anchor="middle" fill="#ffffff" font-size="3.6" font-weight="700" font-family="system-ui">${esc(peopleInit[1])}</text>
+          </g>
         </g>`
       : `<g id="climberMarker" class="climber-rig" transform="translate(${x} ${y})" data-cx="${x}" data-cy="${y}">
           <circle cx="0" cy="0" r="5.5" fill="#141414" opacity=".16"/>
@@ -2329,7 +2338,7 @@
     }
 
     const wallpaper = `<div class="mountain-stage mountain-fullscreen ${state.blocked ? 'storm-shake' : ''}" data-biome="${stage.id}" data-dialog-ready="${dialogVisible ? 'true' : 'false'}">
-      ${svgMarkup(state.summit ? 0 : stage.offset, state.summit ? biomes[3].point : stage.point, state.history || [], state.blocked, couple, state.votes, fail, lang, { stage: state.summit ? 3 : stageIdx, initialViewBox: initBox, inspectedRisk: activeRiskIdx })}
+      ${svgMarkup(state.summit ? 0 : stage.offset, state.summit ? biomes[3].point : stage.point, state.history || [], state.blocked, couple, state.votes, fail, lang, { stage: state.summit ? 3 : stageIdx, initialViewBox: initBox, inspectedRisk: activeRiskIdx, people: s.people })}
     </div>`;
 
     const contrast = buildContrastSummary(state, data);
@@ -2427,21 +2436,27 @@
       } else if (showPathCompare) {
         const aIsBad = stageDec.A.route === 'bad';
         const bIsBad = stageDec.B.route === 'bad';
+        const nextCampName = shortLabels[Math.min(3, stageIdx + 1)];
+        const failShort = fail && fail.hasExhaustion
+          ? (es ? `cayó en ${fail.year}` : `dropped in ${fail.year}`)
+          : (es ? 'tomó el desvío de riesgo' : 'took the risk deviation');
+        const aSummary = aIsBad ? failShort : (es ? `siguió hacia ${nextCampName}` : `climbed to ${nextCampName}`);
+        const bSummary = bIsBad ? failShort : (es ? `siguió hacia ${nextCampName}` : `climbed to ${nextCampName}`);
         activeCampBody = `${roomBarCampHtml}
           <div class="floating-dialog-head"><span class="camp-line-title">${t(state, 'pathCompareTitle')} · ${esc(campLineTitle)}</span><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
           <div class="path-compare-grid">
             <div class="path-card ${aIsBad ? 'is-risk' : 'is-safe'}">
-              <span class="path-badge ${aIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[0])} · ${aIsBad ? t(state, 'riskRoute') : t(state, 'safeRoute')}</span>
-              <p class="compact-sub">${esc(shortWords(stageDec.A.label || (aIsBad ? activeMove.badLabel : activeMove.title), 8))}</p>
+              <span class="path-badge ${aIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[0])}</span>
+              <p class="compact-sub">${esc(aSummary)}</p>
             </div>
             <div class="path-card ${bIsBad ? 'is-risk' : 'is-safe'}">
-              <span class="path-badge ${bIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[1])} · ${bIsBad ? t(state, 'riskRoute') : t(state, 'safeRoute')}</span>
-              <p class="compact-sub">${esc(shortWords(stageDec.B.label || (bIsBad ? activeMove.badLabel : activeMove.title), 8))}</p>
+              <span class="path-badge ${bIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[1])}</span>
+              <p class="compact-sub">${esc(bSummary)}</p>
             </div>
           </div>
           <div class="button-row">
             <button class="primary" data-action="room-agree-good">${t(state, 'agreeAdvance')}</button>
-            ${campRiskIdx >= 0 ? `<button data-action="inspect-risk" data-risk-index="${campRiskIdx}">${t(state, 'seeRedBranch')}</button>` : ''}
+            <button data-action="rewind">${t(state, 'rewind')}</button>
           </div>`;
       } else {
         const goodText = activeMove.shortFact
@@ -2646,13 +2661,110 @@
       animateViewBox(svg, from, fullCamera.slice(), 480, done, tk);
       return;
     }
+    const moveClimbersTogether = (mx, my) => {
+      const mA = svg.querySelector('#climberMarkerA');
+      const mB = svg.querySelector('#climberMarkerB');
+      if (mA && mB) {
+        mA.setAttribute('transform', `translate(${(mx - 4).toFixed(2)} ${my.toFixed(2)})`);
+        mB.setAttribute('transform', `translate(${(mx + 4).toFixed(2)} ${my.toFixed(2)})`);
+      } else {
+        const mSingle = svg.querySelector('#climberMarker');
+        if (mSingle) mSingle.setAttribute('transform', `translate(${mx.toFixed(2)} ${my.toFixed(2)})`);
+      }
+    };
+
+    if (type === 'couple-split') {
+      const fromStage = Math.max(0, Math.min(3, Number(intent.fromStage != null ? intent.fromStage : stage)));
+      const toStage = Math.max(0, Math.min(3, Number(intent.toStage != null ? intent.toStage : Math.min(3, fromStage + 1))));
+      const goodMember = intent.goodMember === 'B' ? 'B' : 'A';
+      const badMember = goodMember === 'A' ? 'B' : 'A';
+      const goodMarker = svg.querySelector(`#climberMarker${goodMember}`);
+      const badMarker = svg.querySelector(`#climberMarker${badMember}`);
+      const goodRope = svg.querySelector(`#partnerRope${goodMember}`);
+      const risks = svg.querySelectorAll('.risk-path');
+      const risk = svg.querySelector('.risk-path[data-active-risk="true"]') || risks[risks.length - 1];
+      const group = risk && risk.closest ? risk.closest('.risk-group') : null;
+      const activeNode = group ? group.querySelector('.risk-node') : null;
+      const pts = risk ? String(risk.dataset.riskBreak || '684,319').split(',').map(Number) : biomes[toStage].point;
+      const toPt = biomes[toStage].point;
+      const fromPt = biomes[fromStage].point;
+      const minX = Math.min(fromPt[0], toPt[0], pts[0]) - 110;
+      const maxX = Math.max(fromPt[0], toPt[0], pts[0]) + 140;
+      const minY = Math.min(fromPt[1], toPt[1], pts[1]) - 90;
+      const maxY = Math.max(fromPt[1], toPt[1], pts[1]) + 110;
+      const boxW = Math.max(760, Math.min(fullCamera[2], maxX - minX));
+      const boxH = Math.min(fullCamera[3], Math.max(475, boxW * (750 / 1200)));
+      const midX = (minX + maxX) / 2;
+      const midY = (minY + maxY) / 2;
+      const splitBox = [
+        Math.max(0, Math.min(fullCamera[2] - boxW, midX - boxW / 2)),
+        Math.max(0, Math.min(fullCamera[3] - boxH, midY - boxH / 2)),
+        boxW,
+        boxH
+      ];
+
+      const fromOff = biomes[fromStage].offset;
+      const toOff = biomes[toStage].offset;
+      const fromFrac = TRAIL_FRACS[fromStage] != null ? TRAIL_FRACS[fromStage] : 0;
+      const toFrac = TRAIL_FRACS[toStage] != null ? TRAIL_FRACS[toStage] : 1;
+      const len = risk && risk.getTotalLength ? risk.getTotalLength() : 260;
+
+      if (!hasRaf()) {
+        if (risk) { risk.style.strokeDashoffset = '0'; risk.style.strokeDasharray = 'none'; }
+        if (activeNode) activeNode.style.opacity = '1';
+        if (goodRope) { goodRope.setAttribute('opacity', '.78'); goodRope.setAttribute('stroke-dashoffset', String(toOff)); }
+        if (goodMarker) goodMarker.setAttribute('transform', `translate(${toPt[0]} ${toPt[1]})`);
+        if (badMarker) badMarker.setAttribute('transform', `translate(${pts[0]} ${pts[1]})`);
+        setViewBox(svg, splitBox);
+        if (done) done();
+        return;
+      }
+
+      if (risk) { risk.style.strokeDasharray = '1000'; risk.style.strokeDashoffset = '1000'; }
+      if (activeNode) activeNode.style.opacity = '0';
+      if (goodRope) goodRope.setAttribute('opacity', '.78');
+
+      // Act 1 (470ms): pull back to frame both safe ridge camp and red deviation
+      animateSteps(470, tk, p => {
+        const e = easeInOut(p);
+        setViewBox(svg, from.map((n, i) => n + (splitBox[i] - n) * e));
+      }, () => {
+        // Act 2 (1800ms): SIMULTANEOUS safe climb (goodMember) + red deviation (badMember)
+        animateSteps(1800, tk, p => {
+          const eSafe = easeInOut(p);
+          if (goodRope) goodRope.setAttribute('stroke-dashoffset', String(fromOff + (toOff - fromOff) * eSafe));
+          if (goodMarker) {
+            const [gx, gy] = trailPointAt(svg, fromFrac + (toFrac - fromFrac) * eSafe);
+            goodMarker.setAttribute('transform', `translate(${gx.toFixed(2)} ${gy.toFixed(2)})`);
+          }
+          const progBad = p < 0.7 ? (p / 0.7) * 0.75 : 0.75 + Math.pow((p - 0.7) / 0.3, 1.8) * 0.25;
+          if (risk) {
+            risk.style.strokeDashoffset = String((1000 * (1 - progBad)).toFixed(2));
+            if (badMarker && typeof risk.getPointAtLength === 'function') {
+              const bpt = risk.getPointAtLength(len * progBad);
+              badMarker.setAttribute('transform', `translate(${bpt.x.toFixed(2)} ${bpt.y.toFixed(2)})`);
+            }
+          }
+        }, () => {
+          if (risk) { risk.style.strokeDashoffset = '0'; risk.style.strokeDasharray = 'none'; }
+          // Act 3 (360ms): reveal red node + 145ms breath before showing comparison card
+          animateSteps(360, tk, p => {
+            if (activeNode) activeNode.style.opacity = String(easeOut(p).toFixed(3));
+          }, () => {
+            if (activeNode) activeNode.style.opacity = '1';
+            if (done) setTimeout(() => { if (tk === activeToken) done(); }, 145);
+          });
+        });
+      });
+      return;
+    }
+
     if (type === 'risk') {
       const risks = svg.querySelectorAll('.risk-path');
       const risk = svg.querySelector('.risk-path[data-active-risk="true"]') || risks[risks.length - 1];
       if (!risk) { if (done) done(); return; }
       const group = risk.closest ? risk.closest('.risk-group') : null;
       const activeNode = group ? group.querySelector('.risk-node') : null;
-      const markerEl = svg.querySelector('#climberMarker');
       const pts = String(risk.dataset.riskBreak || '684,319').split(',').map(Number);
       const w = 696, h = 435;
       const crash = [Math.max(0, Math.min(fullCamera[2] - w, pts[0] - w * 0.55)), Math.max(0, Math.min(fullCamera[3] - h, pts[1] - h * 0.45)), w, h];
@@ -2662,9 +2774,9 @@
         risk.style.strokeDashoffset = '0';
         risk.style.strokeDasharray = 'none';
         if (activeNode) activeNode.style.opacity = '1';
-        if (markerEl && typeof risk.getPointAtLength === 'function') {
+        if (typeof risk.getPointAtLength === 'function') {
           const endPt = risk.getPointAtLength(len);
-          markerEl.setAttribute('transform', `translate(${endPt.x.toFixed(2)} ${endPt.y.toFixed(2)})`);
+          moveClimbersTogether(endPt.x, endPt.y);
         }
         setViewBox(svg, crash);
         if (done) done();
@@ -2692,15 +2804,13 @@
         curBox = from.map((n, i) => n + (fullCamera[i] - n) * e);
         setViewBox(svg, curBox);
       }, () => {
-        // Act 2 (1770-2130ms): organic ink draw (normalized pathLength=1000) + #climberMarker riding tip + smooth camera follow
+        // Act 2 (1770-2130ms): organic ink draw (normalized pathLength=1000) + climber riding tip + smooth camera follow
         animateSteps(act2Ms, tk, p => {
           const prog = riskPacing(p);
           risk.style.strokeDashoffset = String((1000 * (1 - prog)).toFixed(2));
           if (typeof risk.getPointAtLength === 'function') {
             const pt = risk.getPointAtLength(len * prog);
-            if (markerEl) {
-              markerEl.setAttribute('transform', `translate(${pt.x.toFixed(2)} ${pt.y.toFixed(2)})`);
-            }
+            moveClimbersTogether(pt.x, pt.y);
             const zoomT = easeInOut(Math.min(1, p * 1.05));
             const targetW = fullCamera[2] + (w - fullCamera[2]) * zoomT;
             const targetH = fullCamera[3] + (h - fullCamera[3]) * zoomT;
@@ -2745,13 +2855,13 @@
       const toStage = Math.max(0, Math.min(3, Number(intent.toStage != null ? intent.toStage : stage)));
       const fromOff = biomes[fromStage].offset;
       const toOff = biomes[toStage].offset;
-      const trailFracs = [0.1104, 0.4883, 0.6713, 1];
-      const fromFrac = trailFracs[fromStage] != null ? trailFracs[fromStage] : (1 - fromOff / TRAIL_LENGTH);
-      const toFrac = trailFracs[toStage] != null ? trailFracs[toStage] : (1 - toOff / TRAIL_LENGTH);
+      const fromFrac = TRAIL_FRACS[fromStage] != null ? TRAIL_FRACS[fromStage] : (1 - fromOff / TRAIL_LENGTH);
+      const toFrac = TRAIL_FRACS[toStage] != null ? TRAIL_FRACS[toStage] : (1 - toOff / TRAIL_LENGTH);
       const trailEl = svg.querySelector('#activeTrail');
       const ropeA = svg.querySelector('#partnerRopeA');
       const ropeB = svg.querySelector('#partnerRopeB');
-      const markerEl = svg.querySelector('#climberMarker');
+      if (ropeA) ropeA.setAttribute('opacity', '.72');
+      if (ropeB) ropeB.setAttribute('opacity', '.72');
       animateViewBox(svg, from, fullCamera.slice(), 400, () => {
         animateSteps(560, tk, p => {
           const e = easeInOut(p);
@@ -2759,10 +2869,8 @@
           if (trailEl) trailEl.setAttribute('stroke-dashoffset', offVal);
           if (ropeA) ropeA.setAttribute('stroke-dashoffset', offVal);
           if (ropeB) ropeB.setAttribute('stroke-dashoffset', offVal);
-          if (markerEl) {
-            const [mx, my] = trailPointAt(svg, fromFrac + (toFrac - fromFrac) * e);
-            markerEl.setAttribute('transform', `translate(${mx.toFixed(2)} ${my.toFixed(2)})`);
-          }
+          const [mx, my] = trailPointAt(svg, fromFrac + (toFrac - fromFrac) * e);
+          moveClimbersTogether(mx, my);
         }, () => {
           animateViewBox(svg, fullCamera.slice(), campCamera(toStage), 620, done, tk);
         });
@@ -2870,6 +2978,7 @@
       if (root.document && root.document.body) root.document.body.classList.add('is-mountain-viewport');
     };
     const keepPathCompare = !!(opts && opts.keepPathCompare);
+    const split = (opts && opts.split) || null;
     const svg = el && el.querySelector ? el.querySelector('.mountain-svg[data-camera]') : null;
     const prevBox = svg ? parseViewBox(svg) : fullCamera.slice();
     const riskIdx = ensureStageRiskEntry(state);
@@ -2890,7 +2999,10 @@
     syncViewportClass();
     if (hasRaf() && el && el.querySelector) {
       const nextSvg = el.querySelector('.mountain-svg[data-camera]');
-      runCamera(nextSvg, { type: 'risk', stage: state.stage }, () => {
+      const intent = split
+        ? { type: 'couple-split', fromStage: state.stage, toStage: Math.min(3, (Number(state.stage) || 0) + 1), goodMember: split.goodMember, badMember: split.badMember }
+        : { type: 'risk', stage: state.stage };
+      runCamera(nextSvg, intent, () => {
         state.initialViewBox = null;
         revealDialog(el, state);
       });
@@ -2953,7 +3065,10 @@
           return true;
         }
         if (!curDec.aligned || (curDec.A && curDec.A.route === 'bad') || (curDec.B && curDec.B.route === 'bad')) {
-          animateRiskStage(el, state, rerender, { keepPathCompare: true });
+          const split = !curDec.aligned
+            ? { goodMember: curDec.A.route === 'good' ? 'A' : 'B', badMember: curDec.A.route === 'bad' ? 'A' : 'B' }
+            : null;
+          animateRiskStage(el, state, rerender, { keepPathCompare: true, split });
           return true;
         }
       }
@@ -3194,7 +3309,10 @@
               state.roomAlignedBanner = true;
               animateAdvanceStage(el, state, rerender, onSummit);
             } else {
-              animateRiskStage(el, state, rerender, { keepPathCompare: true });
+              const split = !stDec.aligned
+                ? { goodMember: stDec.A.route === 'good' ? 'A' : 'B', badMember: stDec.A.route === 'bad' ? 'A' : 'B' }
+                : null;
+              animateRiskStage(el, state, rerender, { keepPathCompare: true, split });
             }
           }
           return true;
