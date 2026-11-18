@@ -1310,22 +1310,38 @@
     return `<details class="exact-math"><summary>${t(state, 'exact')}</summary><ul><li><strong>Score:</strong> ${esc(score.published_score ?? '—')}/100 (${esc(score.band || '—')}).</li><li><strong>${t(state, 'levers')}:</strong> ${moveText}.</li><li><strong>${t(state, 'yearly')}:</strong> ${rows.length} ${es ? 'años' : 'years'} (${esc(first.year || '—')} ${esc(exactMoney(first.investable_assets))} → ${esc(last.year || '—')} ${esc(exactMoney(last.investable_assets))}; ${es ? 'patrimonio neto final' : 'final net worth'} ${esc(exactMoney(last.net_worth))}).</li><li><strong>${es ? 'Punto crítico yearly' : 'Yearly critical point'}:</strong> ${esc(rec.label)}</li></ul>${yearlyMarkup(data, langOf(state))}<p class="preview">${t(state, 'sources')}: score.pillars, score.top_moves, score.combined_moves, projections.yearly, persona.tensions.</p></details>`;
   }
 
+  function neutralAlternativeCopy(topic, lang) {
+    const es = lang !== 'EN';
+    const byTopic = es ? {
+      protection: 'Mantener tus pólizas actuales y reservar ese dinero',
+      debt: 'Seguir pagando la cuota habitual y conservar el efectivo',
+      liquidity: 'Mantener tu ritmo actual y revisar la reserva más adelante',
+      home_purchase: 'Priorizar liquidez a mano y aplazar cambios en el plan',
+      retirement: 'Conservar tu ritmo actual de gastos y ajustar el próximo año',
+      cash_flow: 'Mantener tu presupuesto actual sin recortar este año',
+      investments: 'Conservar tu cartera actual sin mover posiciones'
+    } : {
+      protection: 'Keep your current policies and hold onto the cash',
+      debt: 'Keep paying the usual monthly bill and hold your cash',
+      liquidity: 'Keep your current pace and revisit cash reserves later',
+      home_purchase: 'Prioritize cash on hand and adjust the plan later',
+      retirement: 'Keep your current spending pace and adjust next year',
+      cash_flow: 'Keep your current budget without trimming this year',
+      investments: 'Keep your current portfolio mix without making changes'
+    };
+    return byTopic[topic] || (es ? 'Seguir con tu plan actual y revisarlo más adelante' : 'Stick with your current plan and review it later');
+  }
+
   function stepGoodOption(state, data, s, stageIdx) {
     const lang = langOf(state);
     const es = lang === 'ES';
     const moves = orderedTopMoves(state, data);
-    const tensions = ((data && data.persona && data.persona.tensions) || []);
     const top1 = primaryConcern(state, data);
     const scoreNow = (data.score && data.score.published_score) ?? 0;
     if (stageIdx < moves.length && moves[stageIdx]) {
       const m = moves[stageIdx];
-      const relatedTension = tensions.find(tn => tn.topic === m.topic) || tensions[stageIdx] || tensions[0];
-      const rawBad = relatedTension
-        ? (relatedTension.title || relatedTension.body)
-        : (es ? `Posponer ${m.title}` : `Postpone ${m.title}`);
-      const badOption = es
-        ? `Dejar sin resolver: ${shortWords(rawBad, 8)}`
-        : `Leave unresolved: ${shortWords(rawBad, 8)}`;
+      const topic = m.topic || detectTopic((m.title || '') + ' ' + (m.action || ''));
+      const badOption = neutralAlternativeCopy(topic, lang);
       const shortFact = compactMoveActionLine(m, scoreNow, lang).split(' · ')[0];
       const before = m.score_before != null ? m.score_before : scoreNow;
       const after = m.score_after != null ? m.score_after : scoreNow;
@@ -1347,8 +1363,8 @@
       const before = best.score_before != null ? best.score_before : scoreNow;
       const after = best.score_after != null ? best.score_after : scoreNow;
       const badOption = es
-        ? shortWords(`Actuar sin coordinar el plan completo`, 8)
-        : shortWords(`Act without coordinating the full plan`, 8);
+        ? 'Aplicar solo cambios pequeños y dejar el resto para más adelante'
+        : 'Make only small tweaks and leave the rest for later';
       return {
         label: `${comboLabel}${best.score_after != null ? ` (${before} → ${after})` : ''}`,
         title: shortWords(comboLabel, 6),
@@ -1361,9 +1377,7 @@
       };
     }
     const pub = scoreNow;
-    const fallbackBad = tensions[0]
-      ? (es ? `Dejar sin resolver: ${shortWords(tensions[0].title || tensions[0].body, 8)}` : `Leave unresolved: ${shortWords(tensions[0].title || tensions[0].body, 8)}`)
-      : t(state, 'ignore');
+    const fallbackBad = neutralAlternativeCopy('overview', lang);
     return { label: s.pact, title: shortWords(s.pact, 6), shortFact: '', badLabel: fallbackBad, focusNote: '', scoreBefore: pub, scoreAfter: pub, trend: `${t(state, 'trend')}: ${s.pact}` };
   }
 
@@ -2429,18 +2443,21 @@
             ${campRiskIdx >= 0 ? `<button data-action="inspect-risk" data-risk-index="${campRiskIdx}">${t(state, 'seeRedBranch')}</button>` : ''}
           </div>`;
       } else {
-        const scoreBadge = activeMove.scoreBefore != null && activeMove.scoreAfter != null
-          ? `<span class="score-pill">${esc(activeMove.scoreBefore)} → ${esc(activeMove.scoreAfter)}</span>`
-          : '';
-        const safeLine = activeMove.shortFact
-          ? `<strong>${esc(activeMove.title)}</strong> · ${esc(activeMove.shortFact)}`
-          : `<strong>${esc(activeMove.title)}</strong>`;
+        const goodText = activeMove.shortFact
+          ? `${activeMove.title} · ${activeMove.shortFact}`
+          : activeMove.title;
+        const badText = activeMove.badLabel || neutralAlternativeCopy('overview', lang);
+        const caseIdx = Math.max(0, ids.indexOf(state.caseId));
+        const flipOrder = ((stageIdx + caseIdx) % 2) === 1;
+        const optionsPair = flipOrder
+          ? [{ value: 'bad', text: badText }, { value: 'good', text: goodText }]
+          : [{ value: 'good', text: goodText }, { value: 'bad', text: badText }];
+        const optionsHtml = optionsPair.map((opt, idx) => `<label class="choice choice-compact"><input type="radio" name="route" value="${opt.value}" ${idx === 0 ? 'checked' : ''}><span class="choice-text">${esc(opt.text)}</span></label>`).join('');
         activeCampBody = `${roomBarCampHtml}
            <div class="floating-dialog-head"><span class="camp-line-title">${esc(campLineTitle)}</span><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
            ${state.roomAlignedBanner ? `<div class="focus-priority-pill">${t(state, 'alignedAdvancing')}</div>` : ''}
            <div class="choice-list compact-choices">
-             <label class="choice choice-compact"><input type="radio" name="route" value="good" checked><span class="choice-text">${safeLine}</span>${scoreBadge}</label>
-             <label class="choice choice-compact is-risk-opt"><input type="radio" name="route" value="bad"><span class="choice-text">${esc(activeMove.badLabel || t(state, 'ignore'))}</span></label>
+             ${optionsHtml}
            </div>
            <div class="dialog-footer-bar">
              ${compactMath}
