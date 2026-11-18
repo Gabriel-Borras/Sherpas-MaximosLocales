@@ -722,15 +722,26 @@ body.is-mountain-viewport {
   bottom: 22px;
   transform: translateX(-50%);
   z-index: 26;
-  display: flex;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 14px;
-  background: rgba(251, 249, 245, 0.92);
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--ink-primary);
   border: 1px solid var(--border-strong);
   border-radius: 999px;
   backdrop-filter: blur(10px);
-  font-size: 13px;
+}
+.floating-overview-cta svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .floating-overview-cta.is-hidden,
 .floating-overview-cta[hidden] {
