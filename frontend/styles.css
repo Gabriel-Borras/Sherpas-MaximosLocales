@@ -805,19 +805,16 @@ details.exact-math dl {
   opacity: .88;
   fill: none;
   stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
 }
 .mountain-svg .partner-rope {
   fill: none;
   stroke-linecap: round;
-  vector-effect: non-scaling-stroke;
 }
 .mountain-svg .risk-path {
   stroke: #9E2A2B;
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
 }
 .mountain-svg .risk-node {
   cursor: pointer;

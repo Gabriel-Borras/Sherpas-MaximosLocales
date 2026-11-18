@@ -1796,7 +1796,7 @@
         ? `<path d="M ${coord.x} ${coord.y - 9} L ${coord.x} ${coord.y + 9}" stroke="#9E2A2B" stroke-width="1.35" stroke-linecap="round"/>`
         : `<circle cx="${coord.rx}" cy="${coord.ry}" r="2.1" fill="#9E2A2B" opacity=".88"/>`;
       return `<g class="risk-group" data-risk-stage="${originIdx}" data-risk-index="${idx}">
-        <path class="risk-path" data-active-risk="${isLatest ? 'true' : 'false'}" data-risk-break="${coord.x},${coord.y}" data-exhaustion="${record && record.hasExhaustion ? 'true' : 'false'}" data-year="${record && record.year ? record.year : ''}" data-age="${record && record.age != null ? record.age : ''}" data-investable-assets="${record && record.investable_assets != null ? record.investable_assets : ''}" d="${coord.d}" fill="none" stroke="#9E2A2B" stroke-linecap="round" stroke-linejoin="round" stroke-width="${isInspected ? '2.5' : '2'}" opacity="${isInspected ? '0.96' : '0.86'}"/>
+        <path class="risk-path" pathLength="1000" data-active-risk="${isLatest ? 'true' : 'false'}" data-risk-break="${coord.x},${coord.y}" data-exhaustion="${record && record.hasExhaustion ? 'true' : 'false'}" data-year="${record && record.year ? record.year : ''}" data-age="${record && record.age != null ? record.age : ''}" data-investable-assets="${record && record.investable_assets != null ? record.investable_assets : ''}" d="${coord.d}" fill="none" stroke="#9E2A2B" stroke-linecap="round" stroke-linejoin="round" stroke-width="${isInspected ? '2.2' : '1.8'}" opacity="${isInspected ? '0.96' : '0.86'}"/>
         ${stopWall}
         <g class="risk-node ${isInspected ? 'is-active' : ''}" data-action="inspect-risk" data-risk-index="${idx}" data-risk-stage="${originIdx}" transform="translate(${coord.x} ${coord.y})" role="button" tabindex="0" aria-label="${esc(nodeLabel)}">
           <circle class="risk-hit" cx="0" cy="0" r="16" fill="transparent"/>
@@ -2574,8 +2574,8 @@
         return;
       }
 
-      risk.style.strokeDasharray = String(len);
-      risk.style.strokeDashoffset = String(len);
+      risk.style.strokeDasharray = '1000';
+      risk.style.strokeDashoffset = '1000';
       if (activeNode) activeNode.style.opacity = '0';
 
       // Natural 3-phase pacing: steady ridge ascent (0..0.68), tension pause at break (0.68..0.78), gravity drop (0.78..1)
@@ -2595,10 +2595,10 @@
         curBox = from.map((n, i) => n + (fullCamera[i] - n) * e);
         setViewBox(svg, curBox);
       }, () => {
-        // Act 2 (1770-2130ms): organic ink draw + #climberMarker riding tip + exponentially damped camera follow
+        // Act 2 (1770-2130ms): organic ink draw (normalized pathLength=1000) + #climberMarker riding tip + smooth camera follow
         animateSteps(act2Ms, tk, p => {
           const prog = riskPacing(p);
-          risk.style.strokeDashoffset = String(len * (1 - prog));
+          risk.style.strokeDashoffset = String((1000 * (1 - prog)).toFixed(2));
           if (typeof risk.getPointAtLength === 'function') {
             const pt = risk.getPointAtLength(len * prog);
             if (markerEl) {
