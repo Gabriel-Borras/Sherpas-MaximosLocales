@@ -1796,7 +1796,7 @@
         ? `<path d="M ${coord.x} ${coord.y - 9} L ${coord.x} ${coord.y + 9}" stroke="#9E2A2B" stroke-width="1.35" stroke-linecap="round"/>`
         : `<circle cx="${coord.rx}" cy="${coord.ry}" r="2.1" fill="#9E2A2B" opacity=".88"/>`;
       return `<g class="risk-group" data-risk-stage="${originIdx}" data-risk-index="${idx}">
-        <path class="risk-path" data-active-risk="${isLatest ? 'true' : 'false'}" data-risk-break="${coord.x},${coord.y}" data-exhaustion="${record && record.hasExhaustion ? 'true' : 'false'}" data-year="${record && record.year ? record.year : ''}" data-age="${record && record.age != null ? record.age : ''}" data-investable-assets="${record && record.investable_assets != null ? record.investable_assets : ''}" d="${coord.d}" stroke-width="${isInspected ? '2.4' : '1.9'}" opacity="${isInspected ? '0.96' : '0.84'}" filter="url(#dryBrush)"/>
+        <path class="risk-path" data-active-risk="${isLatest ? 'true' : 'false'}" data-risk-break="${coord.x},${coord.y}" data-exhaustion="${record && record.hasExhaustion ? 'true' : 'false'}" data-year="${record && record.year ? record.year : ''}" data-age="${record && record.age != null ? record.age : ''}" data-investable-assets="${record && record.investable_assets != null ? record.investable_assets : ''}" d="${coord.d}" fill="none" stroke="#9E2A2B" stroke-linecap="round" stroke-linejoin="round" stroke-width="${isInspected ? '2.5' : '2'}" opacity="${isInspected ? '0.96' : '0.86'}"/>
         ${stopWall}
         <g class="risk-node ${isInspected ? 'is-active' : ''}" data-action="inspect-risk" data-risk-index="${idx}" data-risk-stage="${originIdx}" transform="translate(${coord.x} ${coord.y})" role="button" tabindex="0" aria-label="${esc(nodeLabel)}">
           <circle class="risk-hit" cx="0" cy="0" r="16" fill="transparent"/>
@@ -2562,8 +2562,8 @@
       const len = risk.getTotalLength ? risk.getTotalLength() : 260;
 
       if (!hasRaf()) {
-        risk.style.strokeDasharray = String(len);
         risk.style.strokeDashoffset = '0';
+        risk.style.strokeDasharray = 'none';
         if (activeNode) activeNode.style.opacity = '1';
         if (markerEl && typeof risk.getPointAtLength === 'function') {
           const endPt = risk.getPointAtLength(len);
@@ -2586,16 +2586,16 @@
         return 0.78 + (dropT * dropT) * 0.22;
       };
 
-      const act2Ms = Math.max(1950, Math.min(2350, Math.round(1750 + len * 1.1)));
+      const act2Ms = Math.max(1770, Math.min(2130, Math.round(1590 + len * 1.0)));
       let curBox = from.slice();
 
-      // Act 1 (520ms, easeInOut): smooth pullback to open mountain context
-      animateSteps(520, tk, p => {
+      // Act 1 (470ms, easeInOut): smooth pullback to open mountain context
+      animateSteps(470, tk, p => {
         const e = easeInOut(p);
         curBox = from.map((n, i) => n + (fullCamera[i] - n) * e);
         setViewBox(svg, curBox);
       }, () => {
-        // Act 2 (1950-2350ms): organic ink draw + #climberMarker riding tip + exponentially damped camera follow
+        // Act 2 (1770-2130ms): organic ink draw + #climberMarker riding tip + exponentially damped camera follow
         animateSteps(act2Ms, tk, p => {
           const prog = riskPacing(p);
           risk.style.strokeDashoffset = String(len * (1 - prog));
@@ -2618,9 +2618,12 @@
             setViewBox(svg, curBox);
           }
         }, () => {
-          // Act 3 (420ms): fade in red node + settle camera into exact riskCameraBox, then 160ms breath before dialog
+          // Lock stroke visible so Chromium never hides or clips the red path after animation
+          risk.style.strokeDashoffset = '0';
+          risk.style.strokeDasharray = 'none';
+          // Act 3 (380ms): fade in red node + settle camera into exact riskCameraBox, then 145ms breath before dialog
           const settleFrom = curBox.slice();
-          animateSteps(420, tk, p => {
+          animateSteps(380, tk, p => {
             const e = easeOut(p);
             if (activeNode) activeNode.style.opacity = String(e.toFixed(3));
             setViewBox(svg, settleFrom.map((n, i) => n + (crash[i] - n) * e));
@@ -2628,7 +2631,7 @@
             if (activeNode) activeNode.style.opacity = '1';
             setViewBox(svg, crash);
             if (done) {
-              setTimeout(() => { if (tk === activeToken) done(); }, 160);
+              setTimeout(() => { if (tk === activeToken) done(); }, 145);
             }
           });
         });
