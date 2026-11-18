@@ -1,0 +1,137 @@
+#!/usr/bin/env python3
+"""contexto-check — detecta entradas de contexto/INDEX.md cuya fuente cambió desde que se cachearon.
+
+  contexto-check              lista el estado de cada entrada (exit 1 si hay alguna VIEJA o FALTA)
+  contexto-check --pedir      además imprime los `PEDIR-CONTEXTO:` para enviar al optimizador
+
+Criterio: si el archivo cacheado trae `git HEAD: <sha>` en su comentario inicial y la fuente está en un repo git,
+compara contra el último commit que tocó la fuente (o cambios sin commitear); si no, compara mtime vs fecha.
+"""
+import argparse
+import datetime as dt
+import os
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8", errors="replace")
+
+DEFAULT_HOME = Path(__file__).resolve().parent.parent
+HOME = Path(os.environ.get("AGENTES_HOME") or DEFAULT_HOME)
+CTX = HOME / "contexto"
+REPO_ROOT = HOME.parent
+IGNORAR = {".git", "node_modules", "venv", ".venv", "__pycache__", ".mypy_cache", "dist", "build"}
+
+
+def ultima_mod(p: Path) -> float:
+    if p.is_file():
+        return p.stat().st_mtime
+    m = 0.0
+    for r, ds, fs in os.walk(p):
+        ds[:] = [d for d in ds if d not in IGNORAR]
+        for f in fs:
+            try:
+                m = max(m, os.path.getmtime(os.path.join(r, f)))
+            except OSError:
+                pass
+    return m
+
+
+def resolver_fuente(fuente: str) -> Path | None:
+    if fuente.startswith("http"):
+        return None
+    candidatos = re.findall(r"(?:~|/|[A-Za-z]:\\)[^\s,)|;]+", fuente)
+    tokens = [t.strip("(),;") for t in re.split(r"[\s,;]+", fuente) if t.strip("(),;")]
+    for cand in candidatos + tokens:
+        expanded = Path(os.path.expanduser(cand))
+        if expanded.is_absolute() and expanded.exists():
+            return expanded
+        rel = (REPO_ROOT / cand).resolve()
+        if rel.exists():
+            return rel
+    return None
+
+
+def git_info(src: Path) -> tuple[str | None, bool]:
+    d = src if src.is_dir() else src.parent
+    try:
+        top = subprocess.run(
+            ["git", "-C", str(d), "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace",
+        ).stdout.strip()
+        if not top:
+            return None, False
+        rel = os.path.relpath(src.resolve(), Path(top).resolve())
+        target = "." if rel == "." else rel.replace("\\", "/")
+        sha = subprocess.run(
+            ["git", "-C", top, "log", "-1", "--format=%h", "--", target],
+            capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace",
+        ).stdout.strip()
+        if not sha:
+            sha = subprocess.run(
+                ["git", "-C", top, "rev-parse", "--short", "HEAD"],
+                capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace",
+            ).stdout.strip()
+        dirty = bool(
+            subprocess.run(
+                ["git", "-C", top, "status", "--porcelain", "--", target],
+                capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace",
+            ).stdout.strip()
+        )
+        return (sha or None), dirty
+    except (OSError, subprocess.SubprocessError):
+        return None, False
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(prog="contexto-check")
+    ap.add_argument("--pedir", action="store_true")
+    a = ap.parse_args()
+    idx = CTX / "INDEX.md"
+    if not idx.exists():
+        print("(sin INDEX.md)")
+        return 0
+    malo = False
+    for l in idx.read_text(encoding="utf-8", errors="replace").splitlines():
+        if l.startswith("#") or "|" not in l:
+            continue
+        c = [x.strip() for x in l.split("|")]
+        if len(c) < 3:
+            continue
+        ruta, fuente, fecha = c[0], c[1], c[2]
+        arch = CTX / ruta
+        if not arch.exists():
+            estado, malo = "FALTA ", True
+        elif fuente.startswith("http"):
+            estado = "?     "
+        else:
+            src = resolver_fuente(fuente)
+            if src is None or not src.exists():
+                estado, malo = "FALTA ", True
+            else:
+                cabecera = arch.read_text(encoding="utf-8", errors="replace")[:800]
+                head = re.search(r"git HEAD:\s*([0-9a-f]{6,40})", cabecera)
+                actual, dirty = git_info(src)
+                if dirty:
+                    viejo = True
+                elif head and actual:
+                    h_val = head.group(1)
+                    viejo = not actual.startswith(h_val[: len(actual)]) and not h_val.startswith(actual)
+                else:
+                    try:
+                        viejo = ultima_mod(src) > dt.datetime.strptime(fecha[:10], "%Y-%m-%d").timestamp() + 86400
+                    except ValueError:
+                        viejo = False
+                estado = "VIEJA " if viejo else "ok    "
+                malo |= viejo
+        print(f"{estado} {ruta}  ({fuente[:60]})")
+        if a.pedir and estado.strip() in ("VIEJA", "FALTA"):
+            print(f"PEDIR-CONTEXTO: refrescar {ruta} | fuente: {fuente} | para: optimizador")
+    return 1 if malo else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
