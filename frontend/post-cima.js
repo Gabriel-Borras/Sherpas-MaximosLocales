@@ -380,6 +380,17 @@
         root.document.body.classList.add('is-mountain-viewport');
       }
     };
+    let unsubRoom = null;
+    const attachRoom = () => {
+      if (unsubRoom) { try { unsubRoom(); } catch (_) {} unsubRoom = null; }
+      const raw = dataFor(state.caseId) || {};
+      if (raw.meta && raw.meta.isCouple && state.roomId && expedition.CoupleRoomSync) {
+        expedition.CoupleRoomSync.createRoom(state.caseId, state.roomId);
+        unsubRoom = expedition.CoupleRoomSync.subscribe(state.roomId, state.caseId, roomData => {
+          expedition.applyRoomSnapshot(state, roomData, el, render, summit);
+        });
+      }
+    };
     const render = () => {
       el.innerHTML = view(state);
       syncViewport();
@@ -475,6 +486,7 @@
         const lang = state.lang;
         state = initial(c.value);
         state.lang = lang;
+        attachRoom();
         render();
       };
       const s = el.querySelector('[data-shock]');
@@ -529,10 +541,11 @@
         if (p) p.textContent = expedition.preview(state, expedition.localizeData(dataFor(state.caseId), langOf(state)), r.value);
       });
     }
+    attachRoom();
     render();
     return {
       getState: () => state,
-      setState(next) { state = next; render(); return state; },
+      setState(next) { state = next; attachRoom(); render(); return state; },
       dispatch(a, v) {
         if (a === 'nav') state.view = v;
         else if (a === 'mode') state.mode = v;
@@ -549,6 +562,7 @@
         return state;
       },
       unmount() {
+        if (unsubRoom) { try { unsubRoom(); } catch (_) {} unsubRoom = null; }
         el.innerHTML = '';
         if (root.document && root.document.body) root.document.body.classList.remove('is-mountain-viewport');
       }
