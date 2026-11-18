@@ -1,4 +1,4 @@
-﻿<!-- fuente: frontend/ | fecha: 2026-11-18 | git HEAD: 1e64387 -->
+﻿<!-- fuente: frontend/ | fecha: 2026-11-18 | git HEAD: e74e685 -->
 # Mapa Compacto del Repositorio â€” Sherpa Basecamp Ã— Run IRL
 
 > Reemplaza la lectura completa de `frontend/` (~783 KB / ~196k tokens; ~31.9k tokens sin `cases-data.js`) en ~961 tokens.
