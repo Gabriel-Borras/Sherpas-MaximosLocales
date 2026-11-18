@@ -126,7 +126,7 @@
 
   const specs = {
     'michael-carter': {
-      ES: { people: ['Michael'], blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Prioriza liquidez, cobertura paraguas y tasa de retiro sostenibile.', pact: 'Ejecutar medidas prioritarias de deuda, retiro y cobertura.', events: [] },
+      ES: { people: ['Michael'], blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Prioriza liquidez, cobertura paraguas y tasa de retiro sostenible.', pact: 'Ejecutar medidas prioritarias de deuda, retiro y cobertura.', events: [] },
       EN: { people: ['Michael'], blocked: 'Consult the yearly plan record for the documented point.', reframe: 'Prioritize liquidity, umbrella coverage, and a sustainable withdrawal rate.', pact: 'Execute priority debt, withdrawal, and coverage moves.', events: [] }
     },
     'samantha-lewis': {
@@ -785,13 +785,13 @@
     const fail = failTags[state.caseId][lang];
     const shortLabels = campShorts[lang];
     const entries = buildHistoryEntries(state.history, state.blocked, stageIdx);
-    const activeRiskIdx = state.inspectedRisk != null ? Number(state.inspectedRisk) : (state.blocked ? Math.max(0, entries.length - 1) : null);
+    const activeRiskIdx = state.inspectedRisk != null ? Number(state.inspectedRisk) : (state.blocked && focusedIdx === stageIdx ? Math.max(0, entries.length - 1) : null);
 
     let initBox = fullCamera;
     if (view === 'expedition' && (state.phase === 'expedition' || state.phase === 'blocked')) {
       if (state.initialViewBox) initBox = state.initialViewBox;
       else if (state.cameraMode === 'panoramic') initBox = fullCamera;
-      else if (state.blocked || activeRiskIdx != null) {
+      else if ((state.blocked && focusedIdx === stageIdx) || activeRiskIdx != null) {
         const rEntry = entries[activeRiskIdx] || { stage: stageIdx };
         initBox = dialogVisible ? riskCameraBox(fail, biomes[rEntry.stage || 0].point, rEntry.stage || 0) : fullCamera;
       } else {
@@ -818,7 +818,7 @@
       const shared = common.length ? common.map(id => { const x = (persona.objectiveConcerns || []).find(c => c.id === id); return `<li>${x ? detail(id, x.detail, lang) : esc(id)}</li>`; }).join('') : `<li>${lang === 'ES' ? 'D6: proteger a los hijos.' : 'D6: protect the children.'}</li>`;
       const fr = [...(a.priority && b.priority && a.priority !== b.priority ? [`<p><strong>${t(state, 'different')}:</strong> ${t(state, a.priority === 'crecimiento' ? 'growth' : 'debt')} ${lang === 'ES' ? 'frente a' : 'versus'} ${t(state, b.priority === 'crecimiento' ? 'growth' : 'debt')}.</p>`] : []), ...(persona.tensions || []).slice(0, 2).map(x => `<p>${detail(x.id, x.detail, lang)}</p>`)].join('') || `<p>${t(state, 'common')}</p>`;
       panel = `<aside class="floating-panel"><p class="eyebrow">${t(state, 'cross')}</p><h1>${t(state, 'agree')}</h1><ul>${shared}</ul><h2>${t(state, 'friction')}</h2>${fr}<p class="reframe">${t(state, 'pact')}: ${esc(s.pact)}</p>${mathSummary(data, state)}<div class="button-row"><button class="primary" data-action="start-expedition">${t(state, 'enter')}</button></div></aside>`;
-    } else if (state.blocked || activeRiskIdx != null) {
+    } else if ((state.blocked && focusedIdx === stageIdx) || activeRiskIdx != null) {
       const cardHtml = renderRiskInspectionCard(state, data, persona, s, activeRiskIdx != null ? activeRiskIdx : Math.max(0, entries.length - 1));
       panel = (dialogVisible ? cardHtml : cardHtml.replace('class="floating-dialog"', 'class="floating-dialog is-dialog-hidden" hidden'))
         + `<div class="floating-overview-cta ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'is-hidden'}" ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'hidden'}><span>${t(state, 'panoramicHint')}</span><button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button></div>`;
@@ -862,10 +862,24 @@
       mode: 'deterministic',
       last: null,
       request(kind, payload, fallback) {
+        const body = Object.assign({ strict_zero_inference: true }, payload || {});
         const local = fallback == null ? { mode: 'deterministic', kind, strict_zero_inference: true } : fallback;
         client.mode = 'deterministic';
         client.last = local;
         mark('deterministic');
+        if (typeof root.fetch === 'function' && root.location && /^https?:$/i.test(root.location.protocol || '')) {
+          try {
+            return root.fetch(`/api/ai/${encodeURIComponent(kind || 'reframe')}`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body)
+            }).then(r => (r && r.ok ? r.json() : local)).then(res => {
+              const out = res && typeof res === 'object' ? Object.assign({}, local, res) : local;
+              client.last = out;
+              return out;
+            }).catch(() => local);
+          } catch (_) {}
+        }
         return Promise.resolve(local);
       }
     };
@@ -1221,8 +1235,6 @@
       const svg = el.querySelector('.mountain-svg[data-camera]');
       const prevBox = svg ? parseViewBox(svg) : fullCamera.slice();
       state.view = viewName('expedition', langOf(state), state.irlDay);
-      state.blocked = false;
-      if (state.phase === 'blocked') state.phase = 'expedition';
       state.inspectedRisk = null;
       state.focusedNode = targetStage;
       state.cameraMode = 'camp';
