@@ -869,15 +869,24 @@
         mark('deterministic');
         if (typeof root.fetch === 'function' && root.location && /^https?:$/i.test(root.location.protocol || '')) {
           try {
+            const ctrl = typeof root.AbortController === 'function' ? new root.AbortController() : null;
+            const timer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (_) {} }, 1200) : null;
             return root.fetch(`/api/ai/${encodeURIComponent(kind || 'reframe')}`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body)
-            }).then(r => (r && r.ok ? r.json() : local)).then(res => {
+              body: JSON.stringify(body),
+              signal: ctrl ? ctrl.signal : undefined
+            }).then(r => {
+              if (timer) clearTimeout(timer);
+              return r && r.ok ? r.json() : local;
+            }).then(res => {
               const out = res && typeof res === 'object' ? Object.assign({}, local, res) : local;
               client.last = out;
               return out;
-            }).catch(() => local);
+            }).catch(() => {
+              if (timer) clearTimeout(timer);
+              return local;
+            });
           } catch (_) {}
         }
         return Promise.resolve(local);
