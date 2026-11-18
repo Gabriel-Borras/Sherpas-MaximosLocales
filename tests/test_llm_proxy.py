@@ -20,6 +20,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 if str(_ROOT) not in sys.path:
     sys.path.insert(0, str(_ROOT))
 
+import backend.behavioral_narrator as narrator_mod
 import backend.llm_proxy as llm_proxy_mod
 
 from backend.behavioral_narrator import (
@@ -34,6 +35,7 @@ from backend.behavioral_narrator import (
     extract_case_allowed_numbers,
     generate_advisor_brief,
     load_case,
+    resolve_cases_dir,
     synthesize_cordada_pact,
     translate_dual_lens,
     verify_text_numbers_against_case,
@@ -349,6 +351,42 @@ class BehavioralNarratorTests(unittest.TestCase):
                 loaded = load_case("michael-carter")
                 self.assertEqual(loaded.case_dir.parent, bom_root)
                 self.assertEqual(loaded.published_score, 26)
+
+    def test_embedded_cases_fallback_when_no_cases_on_disk(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            empty_cwd = tmp_path / "empty_cwd"
+            empty_cwd.mkdir()
+            fake_repo_file = tmp_path / "isolated_repo" / "backend" / "behavioral_narrator.py"
+            fake_repo_file.parent.mkdir(parents=True)
+            isolated_temp = tmp_path / "tmp_cache"
+            isolated_temp.mkdir()
+
+            with (
+                patch.object(narrator_mod, "__file__", str(fake_repo_file)),
+                patch.object(Path, "cwd", return_value=empty_cwd),
+                patch.object(tempfile, "gettempdir", return_value=str(isolated_temp)),
+                patch.dict(os.environ, {"SHERPAS_CASES_DIR": "", "CASES_DIR": "", "MCP_TOKEN": ""}, clear=False),
+            ):
+                resolved = resolve_cases_dir()
+                self.assertTrue(resolved.is_dir())
+                self.assertEqual(resolved.parent, isolated_temp)
+
+                michael = load_case("michael-carter")
+                self.assertEqual(michael.published_score, 26)
+                self.assertEqual(len(michael.analysis_events), 11)
+
+                narrator = BehavioralNarrator()
+                self.assertEqual(sorted(narrator.list_cases()), sorted(SUPPORTED_CASES))
+                dl = narrator.translate_dual_lens("michael-carter", topic="home_purchase")
+                self.assertIn("$81,172", dl["plain"]["summary"])
+                biases = {b["bias_id"]: b for b in narrator.detect_behavioral_biases("samantha-lewis")}
+                self.assertTrue(biases["halo_effect"]["triggered"])
+                brief = narrator.generate_advisor_brief("daniel-emily-johnson")
+                self.assertTrue(brief["couple_disagreements"]["is_couple"])
+
+                with self.assertRaises(FileNotFoundError):
+                    resolve_cases_dir(cases_dir=tmp_path / "nonexistent_cases")
 
     def test_dual_lens_plain_and_math_no_invented_numbers(self) -> None:
         topics = ("overview", "liquidity", "debt", "retirement", "protection", "investments", "home_purchase")
