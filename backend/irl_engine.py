@@ -39,9 +39,7 @@ SUPPORTED_CASES: tuple[str, ...] = (
     "daniel-emily-johnson",
 )
 
-DEFAULT_FALLBACK_CASES_DIR = Path(
-    r"C:\Users\Silvia\.gemini\antigravity\scratch\hackathon-upv-2026\cases"
-)
+DEFAULT_FALLBACK_CASES_DIR = Path(__file__).resolve().parent.parent / "cases"
 DEFAULT_PLAN_START_DATE = date(2026, 11, 1)
 
 _BASE_CHECKIN_DAYS: tuple[int, ...] = (0, 3, 14, 30)
@@ -53,14 +51,25 @@ def _repo_root() -> Path:
 
 def resolve_case_dir(case_id: str, cases_dir: str | Path | None = None) -> Path:
     """Resolve the directory holding ``financial-health.json``, ``investment-analysis.json`` and ``persona.md``."""
+    repo_root = _repo_root()
+    cwd = Path.cwd()
     candidates: list[Path] = []
     if cases_dir is not None:
         candidates.append(Path(cases_dir) / case_id)
-    candidates.append(_repo_root() / "cases" / case_id)
-    env_dir = os.environ.get("SHERPAS_CASES_DIR")
-    if env_dir:
-        candidates.append(Path(env_dir) / case_id)
-    candidates.append(DEFAULT_FALLBACK_CASES_DIR / case_id)
+    candidates.append(repo_root / "cases" / case_id)
+    candidates.append(cwd / "cases" / case_id)
+    for env_var in ("SHERPAS_CASES_DIR", "CASES_DIR"):
+        env_dir = os.environ.get(env_var)
+        if env_dir:
+            candidates.append(Path(env_dir) / case_id)
+    candidates.extend(
+        [
+            repo_root.parent / "cases" / case_id,
+            repo_root.parent / "hackathon-upv-2026" / "cases" / case_id,
+            cwd.parent / "hackathon-upv-2026" / "cases" / case_id,
+            DEFAULT_FALLBACK_CASES_DIR / case_id,
+        ]
+    )
 
     required = ("financial-health.json", "investment-analysis.json", "persona.md")
     for candidate in candidates:
@@ -141,9 +150,9 @@ def _parse_persona_markdown(markdown_text: str) -> dict[str, Any]:
 def load_case_data(case_id: str, cases_dir: str | Path | None = None) -> dict[str, Any]:
     """Load real JSON and persona markdown files for ``case_id``."""
     case_path = resolve_case_dir(case_id, cases_dir=cases_dir)
-    fh = json.loads((case_path / "financial-health.json").read_text(encoding="utf-8"))
-    ia = json.loads((case_path / "investment-analysis.json").read_text(encoding="utf-8"))
-    persona_md = (case_path / "persona.md").read_text(encoding="utf-8")
+    fh = json.loads((case_path / "financial-health.json").read_text(encoding="utf-8-sig"))
+    ia = json.loads((case_path / "investment-analysis.json").read_text(encoding="utf-8-sig"))
+    persona_md = (case_path / "persona.md").read_text(encoding="utf-8-sig")
     return {
         "case_id": case_id,
         "case_dir": str(case_path),

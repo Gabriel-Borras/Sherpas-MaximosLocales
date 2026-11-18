@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import date
 import os
 from pathlib import Path
+import re
 import tempfile
 import unittest
 
 from backend.irl_engine import (
+    DEFAULT_FALLBACK_CASES_DIR,
     SUPPORTED_CASES,
     IRLEngine,
     create_irl_run,
@@ -47,12 +49,41 @@ class TestCaseResolution(unittest.TestCase):
             try:
                 os.environ["SHERPAS_CASES_DIR"] = tmp
                 resolved = load_case_data("michael-carter")
-                self.assertTrue(Path(resolved["case_dir"]).is_dir())
+                self.assertEqual(Path(resolved["case_dir"]).resolve(), target.resolve())
             finally:
                 if prev is None:
                     os.environ.pop("SHERPAS_CASES_DIR", None)
                 else:
                     os.environ["SHERPAS_CASES_DIR"] = prev
+
+    def test_cases_dir_env_var_and_utf8_bom_and_portable_fallback(self) -> None:
+        repo_root = Path(__file__).resolve().parent.parent
+        self.assertEqual(DEFAULT_FALLBACK_CASES_DIR, repo_root / "cases")
+        for rel in ("backend/irl_engine.py", "backend/notifications.py"):
+            src_text = (repo_root / rel).read_text(encoding="utf-8")
+            self.assertIsNone(re.search(r"[A-Za-z]:\\\\Users\\\\|/Users/[^/]+/|/home/[^/]+/", src_text))
+        src = Path(load_case_data("michael-carter")["case_dir"])
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "michael-carter"
+            target.mkdir()
+            for fname in ("financial-health.json", "investment-analysis.json", "persona.md"):
+                content = (src / fname).read_text(encoding="utf-8-sig")
+                (target / fname).write_text("\ufeff" + content, encoding="utf-8")
+
+            prev_sherpas = os.environ.pop("SHERPAS_CASES_DIR", None)
+            prev_cases = os.environ.get("CASES_DIR")
+            try:
+                os.environ["CASES_DIR"] = tmp
+                resolved = load_case_data("michael-carter")
+                self.assertEqual(Path(resolved["case_dir"]).resolve(), target.resolve())
+                self.assertEqual(resolved["financial_health"]["score"]["published_score"], 26)
+            finally:
+                if prev_sherpas is not None:
+                    os.environ["SHERPAS_CASES_DIR"] = prev_sherpas
+                if prev_cases is None:
+                    os.environ.pop("CASES_DIR", None)
+                else:
+                    os.environ["CASES_DIR"] = prev_cases
 
     def test_unknown_case_raises_file_not_found(self) -> None:
         with self.assertRaises(FileNotFoundError):
