@@ -229,20 +229,20 @@
 
   const specs = {
     'michael-carter': {
-      ES: { people: ['Michael'], blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Prioriza liquidez, cobertura paraguas y tasa de retiro sostenible.', pact: 'Ejecutar medidas prioritarias de deuda, retiro y cobertura.', events: [] },
-      EN: { people: ['Michael'], blocked: 'Consult the yearly plan record for the documented point.', reframe: 'Prioritize liquidity, umbrella coverage, and a sustainable withdrawal rate.', pact: 'Execute priority debt, withdrawal, and coverage moves.', events: [] }
+      ES: { people: ['Michael'], blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Prioriza tu colchón líquido, un seguro extra ante imprevistos y sacar menos dinero de tus ahorros al año.', pact: 'Ordenar tarjeta, seguro extra y cuánto sacas de tus ahorros al año.', events: [] },
+      EN: { people: ['Michael'], blocked: 'Consult the yearly plan record for the documented point.', reframe: 'Prioritize your cash cushion, extra liability protection, and taking less from savings each year.', pact: 'Tackle credit card, extra protection, and yearly savings withdrawals.', events: [] }
     },
     'samantha-lewis': {
-      ES: { people: ['Samantha'], blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Cierra la brecha de cobertura patrimonial y reduce la concentración en VTI.', pact: 'Asegurar vivienda/vehículo y diversificar exposición.', events: [] },
-      EN: { people: ['Samantha'], blocked: 'Consult the yearly plan record for the documented point.', reframe: 'Close the property coverage gap and reduce single-name VTI concentration.', pact: 'Insure home/vehicle and diversify exposure.', events: [] }
+      ES: { people: ['Samantha'], blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Asegura vivienda y vehículo y reparte mejor tu inversión en VTI.', pact: 'Confirmar seguros de hogar/auto y diversificar tu inversión.', events: [] },
+      EN: { people: ['Samantha'], blocked: 'Consult the yearly plan record for the documented point.', reframe: 'Insure your home and vehicle and spread out your VTI concentration.', pact: 'Confirm home/auto policies and diversify investments.', events: [] }
     },
     'timothy-melanie-weah': {
-      ES: { people: ['Timothy', 'Melanie'], blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Liquida la tarjeta al 18% APR con efectivo ocioso y añade cobertura de vida.', pact: 'Cancelar deuda rotativa y proteger a la familia.', events: [] },
-      EN: { people: ['Timothy', 'Melanie'], blocked: 'Consult the yearly plan record for the documented point.', reframe: 'Pay off the 18% APR revolving card with idle cash and add life coverage.', pact: 'Eliminate revolving debt and protect the household.', events: [] }
+      ES: { people: ['Timothy', 'Melanie'], blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Liquida la tarjeta al 18% con el efectivo disponible y amplía el seguro de vida.', pact: 'Liquidar la tarjeta de crédito y proteger a la familia.', events: [] },
+      EN: { people: ['Timothy', 'Melanie'], blocked: 'Consult the yearly plan record for the documented point.', reframe: 'Pay off the 18% credit card with available cash and increase life insurance.', pact: 'Pay off the credit card and protect the family.', events: [] }
     },
     'daniel-emily-johnson': {
-      ES: { people: ['Daniel', 'Emily'], blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Cubre el déficit crítico de seguro de vida y redirige ahorro hacia deuda y 401(k).', pact: 'Activar protección familiar y optimizar ahorro anual.', events: [] },
-      EN: { people: ['Daniel', 'Emily'], blocked: 'Consult the yearly plan record for the documented point.', reframe: 'Close the critical mortality coverage gap and redirect savings to debt and 401(k).', pact: 'Activate family protection and optimize annual savings.', events: [] }
+      ES: { people: ['Daniel', 'Emily'], blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Amplía el seguro de vida familiar y redirige ahorro a la tarjeta y al 401(k).', pact: 'Proteger a la familia y ahorrar más cada año.', events: [] },
+      EN: { people: ['Daniel', 'Emily'], blocked: 'Consult the yearly plan record for the documented point.', reframe: 'Increase family life insurance and redirect savings to the card and 401(k).', pact: 'Protect the family and save more each year.', events: [] }
     }
   };
 
@@ -257,17 +257,86 @@
   }
 
   const moveTitles = {
-    'Add umbrella cover': 'Añadir cobertura paraguas de responsabilidad civil',
-    'Lower the withdrawal rate': 'Reducir la tasa de retiro anual a nivel sostenible',
-    'Raise growth allocation toward glide': 'Ajustar el peso en crecimiento hacia la senda objetivo',
-    'Close a coverage gap': 'Cerrar la brecha de seguro patrimonial en vivienda',
-    'Reduce single-name concentration': 'Reducir la concentración en una sola posición (VTI)',
-    'Reduce growth allocation toward glide': 'Moderar el peso en crecimiento hacia la senda objetivo',
-    'Pay down revolving card': 'Amortizar la tarjeta de crédito rotativa',
-    'Add life cover': 'Ampliar la cobertura de seguro de vida',
-    'Raise mortality coverage': 'Ampliar la cobertura de seguro de vida familiar',
-    'Raise annual savings': 'Incrementar el ahorro anual dirigido a retiro'
+    'Add umbrella cover': 'Seguro extra ante imprevistos graves',
+    'Lower the withdrawal rate': 'Sacar menos dinero de tus ahorros al año',
+    'Raise growth allocation toward glide': 'Invertir más para el largo plazo',
+    'Close a coverage gap': 'Asegurar tu vivienda principal',
+    'Reduce single-name concentration': 'Repartir mejor tu inversión en VTI',
+    'Reduce growth allocation toward glide': 'Moderar el riesgo de tu cartera',
+    'Pay down revolving card': 'Liquidar la tarjeta de crédito',
+    'Pay off revolving card': 'Liquidar la tarjeta de crédito',
+    'Build emergency fund': 'Completar tu colchón de emergencia',
+    'Add life cover': 'Ampliar tu seguro de vida',
+    'Add life insurance': 'Ampliar tu seguro de vida',
+    'Raise mortality coverage': 'Ampliar tu seguro de vida',
+    'Raise annual savings': 'Ahorrar más cada año para tu futuro'
   };
+
+  const moveTitlesEN = {
+    'Add umbrella cover': 'Extra liability protection',
+    'Lower the withdrawal rate': 'Take less from your savings each year',
+    'Raise growth allocation toward glide': 'Invest more for long-term growth',
+    'Close a coverage gap': 'Insure your primary home',
+    'Reduce single-name concentration': 'Spread out your VTI concentration',
+    'Reduce growth allocation toward glide': 'Dial back portfolio risk',
+    'Pay down revolving card': 'Pay off high-interest credit card',
+    'Pay off revolving card': 'Pay off high-interest credit card',
+    'Build emergency fund': 'Build your emergency cash cushion',
+    'Add life cover': 'Increase life insurance cover',
+    'Add life insurance': 'Increase life insurance cover',
+    'Raise mortality coverage': 'Increase life insurance cover',
+    'Raise annual savings': 'Save more each year for the future'
+  };
+
+  function everydayMoveTitle(rawTitle, lang) {
+    const t0 = String(rawTitle || '').trim();
+    if (lang === 'EN') {
+      if (moveTitlesEN[t0]) return moveTitlesEN[t0];
+      return t0
+        .replace(/revolving card/gi, 'high-interest credit card')
+        .replace(/toward glide/gi, 'for long-term growth')
+        .replace(/mortality coverage/gi, 'life insurance cover')
+        .replace(/withdrawal rate/gi, 'yearly savings withdrawals')
+        .replace(/umbrella cover/gi, 'extra liability protection');
+    }
+    if (moveTitles[t0]) return moveTitles[t0];
+    return translateTitleToES(t0)
+      .replace(/tasa de retiro/gi, 'dinero que sacas de tus ahorros')
+      .replace(/deuda rotativa|tarjeta revolvente|tarjeta rotativa/gi, 'tarjeta de crédito')
+      .replace(/senda objetivo|curva objetivo|glide/gi, 'largo plazo')
+      .replace(/cobertura paraguas|póliza paraguas/gi, 'seguro extra ante imprevistos');
+  }
+
+  function compactMoveActionLine(move, scoreNow, lang) {
+    const es = lang !== 'EN';
+    const raw = String((move && (move.action || move.title)) || '');
+    const before = (move && move.score_before != null) ? move.score_before : scoreNow;
+    const after = (move && move.score_after != null) ? move.score_after : scoreNow;
+    const healthSuffix = es ? `Salud financiera ${before} → ${after}` : `Financial health ${before} → ${after}`;
+    let detailPart = '';
+    const mAmt = raw.match(/\$[\d,.]+[MK]?/i);
+    const mPct = raw.match(/\d+(?:\.\d+)?%/g);
+    if (/withdraw|sacas|retiros|10,300/i.test(raw) && mAmt) {
+      detailPart = es ? `Bajar lo que sacas a ${mAmt[0]}/año` : `Limit yearly withdrawals to ${mAmt[0]}/yr`;
+    } else if (/umbrella|paraguas|responsabilidad civil|imprevistos/i.test(raw) && mAmt) {
+      detailPart = es ? `Añadir protección civil extra de ${mAmt[0]}` : `Add ${mAmt[0]} in extra liability protection`;
+    } else if (/card|tarjeta/i.test(raw) && mAmt) {
+      detailPart = es ? `Pagar ${mAmt[0]} de la tarjeta${mPct ? ` al ${mPct[0]}` : ''}` : `Pay ${mAmt[0]} toward the${mPct ? ` ${mPct[0]}` : ''} card`;
+    } else if (/life|mortality|seguro de vida/i.test(raw) && mAmt) {
+      detailPart = es ? `Añadir ${mAmt[0]} de seguro de vida` : `Add ${mAmt[0]} of life insurance`;
+    } else if (/homeowners|hogar|vivienda/i.test(raw)) {
+      detailPart = es ? 'Activar póliza de seguro de hogar' : 'Activate homeowners insurance policy';
+    } else if (/VTI/i.test(raw) && mPct && mPct.length >= 2) {
+      detailPart = es ? `Bajar VTI del ${mPct[0]} al ${mPct[1]}` : `Trim VTI from ${mPct[0]} to ${mPct[1]}`;
+    } else if (/free cash flow|flujo de caja|annual savings|ahorro/i.test(raw) && mAmt) {
+      detailPart = es ? `Destinar ${mAmt[0]}/año extra al ahorro` : `Redirect ${mAmt[0]}/yr into savings`;
+    } else if (/growth|crecimiento/i.test(raw) && mPct && mPct.length >= 2) {
+      detailPart = es ? `Ajustar inversión del ${mPct[0]} al ${mPct[1]}` : `Adjust invested mix from ${mPct[0]} to ${mPct[1]}`;
+    } else if (mAmt) {
+      detailPart = es ? `Importe clave: ${mAmt[0]}` : `Key amount: ${mAmt[0]}`;
+    }
+    return detailPart ? `${detailPart} · ${healthSuffix}` : healthSuffix;
+  }
 
   const buckets = {
     'Build minimum emergency threshold (3 months)': 'Construir el mínimo de emergencia (3 meses)',
@@ -385,7 +454,7 @@
     // Exact full-sentence & multi-clause patterns (preserving all numbers via capture groups)
     [/Savings run out at (\d+) against a plan to (\d+), with (\$[\d,.]+) of planned spending unpaid and a (\$[\d,.]+) gap at retirement\./gi,
       'Los ahorros se agotan a los $1 años frente a un horizonte hasta los $2, dejando $3 de gasto previsto sin cubrir y una brecha de $4 al jubilarse.'],
-    [/The average draw is ([\d.]+%)\./gi, 'La tasa media de retiro es del $1.'],
+    [/The average draw is ([\d.]+%)\./gi, 'El dinero que saca cada año equivale al $1 de sus ahorros.'],
     [/Cash of (\$[\d,.]+) covers about ([\d.]+) months, (\$[\d,.]+) short of the (\d+) to (\d+) month reserve\./gi,
       'El efectivo disponible de $1 cubre unos $2 meses, quedando a $3 de la reserva recomendada de $4 a $5 meses.'],
     [/Counting the January (\d{4}) goals, the target is (\$[\d,.]+) to (\$[\d,.]+), and the plan's cash covers (\d+) months after them\./gi,
@@ -514,25 +583,25 @@
       'El hogar ahorra $1 al año ($2 a corretaje, $3 al plan 529 y $4 a efectivo) mientras arrastra $5 en tarjeta al $6 APR y aporta $7 a los planes 401(k).'],
     [/The 529 receives (\$[\d,.]+) a year while retirement receives nothing, though retirement is the larger gap\./gi,
       'El plan universitario 529 recibe $1 al año mientras que la jubilación no recibe aportaciones, pese a ser la brecha financiera mayor.'],
-    // Top moves actions & notes
+    // Top moves actions & notes (everyday plain language)
     [/Add (\$[\d,.]+[MK]?) of umbrella to raise the liability shield/gi,
-      'Añadir $1 de póliza paraguas para blindar el patrimonio ante responsabilidad civil'],
+      'Contratar un seguro extra de $1 ante imprevistos graves de responsabilidad civil'],
     [/Cutting withdrawals to (\$[\d,.]+)\/year \(([\d.]+%)\) reaches the sustainable band/gi,
-      'Reducir los retiros anuales a $1/año ($2) para situar el flujo en zona sostenible'],
+      'Bajar lo que sacas de tus ahorros a $1/año ($2) para que el dinero te dure todo el plan'],
     [/Move the invested mix from ([\d.]+%) to ([\d.]+%) growth \(glide ([\d.]+%)\) for the next horizon-fit band — about (\$[\d,.]+) of the invested book/gi,
-      'Ajustar la cartera del $1 al $2 en crecimiento (senda objetivo $3) — movilizando unos $4 de la cartera'],
+      'Invertir más para el largo plazo: pasar del $1 al $2 en crecimiento (unos $4 de la cartera)'],
     [/Add homeowners insurance on Primary home so coverage integrity clears that gap/gi,
-      'Activar la póliza de seguro de hogar sobre la vivienda principal para cerrar la brecha patrimonial'],
+      'Activar la póliza de seguro de hogar sobre tu vivienda principal'],
     [/Bring VTI from ([\d.]+%) to ([\d.]+%) of investable for the next concentration band — about (\$[\d,.]+) of that line/gi,
-      'Reducir el peso de VTI del $1 al $2 de los activos invertibles — reasignando unos $3'],
+      'Repartir mejor tu inversión: bajar VTI del $1 al $2 (unos $3)'],
     [/Pay (\$[\d,.]+) on the ([\d.]+%) card from cash to remove high revolving exposure and clear the gate/gi,
-      'Amortizar $1 de la tarjeta al $2 APR usando efectivo disponible para levantar el freno del score'],
+      'Pagar $1 de la tarjeta al $2 usando tu efectivo disponible para quitar intereses caros'],
     [/Add (\$[\d,.]+) of life cover to raise the mortality ratio and clear the gate/gi,
-      'Añadir $1 de seguro de vida para cubrir el umbral familiar y desbloquear la puntuación'],
+      'Añadir $1 de seguro de vida para proteger a la familia'],
     [/Add (\$[\d,.]+) of life cover to reach the next mortality-coverage anchor/gi,
-      'Añadir $1 de seguro de vida para alcanzar el siguiente nivel de protección familiar'],
+      'Añadir $1 de seguro de vida para proteger a la familia'],
     [/Redirect (\$[\d,.]+)\/year of free cash flow into savings to raise retirement-directed savings toward the next band/gi,
-      'Redirigir los $1/año de flujo de caja libre hacia ahorro de jubilación para subir al siguiente tramo'],
+      'Destinar $1/año que sobran cada año a ahorrar para tu futuro'],
     [/After the card paydown, life cover must reach (\$[\d,.]+) to keep the mortality ratio at the gate line\./gi,
       'Tras rebajar la tarjeta, la cobertura de vida debe situarse en $1 para superar ambos límites del score.'],
     [/Together they raise the published score more than either move alone\./gi,
@@ -625,33 +694,35 @@
     const src = `${title} ${body}`;
     const raw = String(rawCleaned || src);
 
-    // 1. Ultra-short 3-5 word title
+    // 1. Ultra-short 3-5 word title (specific rules BEFORE broad retirement rule to prevent duplicate titles)
     let shortTitle = title;
     const shortMap = es ? [
-      [/se agota a los (\d+)/i, 'Jubilación corta ($1 años)'],
+      [/margen fiscal|espacio fiscal|ventaja fiscal/i, 'Ahorro fiscal sin aprovechar'],
+      [/coste fiscal/i, 'Impuestos evitables en cartera'],
+      [/se agota a los (\d+)/i, 'Ahorro corto ($1 años)'],
       [/jubilaci|retiro/i, 'Brecha de jubilación'],
       [/compra de vivienda.*2030|prevista para 2030/i, 'Compra vivienda 2030'],
       [/efectivo ajustado.*vivienda|vivienda/i, 'Efectivo para vivienda'],
       [/seguro de vida/i, 'Seguro de vida'],
-      [/paraguas/i, 'Sin seguro paraguas'],
+      [/paraguas|imprevistos/i, 'Seguro extra ante imprevistos'],
       [/vivienda y vehículo sin póliza|sin póliza/i, 'Vivienda y auto sin póliza'],
       [/flujo de caja.*negativo/i, 'Flujo de caja negativo'],
       [/margen.*estrecho/i, 'Margen de ahorro justo'],
       [/tarjeta.*([\d.]+%)|alto interés|alto coste/i, 'Tarjeta cara'],
       [/universid|educat|529/i, 'Fondo universitario'],
-      [/efectivo ocioso|sin rentabilidad/i, 'Efectivo ocioso'],
+      [/efectivo ocioso|sin rentabilidad/i, 'Efectivo sin rentabilidad'],
       [/colchón líquido|reserva de liquidez/i, 'Reserva de liquidez'],
-      [/margen fiscal|espacio fiscal|ventaja fiscal/i, 'Margen fiscal sin usar'],
-      [/coste fiscal/i, 'Coste fiscal cartera'],
       [/concentraci|acciones sobre objetivo/i, 'Concentración en cartera'],
       [/dependencia.*salari|solo sueldo/i, 'Dependencia salarial']
     ] : [
-      [/runs out.*age (\d+)/i, 'Retirement ends at $1'],
+      [/unused|tax-advantaged/i, 'Unused tax-advantaged savings'],
+      [/tax cost/i, 'Portfolio tax drag'],
+      [/runs out.*age (\d+)/i, 'Savings end at $1'],
       [/retirement/i, 'Retirement gap'],
       [/home purchase.*2030/i, '2030 home purchase'],
       [/cash for the home|down payment/i, 'Home cash reserve'],
       [/life insurance/i, 'Life insurance gap'],
-      [/umbrella/i, 'No umbrella cover'],
+      [/umbrella|liability/i, 'Extra liability protection'],
       [/no home or auto insurance/i, 'Uninsured home & car'],
       [/cash flow is negative|negative cash flow/i, 'Negative cash flow'],
       [/thin margin/i, 'Thin cash margin'],
@@ -659,88 +730,92 @@
       [/college|education|529/i, 'College funding gap'],
       [/idle cash/i, 'Idle low-yield cash'],
       [/thin cash|cash reserve/i, 'Thin cash reserve'],
-      [/unused|tax-advantaged/i, 'Unused tax-free room'],
-      [/tax cost/i, 'Portfolio tax drag'],
       [/concentrat|equity above target/i, 'Portfolio concentration'],
       [/income dependence|one employer/i, 'Salary concentration']
     ];
+    let matchedTitle = false;
     for (const [rx, rep] of shortMap) {
-      if (rx.test(src)) { shortTitle = src.match(rx)[0].replace(rx, rep); break; }
+      if (rx.test(title)) { shortTitle = title.match(rx)[0].replace(rx, rep); matchedTitle = true; break; }
+    }
+    if (!matchedTitle) {
+      for (const [rx, rep] of shortMap) {
+        if (rx.test(src)) { shortTitle = src.match(rx)[0].replace(rx, rep); break; }
+      }
     }
     if (shortTitle.split(/\s+/).length > 5) {
       shortTitle = shortTitle.split(/\s+/).slice(0, 5).join(' ').replace(/[,:;.]$/, '');
     }
 
-    // 2. Single-line key metric (literal JSON figures only, max ~55 chars)
+    // 2. Single-line key metric (literal JSON figures only, max ~55 chars; NEVER raw $digit literals in replace strings!)
     let keyMetric = '';
     const metricRules = es ? [
-      [/se agotan a los (\d+) años.*brecha de (\$[\d,.]+)/i, 'Se agota a los $1 años · brecha $2'],
-      [/tienen (\$[\d,.]+).*cubre el ([\d.]+%).*quedan (\$[\d,.]+)/i, 'Cuentas retiro $1 · $3 sin cubrir'],
-      [/brecha de jubilación es de (\$[\d,.]+).*requiere unos (\$[\d,.]+)/i, 'Brecha $1 · +$2/año necesarios'],
-      [/efectivo disponible de (\$[\d,.]+) cubre unos ([\d.]+) meses/i, '$1 en caja ($2 meses)'],
-      [/faltan (\$[\d,.]+).*vivienda/i, 'Faltan $1 para reserva y compra'],
-      [/cuenta con (\$[\d,.]+).*frente a los (\$[\d,.]+)/i, 'Tiene $1 · faltan $720,000'],
-      [/Timothy le faltan (\$[\d,.]+).*Melanie (\$[\d,.]+)/i, 'Faltan $1 (Timothy) y $2 (Melanie)'],
-      [/cobertura de (\$[\d,.]+) en Daniel y (\$[\d,.]+) en Emily/i, 'Déficit $1 (Daniel) y $2 (Emily)'],
-      [/vivienda de (\$[\d,.]+).*Porsche Cayenne de (\$[\d,.]+)/i, 'Casa $1 y Porsche $2 sin póliza'],
-      [/mínimo recomendado es (\$[\d,.]+)/i, 'Mínimo $1 · hoy $0'],
-      [/brecha de (\$[\d,.]+) en responsabilidad civil/i, 'Falta póliza de $1'],
-      [/falta una cobertura paraguas de (\$[\d,.]+)/i, 'Falta póliza de $1 (+4 pts)'],
-      [/flujo de caja neto es de (-\$[\d,.]+) al año/i, '$1/año en negativo'],
-      [/déficit anual de (\$[\d,.]+)/i, '-$1/año tras gastos y ahorro'],
-      [/flujo de caja libre de (\$[\d,.]+) al año/i, 'Solo $1/año libres (5.37%)'],
-      [/Amex Platinum es de (\$[\d,.]+) al ([\d.]+%)/i, '$1 al $2 APR'],
-      [/mantienen (\$[\d,.]+) en tarjeta al ([\d.]+%)/i, '$1 al $2 APR (con $150,800 en caja)'],
-      [/tarjeta de (\$[\d,.]+).*?(?:24\.9%|[\d.]+%)/i, 'Tarjeta $1 al 24.9% APR'],
-      [/(\$[\d,.]+) de margen adicional \(unos (\$[\d,.]+)/i, '+$1 libres en 401(k) · ahorra $2/año'],
-      [/aportar hasta (\$[\d,.]+) al año a una HSA/i, 'Hasta $1 en HSA y $7,500 en IRA'],
-      [/factura fiscal.*cuesta unos (\$[\d,.]+) al año/i, '$1/año en impuestos evitables'],
-      [/ahorro fiscal.*(\$[\d,.]+)/i, 'Hasta $1/año en ahorro fiscal'],
-      [/generaría unos (\$[\d,.]+) al año en ahorro fiscal/i, 'Hasta $1/año en ahorro fiscal'],
-      [/faltan (\$[\d,.]+) por cubrir para la universidad/i, 'Faltan $1 · saldo 529 en $0'],
-      [/tienen (\$[\d,.]+) en cuentas 529 frente a.*(\$[\d,.]+)/i, '$1 en 529 · brecha de $2'],
-      [/brecha universitaria de (\$[\d,.]+)/i, 'Brecha de $1 (529 en $30,000)'],
-      [/hay (\$[\d,.]+) ociosos.*rindiendo apenas un ([\d.]+%)/i, '$1 ociosos rindiendo solo $2'],
-      [/quedan (\$[\d,.]+) por encima de la reserva/i, 'Solo $1 libres tras metas cercanas'],
-      [/efectivo disponible de (\$[\d,.]+).*déficit líquido de (\$[\d,.]+)/i, '$1 disponibles · faltan $2'],
-      [/compra de (\$[\d,.]+).*entrada de (\$[\d,.]+)/i, 'Casa $1 · entrada $2'],
-      [/(\$[\d,.]+) en el ETF apalancado 3x UPRO/i, '77% acciones · $1 en UPRO 3x'],
-      [/tecnología pesa el ([\d.]+%).*VTI/i, '39% en VTI · $1 tecnología'],
-      [/salario de (\$[\d,.]+) equivale al ([\d.]+%)/i, 'Sueldo = $2 del patrimonio · $35,000 RSU'],
-      [/salario anual equivale al ([\d.]+%)/i, 'Sueldo = $1 del patrimonio neto']
+      [/se agotan a los (\d+) años.*brecha de (\$[\d,.]+)/i, (_, a, g) => `Se agota a los ${a} años · brecha ${g}`],
+      [/tienen (\$[\d,.]+).*cubre el ([\d.]+%).*quedan (\$[\d,.]+)/i, (_, z, p, u) => `Cuentas retiro ${z} · ${u} sin cubrir`],
+      [/brecha de jubilación es de (\$[\d,.]+).*requiere unos (\$[\d,.]+)/i, (_, g, y) => `Brecha ${g} · +${y}/año necesarios`],
+      [/efectivo disponible de (\$[\d,.]+) cubre unos ([\d.]+) meses/i, (_, c, m) => `${c} en caja (${m} meses)`],
+      [/faltan (\$[\d,.]+).*vivienda/i, (_, a) => `Faltan ${a} para reserva y compra`],
+      [/cuenta con (\$[\d,.]+).*frente a los (\$[\d,.]+)/i, (_, h, r) => `Tiene ${h} vs ${r} recomendados`],
+      [/Timothy le faltan (\$[\d,.]+).*Melanie (\$[\d,.]+)/i, (_, a, b) => `Faltan ${a} (Timothy) y ${b} (Melanie)`],
+      [/cobertura de (\$[\d,.]+) en Daniel y (\$[\d,.]+) en Emily/i, (_, a, b) => `Déficit ${a} (Daniel) y ${b} (Emily)`],
+      [/vivienda de (\$[\d,.]+).*Porsche Cayenne de (\$[\d,.]+)/i, (_, h, c) => `Casa ${h} y Porsche ${c} sin póliza`],
+      [/mínimo recomendado es (\$[\d,.]+)/i, (_, m) => `Mínimo ${m} · hoy $0`],
+      [/brecha de (\$[\d,.]+) en responsabilidad civil/i, (_, m) => `Falta protección de ${m}`],
+      [/falta una cobertura paraguas de (\$[\d,.]+)/i, (_, m) => `Falta protección de ${m} (+4 pts)`],
+      [/flujo de caja neto es de (-\$[\d,.]+) al año/i, (_, f) => `${f}/año en negativo`],
+      [/déficit anual de (\$[\d,.]+)/i, (_, f) => `-${f}/año tras gastos y ahorro`],
+      [/flujo de caja libre de (\$[\d,.]+) al año/i, (_, f) => `Solo ${f}/año libres (5.37%)`],
+      [/Amex Platinum es de (\$[\d,.]+) al ([\d.]+%)/i, (_, b, r) => `${b} al ${r} APR`],
+      [/mantienen (\$[\d,.]+) en tarjeta al ([\d.]+%).*?(\$[\d,.]+) de efectivo/i, (_, b, r, c) => `${b} al ${r} APR (con ${c} en caja)`],
+      [/tarjeta de (\$[\d,.]+)/i, (_, b) => `Tarjeta ${b} al 24.9% APR`],
+      [/(\$[\d,.]+) de margen adicional \(unos (\$[\d,.]+)/i, (_, r, s) => `+${r} libres en 401(k) · ahorra ${s}/año`],
+      [/aportar hasta (\$[\d,.]+) al año a una HSA.*hasta (\$[\d,.]+)/i, (_, h, i) => `Hasta ${h} en HSA y ${i} en IRA`],
+      [/factura fiscal.*cuesta unos (\$[\d,.]+) al año/i, (_, t) => `${t}/año en impuestos evitables`],
+      [/ahorro fiscal.*(\$[\d,.]+)/i, (_, s) => `Hasta ${s}/año en ahorro fiscal`],
+      [/generaría unos (\$[\d,.]+) al año en ahorro fiscal/i, (_, s) => `Hasta ${s}/año en ahorro fiscal`],
+      [/faltan (\$[\d,.]+) por cubrir para la universidad/i, (_, g) => `Faltan ${g} · saldo 529 en $0`],
+      [/tienen (\$[\d,.]+) en cuentas 529 frente a.*(\$[\d,.]+)/i, (_, b, g) => `${b} en 529 · brecha de ${g}`],
+      [/brecha universitaria de (\$[\d,.]+).*?(\$[\d,.]+) ya acumulados/i, (_, g, b) => `Brecha de ${g} (${b} en 529)`],
+      [/hay (\$[\d,.]+) ociosos.*rindiendo apenas un ([\d.]+%)/i, (_, c, r) => `${c} ociosos rindiendo solo ${r}`],
+      [/quedan (\$[\d,.]+) por encima de la reserva/i, (_, c) => `Solo ${c} libres tras metas cercanas`],
+      [/efectivo disponible de (\$[\d,.]+).*déficit líquido de (\$[\d,.]+)/i, (_, c, g) => `${c} disponibles · faltan ${g}`],
+      [/compra de (\$[\d,.]+).*entrada de (\$[\d,.]+)/i, (_, h, d) => `Casa ${h} · entrada ${d}`],
+      [/(\$[\d,.]+) en el ETF apalancado 3x UPRO/i, (_, u) => `77% acciones · ${u} en UPRO 3x`],
+      [/tecnología pesa el ([\d.]+%).*VTI/i, (_, t) => `39% en VTI · ${t} tecnología`],
+      [/salario de (\$[\d,.]+) equivale al ([\d.]+%).*?(\$[\d,.]+) en RSU/i, (_, s, p, r) => `Sueldo = ${p} del patrimonio · ${r} RSU`],
+      [/salario anual equivale al ([\d.]+%)/i, (_, p) => `Sueldo = ${p} del patrimonio neto`]
     ] : [
-      [/run out at (\d+).*(\$[\d,.]+) gap/i, 'Runs out at $1 · $2 gap'],
-      [/hold (\$[\d,.]+).*?(\$[\d,.]+) of planned spending/i, '$1 in retirement · $2 unpaid'],
-      [/gap is (\$[\d,.]+).*?(\$[\d,.]+) a year more/i, '$1 gap · +$2/yr needed'],
-      [/cash of (\$[\d,.]+) covers about ([\d.]+) months/i, '$1 cash ($2 months)'],
-      [/(\$[\d,.]+) of whole life.*against (\$[\d,.]+)/i, '$1 cover vs $2 recommended'],
-      [/Timothy is short (\$[\d,.]+) and Melanie (\$[\d,.]+)/i, 'Short $1 (Timothy) & $2 (Melanie)'],
-      [/shortfalls of (\$[\d,.]+) for Daniel and (\$[\d,.]+)/i, 'Short $1 (Daniel) & $2 (Emily)'],
-      [/(\$[\d,.]+) home and the (\$[\d,.]+) Porsche/i, '$1 home & $2 Porsche uninsured'],
-      [/recommended minimum is (\$[\d,.]+)/i, '$1 recommended · $0 today'],
-      [/(\$[\d,.]+) gap.*liability/i, '$1 liability gap'],
-      [/(\$[\d,.]+) gap\. Adding it is worth (\d+) points/i, '$1 gap (+$2 score pts)'],
-      [/net cash flow is (-\$[\d,.]+) a year/i, '$1/yr negative cash flow'],
-      [/(\$[\d,.]+) a year short/i, '-$1/yr after expenses & savings'],
-      [/free cash flow of (\$[\d,.]+) a year/i, 'Only $1/yr free cash flow'],
-      [/Amex Platinum balance is (\$[\d,.]+) at ([\d.]+%)/i, '$1 at $2 APR'],
-      [/(\$[\d,.]+) at ([\d.]+%) against (\$[\d,.]+)/i, '$1 at $2 APR vs $3 cash'],
-      [/(\$[\d,.]+) card is the most expensive/i, '$1 card at 24.9% APR'],
-      [/(\$[\d,.]+) more is possible.*(\$[\d,.]+) in tax/i, '+$1 401(k) room · saves $2/yr'],
-      [/(\$[\d,.]+) a year in an HSA/i, 'Up to $1 HSA & $7,500 IRA unused'],
-      [/costs about (\$[\d,.]+) a year/i, '$1/yr in investment tax drag'],
-      [/tax saving.*about (\$[\d,.]+) a year/i, 'Up to $1/yr tax savings'],
-      [/(\$[\d,.]+) is still needed.*529/i, '$1 needed · $0 in 529'],
-      [/(\$[\d,.]+) in 529s against a (\$[\d,.]+)/i, '$1 in 529 · $2 gap'],
-      [/(\$[\d,.]+) gap remains after the (\$[\d,.]+)/i, '$1 gap ($2 in 529)'],
-      [/(\$[\d,.]+) sits above.*earns about ([\d.]+%)/i, '$1 idle earning $2'],
-      [/only (\$[\d,.]+) sits above the reserve/i, 'Only $1 above reserve'],
-      [/accessible cash of (\$[\d,.]+).*gap of (\$[\d,.]+)/i, '$1 cash · $2 reserve gap'],
-      [/(\$[\d,.]+) purchase.*(\$[\d,.]+) down payment/i, '$1 home · $2 down payment'],
-      [/([\d.]+%) stocks.*UPRO\) at (\$[\d,.]+)/i, '$1 stocks · $2 in 3x UPRO'],
-      [/cutting VTI from ([\d.]+%) to ([\d.]+%)/i, 'VTI at $1 (target $2)'],
-      [/(\$[\d,.]+) salary equals ([\d.]+%)/i, 'Salary = $2 of net worth · $35,000 RSUs'],
-      [/annual salary is ([\d.]+%)/i, 'Salary = $1 of net worth']
+      [/run out at (\d+).*(\$[\d,.]+) gap/i, (_, a, g) => `Runs out at ${a} · ${g} gap`],
+      [/hold (\$[\d,.]+).*?(\$[\d,.]+) of planned spending/i, (_, z, u) => `${z} in retirement · ${u} unpaid`],
+      [/gap is (\$[\d,.]+).*?(\$[\d,.]+) a year more/i, (_, g, y) => `${g} gap · +${y}/yr needed`],
+      [/cash of (\$[\d,.]+) covers about ([\d.]+) months/i, (_, c, m) => `${c} cash (${m} months)`],
+      [/(\$[\d,.]+) of whole life.*against (\$[\d,.]+)/i, (_, h, r) => `${h} cover vs ${r} recommended`],
+      [/Timothy is short (\$[\d,.]+) and Melanie (\$[\d,.]+)/i, (_, a, b) => `Short ${a} (Timothy) & ${b} (Melanie)`],
+      [/shortfalls of (\$[\d,.]+) for Daniel and (\$[\d,.]+)/i, (_, a, b) => `Short ${a} (Daniel) & ${b} (Emily)`],
+      [/(\$[\d,.]+) home and the (\$[\d,.]+) Porsche/i, (_, h, c) => `${h} home & ${c} Porsche uninsured`],
+      [/recommended minimum is (\$[\d,.]+)/i, (_, m) => `${m} recommended · $0 today`],
+      [/(\$[\d,.]+) gap.*liability/i, (_, m) => `${m} liability gap`],
+      [/(\$[\d,.]+) gap\. Adding it is worth (\d+) points/i, (_, m, p) => `${m} gap (+${p} pts)`],
+      [/net cash flow is (-\$[\d,.]+) a year/i, (_, f) => `${f}/yr negative cash flow`],
+      [/(\$[\d,.]+) a year short/i, (_, f) => `-${f}/yr after expenses & savings`],
+      [/free cash flow of (\$[\d,.]+) a year/i, (_, f) => `Only ${f}/yr free cash flow`],
+      [/Amex Platinum balance is (\$[\d,.]+) at ([\d.]+%)/i, (_, b, r) => `${b} at ${r} APR`],
+      [/(\$[\d,.]+) at ([\d.]+%) against (\$[\d,.]+)/i, (_, b, r, c) => `${b} at ${r} APR vs ${c} cash`],
+      [/(\$[\d,.]+) card is the most expensive/i, (_, b) => `${b} card at 24.9% APR`],
+      [/(\$[\d,.]+) more is possible.*(\$[\d,.]+) in tax/i, (_, r, s) => `+${r} 401(k) room · saves ${s}/yr`],
+      [/(\$[\d,.]+) a year in an HSA.*up to (\$[\d,.]+)/i, (_, h, i) => `Up to ${h} HSA & ${i} IRA unused`],
+      [/costs about (\$[\d,.]+) a year/i, (_, t) => `${t}/yr in investment tax drag`],
+      [/tax saving.*about (\$[\d,.]+) a year/i, (_, s) => `Up to ${s}/yr tax savings`],
+      [/(\$[\d,.]+) is still needed.*529/i, (_, g) => `${g} needed · $0 in 529`],
+      [/(\$[\d,.]+) in 529s against a (\$[\d,.]+)/i, (_, b, g) => `${b} in 529 · ${g} gap`],
+      [/(\$[\d,.]+) gap remains after the (\$[\d,.]+)/i, (_, g, b) => `${g} gap (${b} in 529)`],
+      [/(\$[\d,.]+) sits above.*earns about ([\d.]+%)/i, (_, c, r) => `${c} idle earning ${r}`],
+      [/only (\$[\d,.]+) sits above the reserve/i, (_, c) => `Only ${c} above reserve`],
+      [/accessible cash of (\$[\d,.]+).*gap of (\$[\d,.]+)/i, (_, c, g) => `${c} cash · ${g} reserve gap`],
+      [/(\$[\d,.]+) purchase.*(\$[\d,.]+) down payment/i, (_, h, d) => `${h} home · ${d} down payment`],
+      [/([\d.]+%) stocks.*UPRO\) at (\$[\d,.]+)/i, (_, p, u) => `${p} stocks · ${u} in 3x UPRO`],
+      [/cutting VTI from ([\d.]+%) to ([\d.]+%)/i, (_, a, b) => `VTI at ${a} (target ${b})`],
+      [/(\$[\d,.]+) salary equals ([\d.]+%).*?(\$[\d,.]+) of RSUs/i, (_, s, p, r) => `Salary = ${p} of net worth · ${r} RSUs`],
+      [/annual salary is ([\d.]+%)/i, (_, p) => `Salary = ${p} of net worth`]
     ];
     for (const [rx, rep] of metricRules) {
       const m = src.match(rx);
@@ -885,7 +960,11 @@
       return Object.assign({}, data, {
         score: Object.assign({}, score, {
           top_moves: (score.top_moves || []).map(m => Object.assign({}, m, {
+            title: everydayMoveTitle(m.title, 'EN'),
             topic: detectTopic((m.title || '') + ' ' + (m.action || ''))
+          })),
+          combined_moves: (score.combined_moves || []).map(m => Object.assign({}, m, {
+            moves: (m.moves || []).map(x => everydayMoveTitle(x, 'EN'))
           }))
         }),
         persona: Object.assign({}, persona, {
@@ -908,12 +987,12 @@
         })),
         top_moves: (score.top_moves || []).map((m, i) => Object.assign({}, m, {
           topic: detectTopic((m.title || '') + ' ' + (m.action || '')),
-          title: moveTitles[m.title] || translateTitleToES(m.title || `Medida prioritaria ${i + 1}`),
+          title: everydayMoveTitle(m.title || `Medida prioritaria ${i + 1}`, 'ES'),
           action: translateBodyToES(m.action || m.title || ''),
           note: translateBodyToES(m.note || '')
         })),
         combined_moves: (score.combined_moves || []).map((m, i) => {
-          const translatedMoves = (m.moves || []).map((x, j) => moveTitles[x] || translateTitleToES(x || `Medida ${j + 1}`));
+          const translatedMoves = (m.moves || []).map((x, j) => everydayMoveTitle(x || `Medida ${j + 1}`, 'ES'));
           return Object.assign({}, m, {
             title: translatedMoves.join(' + ') || `Medidas combinadas ${i + 1}`,
             action: translateBodyToES(m.action || translatedMoves.join(' + ')),
@@ -1099,16 +1178,17 @@
           : `Key contrast: what worries you most today is "${top1.title}", whereas the largest score jump in the numbers (${singleDelta}${comboNote}) also requires acting on "${bestMoveTitle}". In Basecamp we will address your #1 priority at the first node while closing this blind spot.`);
 
     const shortMoveTitle = bestSingle
-      ? (bestSingle.title || bestSingle.action).split(/\s+/).slice(0, 5).join(' ')
+      ? everydayMoveTitle(bestSingle.title || bestSingle.action, lang)
       : (es ? 'Medida principal' : 'Primary move');
-    const shortImpactMetric = `Score ${singleDelta}${bestCombined && bestCombined.score_after ? ` (${es ? 'hasta' : 'up to'} ${bestCombined.score_after})` : ''}`;
+    const shortImpactBase = compactMoveActionLine(bestSingle, scoreNow, lang);
+    const shortImpactMetric = `${shortImpactBase}${bestCombined && bestCombined.score_after ? ` (${es ? 'hasta' : 'up to'} ${bestCombined.score_after})` : ''}`;
     const shortTakeaway = aligned
       ? (es
-          ? `Tu #1 coincide con el mayor salto del plan (${singleDelta}). Empezamos aquí.`
-          : `Your #1 matches the plan's biggest score jump (${singleDelta}). Starting here.`)
+          ? `Tu #1 coincide con la acción que más mejora tu salud financiera (${singleDelta}). Empezamos aquí.`
+          : `Your #1 matches the action that boosts your financial health most (${singleDelta}). Starting here.`)
       : (es
-          ? `Punto ciego: te preocupa «${top1.shortTitle || top1.title}», pero «${shortMoveTitle}» mueve más el score (${singleDelta}).`
-          : `Blind spot: "${top1.shortTitle || top1.title}" worries you, yet "${shortMoveTitle}" moves your score most (${singleDelta}).`);
+          ? `Punto ciego: te preocupa «${top1.shortTitle || top1.title}», pero «${shortMoveTitle}» mejora más tu plan (${singleDelta}).`
+          : `Blind spot: "${top1.shortTitle || top1.title}" worries you, yet "${shortMoveTitle}" improves your plan most (${singleDelta}).`);
 
     return { top1, bestSingle, bestCombined, aligned, worryText, impactText, blindSpotText, shortMoveTitle, shortImpactMetric, shortTakeaway, topic: top1Topic };
   }
