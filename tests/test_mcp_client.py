@@ -209,22 +209,36 @@ class MCPClientTests(unittest.TestCase):
 
     def test_seed_fallback_all_four_cases_and_deepcopy(self):
         c = self.client(token="")
-        ids = ["michael-carter","samantha-lewis","timothy-melanie-weah","daniel-emily-johnson"]
+        ids = ["michael-carter", "samantha-lewis", "timothy-melanie-weah", "daniel-emily-johnson"]
         self.assertEqual({x["id"] for x in c.list_cases()}, set(ids))
-        michael = c.get_case(ids[0])
-        self.assertEqual(michael["financial-health"]["score"]["overall"], 26)
-        self.assertEqual(next(row for row in michael["financial-health"]["projections"]["yearly"] if row["year"] == 2075)["investable_assets"],-38276)
-        self.assertEqual(michael["investment-analysis"]["analysis"]["recovery_days"],62)
+
+        names = ["Savings & cash flow", "Debt", "Investments", "Liquidity", "Protection"]
+        maxima = [25, 10, 25, 20, 20]
+        expected_scores = [[0, 8, 11, 4, 4], [None] * 5, [None] * 5, [None, None, None, None, 0]]
+        cases = [c.get_case(case_id) for case_id in ids]
+        for case, scores in zip(cases, expected_scores):
+            with self.subTest(case=case["financial-health"]["case_id"]):
+                pillars = case["financial-health"]["score"]["pillars"]
+                self.assertEqual([pillar["name"] for pillar in pillars], names)
+                self.assertEqual([pillar["max"] for pillar in pillars], maxima)
+                self.assertEqual([pillar["score"] for pillar in pillars], scores)
+
+        michael, samantha, weah, johnson = cases
+        michael_score = michael["financial-health"]["score"]
+        self.assertEqual(michael_score["overall"], 26)
+        yearly = michael["financial-health"]["projections"]["yearly"]
+        self.assertEqual(len(yearly), 12)
+        self.assertEqual([row["year"] for row in yearly], [2026, 2027, 2032, 2038, 2044, 2050, 2056, 2062, 2068, 2074, 2075, 2080])
+        self.assertEqual(next(row for row in yearly if row["year"] == 2075)["investable_assets"], -38276)
+        self.assertEqual(michael["investment-analysis"]["analysis"]["recovery_days"], 62)
         self.assertIn("Subjective concerns: None recorded", michael["persona"])
-        michael["financial-health"]["score"]["overall"] = 0
-        self.assertEqual(c.get_case(ids[0])["financial-health"]["score"]["overall"],26)
-        samantha = c.get_case(ids[1])
+        michael_score["overall"] = 0
+        self.assertEqual(c.get_case(ids[0])["financial-health"]["score"]["overall"], 26)
         self.assertEqual(next(row for row in samantha["financial-health"]["projections"]["yearly"] if row["year"] == 2053)["investable_assets"], -227414)
-        weah = c.get_case(ids[2])
         self.assertEqual(weah["financial-health"]["score"]["combined_moves"][0]["score_after"], 78)
-        johnson = c.get_case(ids[3])
-        self.assertEqual(johnson["financial-health"]["score"]["pillars"][0], {"name":"Protection","score":0,"max":20})
-        self.assertEqual(c.last_source,"seed")
+        self.assertEqual(weah["financial-health"]["score"]["combined_target_score"], 78)
+        self.assertEqual(johnson["financial-health"]["score"]["combined_target_score"], 60)
+        self.assertEqual(c.last_source, "seed")
 
     def test_validation_not_found_and_no_fallback(self):
         c = self.client(token="")
