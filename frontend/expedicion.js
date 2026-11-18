@@ -1787,6 +1787,7 @@
       roomWaiting: false,
       roomCopied: false,
       roomDecisions: {},
+      animatedCoupleKeys: {},
       roomAlignedBanner: false,
       timerStartedAt: null,
       aiReframe: null,
@@ -2818,6 +2819,86 @@
     return state.history.length - 1;
   }
 
+  function animateAdvanceStage(el, state, rerender, onSummit) {
+    const syncViewportClass = () => {
+      if (root.document && root.document.body) root.document.body.classList.add('is-mountain-viewport');
+    };
+    const svg = el && el.querySelector ? el.querySelector('.mountain-svg[data-camera]') : null;
+    const fromStage = Number(state.stage) || 0;
+    const isSummitStep = fromStage >= 3;
+    const toStage = isSummitStep ? 3 : fromStage + 1;
+    state.inspectedRisk = null;
+    state.roomWaiting = false;
+    if (el && el.querySelector) hideDialogs(el, state);
+    if (hasRaf() && svg) {
+      runCamera(svg, { type: 'advance', fromStage, toStage }, () => {
+        if (isSummitStep) {
+          setTimeout(() => {
+            state.initialViewBox = null;
+            if (typeof onSummit === 'function') onSummit();
+            syncViewportClass();
+          }, 340);
+        } else {
+          state.stage = toStage;
+          state.focusedNode = toStage;
+          state.cameraMode = 'camp';
+          state.dialogVisible = true;
+          state.initialViewBox = campCamera(toStage);
+          if (typeof rerender === 'function') rerender();
+          state.initialViewBox = null;
+          syncViewportClass();
+        }
+      });
+    } else {
+      if (isSummitStep) {
+        if (typeof onSummit === 'function') onSummit();
+      } else {
+        state.stage = toStage;
+        state.focusedNode = toStage;
+        state.cameraMode = 'camp';
+        state.dialogVisible = true;
+        state.initialViewBox = campCamera(toStage);
+        if (typeof rerender === 'function') rerender();
+        state.initialViewBox = null;
+      }
+      syncViewportClass();
+    }
+  }
+
+  function animateRiskStage(el, state, rerender, opts) {
+    const syncViewportClass = () => {
+      if (root.document && root.document.body) root.document.body.classList.add('is-mountain-viewport');
+    };
+    const keepPathCompare = !!(opts && opts.keepPathCompare);
+    const svg = el && el.querySelector ? el.querySelector('.mountain-svg[data-camera]') : null;
+    const prevBox = svg ? parseViewBox(svg) : fullCamera.slice();
+    const riskIdx = ensureStageRiskEntry(state);
+    state.roomWaiting = false;
+    if (keepPathCompare) {
+      state.inspectedRisk = null;
+      state.blocked = false;
+      state.phase = 'expedition';
+    } else {
+      state.inspectedRisk = riskIdx;
+      state.blocked = true;
+      state.phase = 'blocked';
+    }
+    state.cameraMode = 'camp';
+    state.dialogVisible = !hasRaf();
+    state.initialViewBox = hasRaf() ? prevBox : riskCameraBox(riskRecord(state.caseId, langOf(state)), biomes[state.stage].point, state.stage);
+    if (typeof rerender === 'function') rerender();
+    syncViewportClass();
+    if (hasRaf() && el && el.querySelector) {
+      const nextSvg = el.querySelector('.mountain-svg[data-camera]');
+      runCamera(nextSvg, { type: 'risk', stage: state.stage }, () => {
+        state.initialViewBox = null;
+        revealDialog(el, state);
+      });
+    } else {
+      state.initialViewBox = null;
+    }
+  }
+
   function applyRoomSnapshot(state, roomData, el, rerender, onSummit) {
     if (!state || !roomData || state.coupleSyncMode === 'local') return false;
     const raw = dataFor(state.caseId) || {};
@@ -2862,28 +2943,19 @@
     const stKey = String(Number(state.stage) || 0);
     const curDec = decs[stKey];
     if (curDec && curDec.ready && state.phase === 'expedition') {
-      if (state.roomWaiting === 'decision') {
-        state.roomWaiting = false;
-        changed = true;
-      }
-      if (curDec.aligned && curDec.A && curDec.A.route === 'good') {
-        const fromStage = Number(state.stage) || 0;
-        const isSummitStep = fromStage >= 3;
-        const toStage = isSummitStep ? 3 : fromStage + 1;
-        state.roomAlignedBanner = true;
-        if (isSummitStep) {
-          if (typeof onSummit === 'function') onSummit();
-        } else {
-          state.stage = toStage;
-          state.focusedNode = toStage;
-          state.inspectedRisk = null;
-          state.dialogVisible = true;
-          state.initialViewBox = campCamera(toStage);
-          changed = true;
+      state.animatedCoupleKeys = state.animatedCoupleKeys || {};
+      const decKey = `${stKey}:${curDec.A && curDec.A.route}:${curDec.B && curDec.B.route}`;
+      if (!state.animatedCoupleKeys[decKey]) {
+        state.animatedCoupleKeys[decKey] = true;
+        if (curDec.aligned && curDec.A && curDec.A.route === 'good') {
+          state.roomAlignedBanner = true;
+          animateAdvanceStage(el, state, rerender, onSummit);
+          return true;
         }
-      } else if (!curDec.aligned || (curDec.A && curDec.A.route === 'bad') || (curDec.B && curDec.B.route === 'bad')) {
-        ensureStageRiskEntry(state);
-        changed = true;
+        if (!curDec.aligned || (curDec.A && curDec.A.route === 'bad') || (curDec.B && curDec.B.route === 'bad')) {
+          animateRiskStage(el, state, rerender, { keepPathCompare: true });
+          return true;
+        }
       }
     }
 
@@ -3053,24 +3125,8 @@
     }
 
     if (action === 'room-agree-good') {
-      const fromStage = Number(state.stage) || 0;
-      const isSummitStep = fromStage >= 3;
-      const toStage = isSummitStep ? 3 : fromStage + 1;
-      state.roomWaiting = false;
       state.roomAlignedBanner = false;
-      state.inspectedRisk = null;
-      if (isSummitStep) {
-        onSummit();
-      } else {
-        state.stage = toStage;
-        state.focusedNode = toStage;
-        state.cameraMode = 'camp';
-        state.dialogVisible = true;
-        state.initialViewBox = campCamera(toStage);
-        rerender();
-        state.initialViewBox = null;
-      }
-      syncViewportClass();
+      animateAdvanceStage(el, state, rerender, onSummit);
       return true;
     }
 
@@ -3116,8 +3172,6 @@
 
     if (action === 'advance') {
       const route = (el.querySelector('[name="route"]:checked') || {}).value || 'good';
-      const svg = el.querySelector('.mountain-svg[data-camera]');
-      const prevBox = svg ? parseViewBox(svg) : fullCamera.slice();
       const raw = dataFor(state.caseId) || {};
       const isRemoteCouple = !!(raw.meta && raw.meta.isCouple) && state.coupleSyncMode !== 'local';
       SherpasAI.request('reframe', strictCasePayload(state.caseId, langOf(state), state.stage, state), { mode: 'deterministic' });
@@ -3125,82 +3179,38 @@
       if (isRemoteCouple) {
         const loc = localizeData(raw, langOf(state));
         const opt = stepGoodOption(state, loc, getSpec(state.caseId, langOf(state), raw), state.stage);
-        const chosenLabel = route === 'bad' ? (opt.badLabel || t(state, 'ignore')) : opt.label;
+        const chosenLabel = route === 'bad' ? (opt.badLabel || t(state, 'ignore')) : opt.title;
         const role = state.memberRole === 'B' ? 'B' : 'A';
+        const stKey = String(Number(state.stage) || 0);
         const roomSnap = CoupleRoomSync.submitDecision(state.roomId, state.caseId, role, state.stage, route, chosenLabel);
         state.roomDecisions = Object.assign({}, roomSnap.decisions || {});
-        const stDec = state.roomDecisions[String(Number(state.stage) || 0)];
+        const stDec = state.roomDecisions[stKey];
         if (stDec && stDec.ready) {
-          state.roomWaiting = false;
-          if (stDec.aligned && stDec.A.route === 'good') {
-            state.roomAlignedBanner = true;
-            // Fall through to normal good advance below
-          } else {
-            ensureStageRiskEntry(state);
-            rerender();
-            syncViewportClass();
-            return true;
+          state.animatedCoupleKeys = state.animatedCoupleKeys || {};
+          const decKey = `${stKey}:${stDec.A && stDec.A.route}:${stDec.B && stDec.B.route}`;
+          if (!state.animatedCoupleKeys[decKey]) {
+            state.animatedCoupleKeys[decKey] = true;
+            if (stDec.aligned && stDec.A.route === 'good') {
+              state.roomAlignedBanner = true;
+              animateAdvanceStage(el, state, rerender, onSummit);
+            } else {
+              animateRiskStage(el, state, rerender, { keepPathCompare: true });
+            }
           }
-        } else {
-          state.roomWaiting = 'decision';
-          rerender();
-          syncViewportClass();
           return true;
         }
-      }
-
-      if (route === 'bad') {
-        state.inspectedRisk = ensureStageRiskEntry(state);
-        state.blocked = true;
-        state.phase = 'blocked';
-        state.cameraMode = 'camp';
-        state.dialogVisible = !hasRaf();
-        state.initialViewBox = hasRaf() ? prevBox : riskCameraBox(riskRecord(state.caseId, langOf(state)), biomes[state.stage].point, state.stage);
+        state.roomWaiting = 'decision';
         rerender();
         syncViewportClass();
-        if (hasRaf()) {
-          const nextSvg = el.querySelector('.mountain-svg[data-camera]');
-          runCamera(nextSvg, { type: 'risk', stage: state.stage }, () => { state.initialViewBox = null; revealDialog(el, state); });
-        }
         return true;
       }
 
-      const fromStage = Number(state.stage) || 0;
-      const isSummitStep = fromStage >= 3;
-      const toStage = isSummitStep ? 3 : fromStage + 1;
-      state.inspectedRisk = null;
-      hideDialogs(el, state);
-      if (hasRaf() && svg) {
-        runCamera(svg, { type: 'advance', fromStage, toStage }, () => {
-          if (isSummitStep) {
-            setTimeout(() => {
-              state.initialViewBox = null;
-              onSummit();
-              syncViewportClass();
-            }, 340);
-          } else {
-            state.stage = toStage;
-            state.focusedNode = toStage;
-            state.cameraMode = 'camp';
-            state.dialogVisible = true;
-            state.initialViewBox = campCamera(toStage);
-            rerender();
-            state.initialViewBox = null;
-            syncViewportClass();
-          }
-        });
-      } else {
-        if (isSummitStep) onSummit();
-        else {
-          state.stage = toStage;
-          state.focusedNode = toStage;
-          state.dialogVisible = true;
-          state.initialViewBox = campCamera(toStage);
-          rerender();
-          state.initialViewBox = null;
-        }
-        syncViewportClass();
+      if (route === 'bad') {
+        animateRiskStage(el, state, rerender, { keepPathCompare: false });
+        return true;
       }
+
+      animateAdvanceStage(el, state, rerender, onSummit);
       return true;
     }
 
