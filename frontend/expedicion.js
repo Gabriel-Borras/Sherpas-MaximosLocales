@@ -198,6 +198,11 @@
   };
 
   const campShorts = { ES: ['Base', 'C1', 'C2', 'Cima'], EN: ['Base', 'C1', 'C2', 'Summit'] };
+  const campAlts = ['2,800m', '4,600m', '6,900m', '8,848m'];
+  const shortWords = (txt, maxWords) => {
+    const w = String(txt || '').replace(/\s+/g, ' ').trim().split(' ');
+    return w.length <= maxWords ? w.join(' ') : `${w.slice(0, maxWords).join(' ').replace(/[,:;.]$/, '')}…`;
+  };
   const t = (s, k) => words[langOf(s)][k] || k;
   const dayLabel = (lang, irlDay) => `${lang === 'EN' ? 'Day' : 'Día'} ${Number.isFinite(Number(irlDay)) ? Number(irlDay) : 0}`;
   const viewName = (key, lang, irlDay) => {
@@ -1311,50 +1316,55 @@
     const moves = orderedTopMoves(state, data);
     const tensions = ((data && data.persona && data.persona.tensions) || []);
     const top1 = primaryConcern(state, data);
+    const scoreNow = (data.score && data.score.published_score) ?? 0;
     if (stageIdx < moves.length && moves[stageIdx]) {
       const m = moves[stageIdx];
       const relatedTension = tensions.find(tn => tn.topic === m.topic) || tensions[stageIdx] || tensions[0];
-      const badOption = relatedTension
-        ? (es
-            ? `Dejar sin resolver: ${relatedTension.title || relatedTension.body.slice(0, 110)}`
-            : `Leave unresolved: ${relatedTension.title || relatedTension.body.slice(0, 110)}`)
-        : (es
-            ? `Posponer «${m.title}» y mantener el score estancado en ${m.score_before ?? (data.score && data.score.published_score)}`
-            : `Postpone "${m.title}" and leave the score at ${m.score_before ?? (data.score && data.score.published_score)}`);
+      const rawBad = relatedTension
+        ? (relatedTension.title || relatedTension.body)
+        : (es ? `Posponer ${m.title}` : `Postpone ${m.title}`);
+      const badOption = es
+        ? `Dejar sin resolver: ${shortWords(rawBad, 8)}`
+        : `Leave unresolved: ${shortWords(rawBad, 8)}`;
+      const shortFact = compactMoveActionLine(m, scoreNow, lang).split(' · ')[0];
+      const before = m.score_before != null ? m.score_before : scoreNow;
+      const after = m.score_after != null ? m.score_after : scoreNow;
       return {
         label: m.action || m.title || s.pact,
         title: m.title || m.action || s.pact,
+        shortFact,
         badLabel: badOption,
-        focusNote: stageIdx === 0 && top1 ? `${top1.title}` : '',
-        scoreBefore: m.score_before,
-        scoreAfter: m.score_after,
-        trend: `${t(state, 'trend')}: ${m.action || m.title} (${es ? 'puntaje' : 'score'} ${m.score_before} → ${m.score_after}).`
+        focusNote: stageIdx === 0 && top1 ? `${top1.shortTitle || top1.title}` : '',
+        scoreBefore: before,
+        scoreAfter: after,
+        trend: `${t(state, 'trend')}: ${m.action || m.title} (${before} → ${after}).`
       };
     }
     const combined = (data.score && data.score.combined_moves) || [];
     if (combined.length) {
       const best = combined.reduce((a, b) => ((b.moves || []).length >= (a.moves || []).length ? b : a), combined[0]);
-      const baseScore = data.score && data.score.published_score;
       const comboLabel = (best.moves || []).join(' + ') || best.title || s.pact;
-      const before = best.score_before != null ? best.score_before : baseScore;
+      const before = best.score_before != null ? best.score_before : scoreNow;
+      const after = best.score_after != null ? best.score_after : scoreNow;
       const badOption = es
-        ? `Aplicar medidas aisladas sin coordinar el paquete completo (${before} vs. ${best.score_after})`
-        : `Apply isolated moves without coordinating the full package (${before} vs. ${best.score_after})`;
+        ? shortWords(`Actuar sin coordinar el plan completo`, 8)
+        : shortWords(`Act without coordinating the full plan`, 8);
       return {
-        label: `${comboLabel}${best.score_after != null ? ` (${before} → ${best.score_after})` : ''}`,
-        title: comboLabel,
+        label: `${comboLabel}${best.score_after != null ? ` (${before} → ${after})` : ''}`,
+        title: shortWords(comboLabel, 6),
+        shortFact: es ? 'Paquete combinado de medidas' : 'Combined priority package',
         badLabel: badOption,
         focusNote: '',
         scoreBefore: before,
-        scoreAfter: best.score_after,
-        trend: `${t(state, 'trend')}: ${comboLabel} (${es ? 'puntaje' : 'score'} ${before} → ${best.score_after}).`
+        scoreAfter: after,
+        trend: `${t(state, 'trend')}: ${comboLabel} (${before} → ${after}).`
       };
     }
-    const pub = (data.score && data.score.published_score) || 0;
+    const pub = scoreNow;
     const fallbackBad = tensions[0]
-      ? (es ? `Mantener abierta la tensión principal: ${tensions[0].title || tensions[0].body.slice(0, 105)}` : `Keep the main tension open: ${tensions[0].title || tensions[0].body.slice(0, 105)}`)
+      ? (es ? `Dejar sin resolver: ${shortWords(tensions[0].title || tensions[0].body, 8)}` : `Leave unresolved: ${shortWords(tensions[0].title || tensions[0].body, 8)}`)
       : t(state, 'ignore');
-    return { label: s.pact, title: s.pact, badLabel: fallbackBad, focusNote: '', scoreBefore: pub, scoreAfter: pub, trend: `${t(state, 'trend')}: ${s.pact}` };
+    return { label: s.pact, title: shortWords(s.pact, 6), shortFact: '', badLabel: fallbackBad, focusNote: '', scoreBefore: pub, scoreAfter: pub, trend: `${t(state, 'trend')}: ${s.pact}` };
   }
 
   function preview(state, data, route) {
@@ -2006,38 +2016,39 @@
 
   function renderRiskInspectionCard(state, data, persona, s, riskIdx) {
     const lang = langOf(state);
+    const es = lang === 'ES';
     const entries = buildHistoryEntries(state.history, state.blocked, state.stage);
     const entry = entries[Math.max(0, Math.min(entries.length - 1, Number(riskIdx) || 0))] || { stage: state.stage };
     const originStage = Math.max(0, Math.min(3, Number(entry.stage) || 0));
-    const campInfo = biome(originStage, lang);
+    const shortLabels = campShorts[lang];
+    const campTitle = `${shortLabels[originStage]} · ${campAlts[originStage]}`;
     const goodMove = stepGoodOption(state, data, s, originStage);
-    const badChoiceText = (entry.decisionChosen && entry.decisionChosen[lang]) || goodMove.badLabel || t(state, 'ignore');
-    const causedText = blockedCopy(state.caseId, state.mode, persona, state);
-    const gapText = goodMove.scoreBefore != null && goodMove.scoreAfter != null
-      ? ` (${lang === 'ES' ? 'brecha de score' : 'score gap'}: ${goodMove.scoreBefore} → ${goodMove.scoreAfter})`
-      : '';
+    const rec = riskRecord(state.caseId, lang);
+    const heading = rec.hasExhaustion
+      ? `${rec.year}${rec.age != null ? (es ? ` · edad ${rec.age}` : ` · age ${rec.age}`) : ''}`
+      : `${es ? 'Brecha en' : 'Gap at'} ${campTitle}`;
+    const oneLineImpact = rec.hasExhaustion
+      ? `${es ? 'Activos invertibles' : 'Investable assets'} ${exactMoney(rec.investable_assets)} · ${es ? 'omitiste' : 'skipped'} ${shortWords(goodMove.title, 5)}`
+      : `${es ? 'Sin agotamiento anual · omitiste' : 'No yearly depletion · skipped'} ${shortWords(goodMove.title, 5)} (${goodMove.scoreBefore} → ${goodMove.scoreAfter})`;
     const tensionsHtml = (persona.tensions || []).map(x => `<p>${detail(x.id, x, lang)}</p>`).join('') || `<p>${esc(persona.D3 || '')}</p>`;
+    const compactMath = mathSummary(data, state)
+      .replace('<details class="exact-math">', '<details class="exact-math compact-math">')
+      .replace(`<summary>${t(state, 'exact')}</summary>`, `<summary>${es ? 'Cálculo' : 'Math'}</summary>`)
+      .replace('<ul>', `<div class="exact-context-notes"><p><strong>${campTitle}:</strong> ${esc(goodMove.label)}</p>${tensionsHtml}</div><ul>`);
 
-    return `<aside class="floating-dialog" data-dialog="blocked">
+    return `<aside class="floating-dialog compact-card" data-dialog="blocked">
       <div class="floating-dialog-head">
-        <div>
-          <p class="eyebrow">${t(state, 'inspectRiskTitle')}</p>
-          <h2>${t(state, 'stopped')}</h2>
-        </div>
+        <span class="camp-line-title is-risk">${esc(heading)}</span>
         <button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button>
       </div>
-      <div class="crack">
-        <div class="crack-grid">
-          <div><strong>${t(state, 'whereTaken')}:</strong> ${esc(campInfo.label)}</div>
-          <div><strong>${t(state, 'whatDecision')}:</strong> ${esc(badChoiceText)} · <em>${t(state, 'recommendedWas')}: ${esc(goodMove.label)}</em></div>
-          <div><strong>${t(state, 'whatCaused')}:</strong> <span class="blocked-impact">${esc(causedText)}${esc(gapText)}</span></div>
-          <div><strong>${t(state, 'whyHappened')}:</strong> ${tensionsHtml}</div>
-        </div>
+      <div class="crack compact-crack">
+        <span class="blocked-impact">${esc(oneLineImpact)}</span>
       </div>
-      ${mathSummary(data, state)}
-      <div class="button-row">
-        ${state.blocked ? `<button class="primary" data-action="rewind">${t(state, 'rewind')}</button>` : `<button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button>`}
-        <button data-action="zoom-out">${t(state, 'panoramic')}</button>
+      <div class="dialog-footer-bar">
+        ${compactMath}
+        ${state.blocked
+          ? `<button class="primary" data-action="rewind">${t(state, 'rewind')}</button>`
+          : `<button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button>`}
       </div>
     </aside>`;
   }
@@ -2369,14 +2380,15 @@
         + campFab;
     } else {
       const inspectingOther = (focusedIdx !== stageIdx) || state.summit || view === 'overview';
-      const focusedBiome = biome(focusedIdx, lang);
       const focusedMove = stepGoodOption(state, data, s, focusedIdx);
       const activeMove = stepGoodOption(state, data, s, stageIdx);
       const campRiskIdx = entries.findIndex(e => Number(e.stage) === focusedIdx);
-      const focusBannerHtml = stageIdx === 0 && contrast.top1
-        ? `<div class="focus-priority-pill"><strong>${t(state, 'focusBanner')}:</strong> ${esc(contrast.top1.shortTitle || contrast.top1.title)}</div>`
-        : '';
-      const campReframe = stageIdx === 0 ? buildThermometerReframe(state, data) : s.reframe;
+      const es = lang === 'ES';
+      const campLineTitle = `${shortLabels[stageIdx]} · ${campAlts[stageIdx]}`;
+      const focusedLineTitle = `${shortLabels[focusedIdx]} · ${campAlts[focusedIdx]}`;
+      const compactMath = mathSummary(data, state)
+        .replace('<details class="exact-math">', '<details class="exact-math compact-math">')
+        .replace(`<summary>${t(state, 'exact')}</summary>`, `<summary>${es ? 'Cálculo' : 'Math'}</summary>`);
       const isRemoteCouple = couple && state.coupleSyncMode !== 'local';
       const roomBarCampHtml = isRemoteCouple ? renderCoupleRoomBar(state, s, couple) : '';
       const stageDec = (state.roomDecisions && state.roomDecisions[String(stageIdx)]) || null;
@@ -2390,9 +2402,9 @@
       let activeCampBody = '';
       if (showDecisionWait) {
         activeCampBody = `${roomBarCampHtml}
-          <div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'phase')} · ${esc(stage.label)}</p><h2>${t(state, 'waitingFor')} ${esc(partnerName)}...</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
-          <p class="compact-line"><strong>${t(state, 'yourChoice')}:</strong> ${esc(myStageVote.label || (myStageVote.route === 'bad' ? t(state, 'riskRoute') : t(state, 'safeRoute')))}</p>
-          <p class="compact-sub">${t(state, 'waitingDecSub')}</p>
+          <div class="floating-dialog-head"><span class="camp-line-title">${esc(campLineTitle)}</span><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
+          <p class="compact-line"><strong>${t(state, 'waitingFor')} ${esc(partnerName)}...</strong></p>
+          <p class="compact-sub">${t(state, 'yourChoice')}: ${esc(shortWords(myStageVote.label || (myStageVote.route === 'bad' ? t(state, 'riskRoute') : t(state, 'safeRoute')), 8))}</p>
           <div class="button-row">
             <button type="button" class="primary" data-action="copy-room-link">${state.roomCopied ? t(state, 'copied') : `${t(state, 'copyLinkFor')} ${esc(partnerName)}`}</button>
             <button type="button" data-action="open-partner-tab">${t(state, 'openPartnerTab')} ${esc(partnerName)} ${t(state, 'inNewTab')}</button>
@@ -2401,49 +2413,54 @@
         const aIsBad = stageDec.A.route === 'bad';
         const bIsBad = stageDec.B.route === 'bad';
         activeCampBody = `${roomBarCampHtml}
-          <div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'pathCompareTitle')} · ${esc(shortLabels[stageIdx])}</p><h2>${esc(activeMove.title)}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
+          <div class="floating-dialog-head"><span class="camp-line-title">${t(state, 'pathCompareTitle')} · ${esc(campLineTitle)}</span><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
           <div class="path-compare-grid">
             <div class="path-card ${aIsBad ? 'is-risk' : 'is-safe'}">
               <span class="path-badge ${aIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[0])} · ${aIsBad ? t(state, 'riskRoute') : t(state, 'safeRoute')}</span>
-              <p class="compact-sub">${esc(stageDec.A.label || (aIsBad ? activeMove.badLabel : activeMove.label))}</p>
+              <p class="compact-sub">${esc(shortWords(stageDec.A.label || (aIsBad ? activeMove.badLabel : activeMove.title), 8))}</p>
             </div>
             <div class="path-card ${bIsBad ? 'is-risk' : 'is-safe'}">
               <span class="path-badge ${bIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[1])} · ${bIsBad ? t(state, 'riskRoute') : t(state, 'safeRoute')}</span>
-              <p class="compact-sub">${esc(stageDec.B.label || (bIsBad ? activeMove.badLabel : activeMove.label))}</p>
+              <p class="compact-sub">${esc(shortWords(stageDec.B.label || (bIsBad ? activeMove.badLabel : activeMove.title), 8))}</p>
             </div>
           </div>
-          <p class="compact-line"><strong>${t(state, 'impact')}:</strong> ${esc(fail.label)}</p>
           <div class="button-row">
             <button class="primary" data-action="room-agree-good">${t(state, 'agreeAdvance')}</button>
             ${campRiskIdx >= 0 ? `<button data-action="inspect-risk" data-risk-index="${campRiskIdx}">${t(state, 'seeRedBranch')}</button>` : ''}
           </div>`;
       } else {
+        const scoreBadge = activeMove.scoreBefore != null && activeMove.scoreAfter != null
+          ? `<span class="score-pill">${esc(activeMove.scoreBefore)} → ${esc(activeMove.scoreAfter)}</span>`
+          : '';
+        const safeLine = activeMove.shortFact
+          ? `<strong>${esc(activeMove.title)}</strong> · ${esc(activeMove.shortFact)}`
+          : `<strong>${esc(activeMove.title)}</strong>`;
         activeCampBody = `${roomBarCampHtml}
-           <div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'phase')} · ${esc(stage.label)}</p><h2>${t(state, 'choose')}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
-           ${state.roomAlignedBanner ? `<div class="focus-priority-pill">${t(state, 'alignedAdvancing')}</div>` : focusBannerHtml}
-           <p class="reframe">${esc(campReframe)}</p>
-           <div class="choice-list">
-             <label class="choice"><input type="radio" name="route" value="good" checked><span>${esc(activeMove.label)}</span></label>
-             <label class="choice"><input type="radio" name="route" value="bad"><span>${esc(activeMove.badLabel || t(state, 'ignore'))}</span></label>
+           <div class="floating-dialog-head"><span class="camp-line-title">${esc(campLineTitle)}</span><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
+           ${state.roomAlignedBanner ? `<div class="focus-priority-pill">${t(state, 'alignedAdvancing')}</div>` : ''}
+           <div class="choice-list compact-choices">
+             <label class="choice choice-compact"><input type="radio" name="route" value="good" checked><span class="choice-text">${safeLine}</span>${scoreBadge}</label>
+             <label class="choice choice-compact is-risk-opt"><input type="radio" name="route" value="bad"><span class="choice-text">${esc(activeMove.badLabel || t(state, 'ignore'))}</span></label>
            </div>
-           <p class="preview" data-preview>${esc(preview(state, data, 'good'))}</p>
-           ${mathSummary(data, state)}
-           <div class="button-row"><button class="primary" data-action="advance">${t(state, 'confirm')}</button></div>`;
+           <div class="dialog-footer-bar">
+             ${compactMath}
+             <button class="primary" data-action="advance">${es ? 'Confirmar' : 'Confirm'}</button>
+           </div>`;
       }
 
       const dialogContent = inspectingOther
-        ? `<div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'inspectCamp')} · ${esc(focusedBiome.label)}</p><h2>${esc(shortLabels[focusedIdx])}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
-           <p class="reframe">${esc(focusedMove.label)}</p>
-           <p class="preview">${esc(focusedMove.trend)}</p>
-           ${campRiskIdx >= 0 ? `<div class="crack"><strong>${t(state, 'whatCaused')}:</strong> ${esc(fail.label)} <button data-action="inspect-risk" data-risk-index="${campRiskIdx}">${t(state, 'inspectRiskTitle')}</button></div>` : ''}
-           ${mathSummary(data, state)}
-           <div class="button-row">
-             ${!state.summit && focusedIdx !== stageIdx ? `<button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button>` : ''}
-             <button data-action="zoom-out">${t(state, 'panoramic')}</button>
-             ${state.summit ? `<button data-action="repeat">${t(state, 'repeat')}</button>` : ''}
+        ? `<div class="floating-dialog-head"><span class="camp-line-title">${esc(focusedLineTitle)}</span><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
+           <p class="compact-line"><strong>${esc(focusedMove.title)}</strong>${focusedMove.shortFact ? ` · ${esc(focusedMove.shortFact)}` : ''} <span class="score-pill">${esc(focusedMove.scoreBefore)} → ${esc(focusedMove.scoreAfter)}</span></p>
+           ${campRiskIdx >= 0 ? `<div class="crack compact-crack">${esc(fail.label)} <button class="link-toggle-btn" data-action="inspect-risk" data-risk-index="${campRiskIdx}">${t(state, 'seeRedBranch')}</button></div>` : ''}
+           <div class="dialog-footer-bar">
+             ${compactMath}
+             <div class="button-row compact-row">
+               ${!state.summit && focusedIdx !== stageIdx ? `<button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button>` : ''}
+               ${state.summit ? `<button data-action="repeat">${t(state, 'repeat')}</button>` : ''}
+             </div>
            </div>`
         : activeCampBody;
-      panel = `<aside class="floating-dialog ${dialogVisible ? '' : 'is-dialog-hidden'}" data-dialog="decision" ${dialogVisible ? '' : 'hidden'}>${dialogContent}</aside>
+      panel = `<aside class="floating-dialog compact-card ${dialogVisible ? '' : 'is-dialog-hidden'}" data-dialog="decision" ${dialogVisible ? '' : 'hidden'}>${dialogContent}</aside>
         ${campFab}`;
     }
 
