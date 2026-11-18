@@ -108,11 +108,60 @@ class UnifiedServerTests(unittest.TestCase):
         status, _, cases = self.api_request("GET", "/api/cases")
         self.assertEqual(status, 200)
         self.assertIn("michael-carter", {case["id"] for case in cases["cases"]})
+        michael_summary = next(
+            case for case in cases["cases"] if case["id"] == "michael-carter"
+        )
+        self.assertTrue(
+            {"id", "name", "score", "status", "household_type"}
+            <= set(michael_summary)
+        )
+        self.assertNotIn("meta", michael_summary)
+
+        # No display mode means the literal document consumed by cases-data.js,
+        # not TimelineEngine's normalised overview.
+        status, _, raw_case = self.api_request("GET", "/api/cases/michael-carter")
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            set(raw_case),
+            {
+                "meta",
+                "score",
+                "persona",
+                "projections",
+                "goals",
+                "facts",
+                "savingsWaterfall",
+                "shocks",
+                "performanceSummary",
+            },
+        )
+        self.assertEqual(raw_case["meta"]["slug"], "michael-carter")
+        self.assertTrue(
+            {"published_score", "pillars", "top_moves", "combined_moves"}
+            <= set(raw_case["score"])
+        )
+        self.assertTrue(
+            {"objectiveConcerns", "tensions"} <= set(raw_case["persona"])
+        )
+        self.assertIn("yearly", raw_case["projections"])
+        self.assertNotIn("mode", raw_case)
+        source = (ROOT / "frontend" / "cases-data.js").read_text(encoding="utf-8")
+        marker = "const CASES_DATA = "
+        start = source.index(marker) + len(marker)
+        official_cases, _ = json.JSONDecoder().raw_decode(source[start:])
+        self.assertEqual(raw_case, official_cases["michael-carter"])
 
         status, _, case = self.api_request("GET", "/api/cases/michael-carter?mode=math")
         self.assertEqual(status, 200)
         self.assertEqual(case["mode"], "math")
         self.assertEqual(case["id"], "michael-carter")
+
+        status, _, overview = self.api_request(
+            "GET", "/api/cases/michael-carter/overview"
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(overview["mode"], "plain")
+        self.assertIn("views", overview)
 
         status, _, expedition = self.api_request(
             "POST", "/api/expedition", {"case_id": "michael-carter"}
@@ -269,6 +318,38 @@ class UnifiedServerTests(unittest.TestCase):
         status, _, body = self.api_request("GET", "/api/does-not-exist")
         self.assertEqual(status, 404)
         self.assertEqual(body["error"], "not_found")
+
+
+class RepositoryFrontendTests(unittest.TestCase):
+    """Serve the checked-in frontend rather than the isolated test fixture."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.server = create_server(port=0)
+        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.base_url = f"http://127.0.0.1:{cls.server.server_port}"
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.server.shutdown()
+        cls.server.server_close()
+        cls.thread.join()
+
+    def get_text(self, path: str):
+        with request.urlopen(f"{self.base_url}{path}") as response:
+            return response.status, response.headers, response.read().decode("utf-8")
+
+    def test_checked_in_frontend_html_and_post_cima_script_are_served(self) -> None:
+        status, headers, html = self.get_text("/")
+        self.assertEqual(status, 200)
+        self.assertIn("text/html", headers["Content-Type"])
+        self.assertIn('id="app"', html)
+
+        status, headers, script = self.get_text("/post-cima.js")
+        self.assertEqual(status, 200)
+        self.assertIn("javascript", headers["Content-Type"])
+        self.assertIn("SherpaPostCima", script)
 
 
 class RepositoryContractTests(unittest.TestCase):

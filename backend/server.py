@@ -32,6 +32,7 @@ from backend.timeline_engine import TimelineEngine
 
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_FRONTEND_DIR = REPOSITORY_ROOT / "frontend"
+OFFICIAL_CASES_DATA = DEFAULT_FRONTEND_DIR / "cases-data.js"
 
 
 class BadRequestError(ValueError):
@@ -110,8 +111,40 @@ def _query_value(parsed, name: str) -> str | None:
     return None
 
 
+def _load_official_cases() -> dict[str, Any]:
+    """Read the literal case catalogue bundled with the frontend.
+
+    ``cases-data.js`` deliberately publishes ``CASES_DATA`` as a JSON object
+    inside its small UMD wrapper.  Decoding that object keeps the detail API
+    aligned with the frontend contract without transforming, supplementing or
+    otherwise inventing any case data.
+    """
+    try:
+        source = OFFICIAL_CASES_DATA.read_text(encoding="utf-8")
+        marker = "const CASES_DATA = "
+        start = source.index(marker) + len(marker)
+        cases, _ = json.JSONDecoder().raw_decode(source[start:])
+    except (OSError, ValueError, json.JSONDecodeError) as error:
+        raise FileNotFoundError("Catálogo oficial de casos no disponible") from error
+    if not isinstance(cases, dict):
+        raise ValueError("El catálogo oficial de casos no es un objeto JSON")
+    return cases
+
+
+def _official_case(case_id: str) -> dict[str, Any]:
+    """Return one unmodified frontend case, or the usual not-found error."""
+    cases = _load_official_cases()
+    try:
+        case = cases[case_id]
+    except KeyError as error:
+        raise CaseNotFoundError(f"Caso no encontrado: {case_id}") from error
+    if not isinstance(case, dict):
+        raise ValueError("El caso oficial no es un objeto JSON")
+    return case
+
+
 def _response_data_for_case(path: str, parsed, state: ServerState) -> tuple[int, Any]:
-    """Serve official case summaries and timeline-engine case views."""
+    """Serve case summaries, literal frontend data and timeline overviews."""
     mode = _validate_mode(_query_value(parsed, "mode"))
     parts = [part for part in parsed.path.split("/") if part]
     if parts == ["api", "cases"]:
@@ -119,10 +152,21 @@ def _response_data_for_case(path: str, parsed, state: ServerState) -> tuple[int,
         # presentation text and therefore does not need a display mode.
         return 200, {"cases": list_cases(cases_dir=state.cases_dir)}
     if len(parts) == 3 and parts[:2] == ["api", "cases"]:
-        # Resolve through the same official client before the existing timeline
-        # adapter constructs its plain/math presentation.
+        if mode is None:
+            return 200, _official_case(parts[2])
+        # A display mode opts in to TimelineEngine's existing presentation
+        # adapter.  The raw route above must remain the frontend's full JSON
+        # document, rather than a normalised overview.
         state.case_provider(parts[2])
         return dispatch_request("GET", path, store=state.session_store)
+    if len(parts) == 4 and parts[:2] == ["api", "cases"] and parts[3] == "overview":
+        # Keep an explicit overview endpoint for callers that want the
+        # TimelineEngine representation without adding a mode query parameter.
+        state.case_provider(parts[2])
+        overview_path = f"/api/cases/{parts[2]}"
+        if parsed.query:
+            overview_path = f"{overview_path}?{parsed.query}"
+        return dispatch_request("GET", overview_path, store=state.session_store)
     raise KeyError("Ruta de caso no encontrada")
 
 
