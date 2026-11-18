@@ -20,37 +20,39 @@
       basecamp: 'Basecamp', expedition: 'Basecamp', current: 'Día 0', overview: 'Basecamp',
       brief: 'Resumen para el asesor', radio: 'Radio / Shocks',
       select: 'Seleccionar hogar', nav: 'Navegación', plan: 'Plan financiero',
-      fears: 'Fase 1A · Evaluación inicial',
-      fearTitle: '¿Qué tres temas te quitan más tranquilidad hoy?',
-      fearHelp: 'Toca hasta 3 tarjetas por orden de prioridad (1º, 2º y 3º) y ajusta tu termómetro emocional. Tu #1 enfocará el primer nodo del Basecamp.',
-      fearAsk: 'Duda libre o nota para tu asesor (opcional)',
-      fearPlaceholder: 'Ej.: ¿Cómo afecta esto a nuestra liquidez de este año?',
-      continue: 'Ver diagnóstico y contraste',
+      fears: 'Fase 1A · Evaluación',
+      fearTitle: '¿Qué 3 temas priorizas hoy?',
+      fearHelp: 'Elige hasta 3 en orden (1º, 2º, 3º). Tu #1 abre el Basecamp.',
+      fearAsk: 'Duda opcional',
+      fearPlaceholder: 'Duda rápida para tu asesor (opcional)...',
+      continue: 'Ver contraste',
       enter: 'Entrar al Basecamp',
-      backEval: 'Editar Top-3',
-      team: 'Fase 1A · Turno privado en pareja',
-      private: 'Turno privado de',
-      blindHint: 'Elige tu Top-3 y tu nivel de inquietud sin que la otra persona vea la pantalla.',
-      growth: 'Priorizar crecimiento patrimonial',
-      debt: 'Priorizar liquidez, deuda y protección',
+      backEval: 'Cambiar Top-3',
+      team: 'Fase 1A · Turno privado',
+      private: 'Turno de',
+      blindHint: 'Elige tu Top-3 en privado sin que la otra persona mire.',
+      growth: 'Crecimiento',
+      debt: 'Liquidez y protección',
       time: 'Turno a ciegas',
-      save: 'Guardar mi turno y pasar a',
-      matches: 'Ver diagnóstico de pareja y contraste',
-      cross: 'Diagnóstico inicial y contraste del plan',
-      agree: 'Coincidencias en vuestro Top-3',
-      friction: 'Diferencias de foco y tensiones del plan',
-      pact: 'Pacto de ruta hacia el Basecamp',
-      contrastTitle: 'Contraste: Lo que más te preocupa vs. Lo que más impacta tu plan',
-      whatWorries: 'Tu prioridad #1 declarada',
-      whatImpacts: 'Lo que más mueve la aguja en tus números',
-      blindSpot: 'Lectura de contraste',
-      thermometerTitle: 'Termómetro emocional ante el plan',
-      thermoGapTitle: 'Termómetro emocional de la pareja',
-      profileSplitTitle: 'Perfil de riesgo declarado vs. cartera real',
+      save: 'Pasar turno a',
+      matches: 'Ver contraste en pareja',
+      cross: 'Contraste del plan',
+      agree: 'Coincidencias',
+      friction: 'Pareja y pacto',
+      pact: 'Pacto',
+      contrastTitle: 'Tu #1 vs. Mayor impacto',
+      whatWorries: 'Tu #1',
+      whatImpacts: 'Mayor impacto',
+      blindSpot: 'Clave',
+      thermometerTitle: 'Nivel de inquietud',
+      thermoGapTitle: 'Pareja',
+      profileSplitTitle: 'Perfil de riesgo',
       rankBadge: ['1º', '2º', '3º'],
-      pickRank: 'Elegir',
-      top3Counter: 'Top-3 seleccionado',
-      focusBanner: 'Foco #1 priorizado en este nodo',
+      pickRank: '+',
+      top3Counter: 'Top-3',
+      showMore: 'más',
+      showLess: 'Ver menos',
+      focusBanner: 'Foco #1',
       blocked: 'Desvío detectado en la ruta', stopped: 'Análisis del camino erróneo', impact: 'Consecuencia proyectada',
       context: 'Contexto adicional', tensions: 'Por qué ocurre (tensiones y hechos)', rewind: 'Rebobinar al campamento',
       phase: 'Basecamp · Ruta de ascenso', route: 'Una ruta, cuatro campamentos', choose: 'Elige el paso en este campamento',
@@ -80,37 +82,39 @@
       basecamp: 'Basecamp', expedition: 'Basecamp', current: 'Day 0', overview: 'Basecamp',
       brief: 'Advisor Brief', radio: 'Radio / Shocks',
       select: 'Select household', nav: 'Navigation', plan: 'Financial plan',
-      fears: 'Phase 1A · Initial Assessment',
-      fearTitle: 'Which three topics weigh most on your peace of mind today?',
-      fearHelp: 'Click up to 3 cards in priority order (1st, 2nd, 3rd) and set your emotional thermometer. Your #1 choice will focus the first critical Basecamp node.',
-      fearAsk: 'Open question or note for your advisor (optional)',
-      fearPlaceholder: 'E.g., How does this affect our cash cushion this year?',
-      continue: 'View diagnosis and plan contrast',
+      fears: 'Phase 1A · Assessment',
+      fearTitle: 'Which 3 topics matter most today?',
+      fearHelp: 'Pick up to 3 in order (1st, 2nd, 3rd). Your #1 opens Basecamp.',
+      fearAsk: 'Optional note',
+      fearPlaceholder: 'Quick question for your advisor (optional)...',
+      continue: 'View contrast',
       enter: 'Enter Basecamp',
       backEval: 'Edit Top-3',
-      team: 'Phase 1A · Private couple turn',
-      private: 'Private turn for',
-      blindHint: 'Pick your Top-3 and stress thermometer privately before handing the screen to your partner.',
-      growth: 'Prioritize long-term growth',
-      debt: 'Prioritize liquidity, debt, and protection',
+      team: 'Phase 1A · Private turn',
+      private: 'Turn:',
+      blindHint: 'Pick your Top-3 privately before handing the screen over.',
+      growth: 'Growth',
+      debt: 'Liquidity & protection',
       time: 'Blind turn',
-      save: 'Save my turn and pass to',
-      matches: 'See couple diagnosis and plan contrast',
-      cross: 'Initial diagnosis and plan contrast',
-      agree: 'Where your Top-3 overlaps',
-      friction: 'Focus differences and plan tensions',
-      pact: 'Route pact entering Basecamp',
-      contrastTitle: 'Contrast: What worries you most vs. What impacts your plan most',
-      whatWorries: 'Your #1 stated priority',
-      whatImpacts: 'What moves the needle most in your numbers',
-      blindSpot: 'Contrast reading',
-      thermometerTitle: 'Emotional thermometer toward the plan',
-      thermoGapTitle: 'Couple emotional thermometer',
-      profileSplitTitle: 'Stated risk profile vs. actual portfolio',
+      save: 'Pass turn to',
+      matches: 'See couple contrast',
+      cross: 'Plan contrast',
+      agree: 'Shared priorities',
+      friction: 'Couple & pact',
+      pact: 'Pact',
+      contrastTitle: 'Your #1 vs. Biggest impact',
+      whatWorries: 'Your #1',
+      whatImpacts: 'Biggest impact',
+      blindSpot: 'Takeaway',
+      thermometerTitle: 'Stress level',
+      thermoGapTitle: 'Couple',
+      profileSplitTitle: 'Risk profile',
       rankBadge: ['1st', '2nd', '3rd'],
-      pickRank: 'Pick',
-      top3Counter: 'Top-3 selected',
-      focusBanner: 'Priority #1 focused at this node',
+      pickRank: '+',
+      top3Counter: 'Top-3',
+      showMore: 'more',
+      showLess: 'Show less',
+      focusBanner: 'Focus #1',
       blocked: 'Route deviation detected', stopped: 'Failed path analysis', impact: 'Projected consequence',
       context: 'Additional context', tensions: 'Why it happens (tensions and facts)', rewind: 'Rewind to camp',
       phase: 'Basecamp · Ascent route', route: 'One route, four camps', choose: 'Choose the step at this camp',
@@ -140,18 +144,18 @@
 
   const thermoLabels = {
     ES: {
-      1: '1 · Calma total',
-      2: '2 · Tranquilo con dudas',
-      3: '3 · Inquietud moderada',
-      4: '4 · Alta presión',
-      5: '5 · Agobio urgente'
+      1: '1 Calma',
+      2: '2',
+      3: '3',
+      4: '4',
+      5: '5 Urgente'
     },
     EN: {
-      1: '1 · Full calm',
-      2: '2 · Mostly calm',
-      3: '3 · Moderate concern',
-      4: '4 · High pressure',
-      5: '5 · Urgent stress'
+      1: '1 Calm',
+      2: '2',
+      3: '3',
+      4: '4',
+      5: '5 Urgent'
     }
   };
 
@@ -453,8 +457,10 @@
       'Solo quedan $1 sobre la reserva tras apartar $2 de metas cercanas, y el déficit anual de $3 iría erosionando ese margen.'],
     [/Large idle cash coexists with (\$[\d,.]+) of combined life insurance shortfall and no umbrella\. Resources exist to close part of the gap, but the cash is sitting unused\. The published score is held at (\d+), while the plan models (\d+) with a card paydown and more life cover, and (\d+) if an umbrella policy is added too\./gi,
       'Un gran saldo de efectivo ocioso convive con un déficit combinado de $1 en seguro de vida y sin póliza paraguas. Hay liquidez de sobra para resolverlo: el score actual de $2 sube a $3 al pagar la tarjeta y ampliar seguro de vida, y alcanza $4 añadiendo la póliza paraguas.'],
-    [/D4 misalignment,?\s*The spouses' stated profiles \(Growth and Moderate\) differ, while the invested book is about ([\d.]+%) stocks\. Revealed risk is higher than the Moderate household reading\./gi,
-      'Sus perfiles declarados difieren (Crecimiento frente a Moderado), mientras la cartera invertida alcanza un $1 en acciones, por encima del nivel moderado del hogar.'],
+    [/(?:D4 misalignment,?\s*)?The spouses' stated profiles \(Growth and Moderate\) differ, while the invested book is about ([\d.]+%) stocks\.?/gi,
+      'Sus perfiles declarados difieren (Crecimiento frente a Moderado), mientras la cartera invertida alcanza un $1 en acciones.'],
+    [/Revealed risk is higher than the Moderate household reading\.?/gi,
+      'El riesgo real de la cartera supera la lectura moderada del hogar.'],
     [/An ([\d.]+%) card balance is carried while accessible cash far exceeds the reserve\. The card costs about (\$[\d,.]+) a year in interest \(([\d.]+%) of (\$[\d,.]+)\), against roughly (\$[\d,.]+) a year earned on the cash\./gi,
       'Se arrastra una tarjeta al $1 APR mientras el efectivo supera ampliamente la reserva: la tarjeta cuesta unos $2 al año en intereses ($3 de $4) frente a solo $5 anuales que rinde el efectivo.'],
     [/O4 against current savings priorities\.\s*/gi, ''],
@@ -463,7 +469,7 @@
     [/compete for the same (\$[\d,.]+) of yearly free cash flow\. Retirement needs about (\$[\d,.]+) a year and the cash gap is (\$[\d,.]+)\. They must weigh the trade-off together\./gi,
       'Jubilación, reserva líquida y seguros compiten por los mismos $1 de flujo de caja libre anual: el retiro necesita unos $2/año y a la reserva le faltan $3, por lo que deben priorizar en pareja.'],
     [/O2, O3 and D4c\.\s*/gi, ''],
-    [/The protection gaps stay open while the household carries high exposure and a thin cushion, and closing them costs cash flow that O1 and O4 also need\./gi,
+    [/The protection gaps stay open while the household carries high exposure and a thin cushion, and closing them costs cash flow that(?: O1 and O4)? also need\./gi,
       'Las brechas de protección siguen abiertas mientras el hogar mantiene un colchón líquido estrecho, y cubrirlas requiere parte del flujo que también necesitan la reserva y el retiro.'],
     [/They state a Moderate orientation and hold a moderate portfolio, but their overall exposure is closer to aggressive, which suggests drift\. Any plan also has to work for both a Growth and a Moderate partner\./gi,
       'Declaran una orientación moderada en cartera, pero su baja liquidez y falta de seguros los expone a un riesgo real elevado; además, el plan debe equilibrar el perfil de Crecimiento de él con el Moderado de ella.'],
@@ -498,6 +504,14 @@
     // Transition alerts & subjective concerns & D6/D4
     [/Home purchase in January (\d{4}) \(within 12 months\)\.\s*Michael plans to buy a (\$[\d,.]+) home \((\$[\d,.]+) at purchase\) with a (\$[\d,.]+) down payment and a (\d+)-year loan of (\$[\d,.]+) at ([\d.]+%)\.\s*The monthly payment is (\$[\d,.]+),?[^.]*\./gi,
       'Compra de vivienda en enero de $1 (en menos de 12 meses): planea adquirir una casa de $2 ($3 al cierre) con $4 de entrada y una hipoteca a $5 años de $6 al $7 ($8/mes).'],
+    [/The home would also add property taxes of (\$[\d,.]+) a year, home insurance of (\$[\d,.]+) a year and (\$[\d,.]+) of closing costs\./gi,
+      'La vivienda sumaría además $1/año en impuestos de propiedad, $2/año en seguro de hogar y $3 de gastos de cierre.'],
+    [/Housing costs, cash, the debt load and retirement saving all change at once\./gi,
+      'Los costes de vivienda, la liquidez, la carga de deuda y el ahorro para el retiro cambian todos a la vez.'],
+    [/The yearly projection shows investable assets of (\$[\d,.]+) in (\d{4}) and (\$[\d,.]+) in (\d{4})\./gi,
+      'La proyección anual muestra activos invertibles de $1 en $2 y $3 en $4.'],
+    [/-?\s*The (\$[\d,.]+) vacation also falls in January (\d{4}) and repeats every year until (\d{4})\./gi,
+      'Las vacaciones de $1 también coinciden en enero de $2 y se repiten cada año hasta $3.'],
     [/None detected(?: within 12 to 24 months)?\./gi, 'Sin cambios bruscos de etapa en los próximos 12–24 meses.'],
     [/None recorded\./gi, 'Sin preocupaciones previas registradas en entrevista.'],
     [/The nearest events are the (\$[\d,.]+) vacation in January (\d{4}), college in August (\d{4}) and August (\d{4}), and retirement in (\d{4})\./gi,
@@ -570,6 +584,143 @@
     return out.replace(/\s{2,}/g, ' ').trim();
   }
 
+  function compactConcern(title, body, rawCleaned, lang) {
+    const es = lang !== 'EN';
+    const src = `${title} ${body}`;
+    const raw = String(rawCleaned || src);
+
+    // 1. Ultra-short 3-5 word title
+    let shortTitle = title;
+    const shortMap = es ? [
+      [/se agota a los (\d+)/i, 'Jubilación corta ($1 años)'],
+      [/jubilaci|retiro/i, 'Brecha de jubilación'],
+      [/compra de vivienda.*2030|prevista para 2030/i, 'Compra vivienda 2030'],
+      [/efectivo ajustado.*vivienda|vivienda/i, 'Efectivo para vivienda'],
+      [/seguro de vida/i, 'Seguro de vida'],
+      [/paraguas/i, 'Sin seguro paraguas'],
+      [/vivienda y vehículo sin póliza|sin póliza/i, 'Vivienda y auto sin póliza'],
+      [/flujo de caja.*negativo/i, 'Flujo de caja negativo'],
+      [/margen.*estrecho/i, 'Margen de ahorro justo'],
+      [/tarjeta.*([\d.]+%)|alto interés|alto coste/i, 'Tarjeta cara'],
+      [/universid|educat|529/i, 'Fondo universitario'],
+      [/efectivo ocioso|sin rentabilidad/i, 'Efectivo ocioso'],
+      [/colchón líquido|reserva de liquidez/i, 'Reserva de liquidez'],
+      [/margen fiscal|espacio fiscal|ventaja fiscal/i, 'Margen fiscal sin usar'],
+      [/coste fiscal/i, 'Coste fiscal cartera'],
+      [/concentraci|acciones sobre objetivo/i, 'Concentración en cartera'],
+      [/dependencia.*salari|solo sueldo/i, 'Dependencia salarial']
+    ] : [
+      [/runs out.*age (\d+)/i, 'Retirement ends at $1'],
+      [/retirement/i, 'Retirement gap'],
+      [/home purchase.*2030/i, '2030 home purchase'],
+      [/cash for the home|down payment/i, 'Home cash reserve'],
+      [/life insurance/i, 'Life insurance gap'],
+      [/umbrella/i, 'No umbrella cover'],
+      [/no home or auto insurance/i, 'Uninsured home & car'],
+      [/cash flow is negative|negative cash flow/i, 'Negative cash flow'],
+      [/thin margin/i, 'Thin cash margin'],
+      [/credit card|high-interest card|([\d.]+%) card/i, 'High-rate credit card'],
+      [/college|education|529/i, 'College funding gap'],
+      [/idle cash/i, 'Idle low-yield cash'],
+      [/thin cash|cash reserve/i, 'Thin cash reserve'],
+      [/unused|tax-advantaged/i, 'Unused tax-free room'],
+      [/tax cost/i, 'Portfolio tax drag'],
+      [/concentrat|equity above target/i, 'Portfolio concentration'],
+      [/income dependence|one employer/i, 'Salary concentration']
+    ];
+    for (const [rx, rep] of shortMap) {
+      if (rx.test(src)) { shortTitle = src.match(rx)[0].replace(rx, rep); break; }
+    }
+    if (shortTitle.split(/\s+/).length > 5) {
+      shortTitle = shortTitle.split(/\s+/).slice(0, 5).join(' ').replace(/[,:;.]$/, '');
+    }
+
+    // 2. Single-line key metric (literal JSON figures only, max ~55 chars)
+    let keyMetric = '';
+    const metricRules = es ? [
+      [/se agotan a los (\d+) años.*brecha de (\$[\d,.]+)/i, 'Se agota a los $1 años · brecha $2'],
+      [/tienen (\$[\d,.]+).*cubre el ([\d.]+%).*quedan (\$[\d,.]+)/i, 'Cuentas retiro $1 · $3 sin cubrir'],
+      [/brecha de jubilación es de (\$[\d,.]+).*requiere unos (\$[\d,.]+)/i, 'Brecha $1 · +$2/año necesarios'],
+      [/efectivo disponible de (\$[\d,.]+) cubre unos ([\d.]+) meses/i, '$1 en caja ($2 meses)'],
+      [/faltan (\$[\d,.]+).*vivienda/i, 'Faltan $1 para reserva y compra'],
+      [/cuenta con (\$[\d,.]+).*frente a los (\$[\d,.]+)/i, 'Tiene $1 · faltan $720,000'],
+      [/Timothy le faltan (\$[\d,.]+).*Melanie (\$[\d,.]+)/i, 'Faltan $1 (Timothy) y $2 (Melanie)'],
+      [/cobertura de (\$[\d,.]+) en Daniel y (\$[\d,.]+) en Emily/i, 'Déficit $1 (Daniel) y $2 (Emily)'],
+      [/vivienda de (\$[\d,.]+).*Porsche Cayenne de (\$[\d,.]+)/i, 'Casa $1 y Porsche $2 sin póliza'],
+      [/mínimo recomendado es (\$[\d,.]+)/i, 'Mínimo $1 · hoy $0'],
+      [/brecha de (\$[\d,.]+) en responsabilidad civil/i, 'Falta póliza de $1'],
+      [/falta una cobertura paraguas de (\$[\d,.]+)/i, 'Falta póliza de $1 (+4 pts)'],
+      [/flujo de caja neto es de (-\$[\d,.]+) al año/i, '$1/año en negativo'],
+      [/déficit anual de (\$[\d,.]+)/i, '-$1/año tras gastos y ahorro'],
+      [/flujo de caja libre de (\$[\d,.]+) al año/i, 'Solo $1/año libres (5.37%)'],
+      [/Amex Platinum es de (\$[\d,.]+) al ([\d.]+%)/i, '$1 al $2 APR'],
+      [/mantienen (\$[\d,.]+) en tarjeta al ([\d.]+%)/i, '$1 al $2 APR (con $150,800 en caja)'],
+      [/tarjeta de (\$[\d,.]+).*?(?:24\.9%|[\d.]+%)/i, 'Tarjeta $1 al 24.9% APR'],
+      [/(\$[\d,.]+) de margen adicional \(unos (\$[\d,.]+)/i, '+$1 libres en 401(k) · ahorra $2/año'],
+      [/aportar hasta (\$[\d,.]+) al año a una HSA/i, 'Hasta $1 en HSA y $7,500 en IRA'],
+      [/factura fiscal.*cuesta unos (\$[\d,.]+) al año/i, '$1/año en impuestos evitables'],
+      [/ahorro fiscal.*(\$[\d,.]+)/i, 'Hasta $1/año en ahorro fiscal'],
+      [/generaría unos (\$[\d,.]+) al año en ahorro fiscal/i, 'Hasta $1/año en ahorro fiscal'],
+      [/faltan (\$[\d,.]+) por cubrir para la universidad/i, 'Faltan $1 · saldo 529 en $0'],
+      [/tienen (\$[\d,.]+) en cuentas 529 frente a.*(\$[\d,.]+)/i, '$1 en 529 · brecha de $2'],
+      [/brecha universitaria de (\$[\d,.]+)/i, 'Brecha de $1 (529 en $30,000)'],
+      [/hay (\$[\d,.]+) ociosos.*rindiendo apenas un ([\d.]+%)/i, '$1 ociosos rindiendo solo $2'],
+      [/quedan (\$[\d,.]+) por encima de la reserva/i, 'Solo $1 libres tras metas cercanas'],
+      [/efectivo disponible de (\$[\d,.]+).*déficit líquido de (\$[\d,.]+)/i, '$1 disponibles · faltan $2'],
+      [/compra de (\$[\d,.]+).*entrada de (\$[\d,.]+)/i, 'Casa $1 · entrada $2'],
+      [/(\$[\d,.]+) en el ETF apalancado 3x UPRO/i, '77% acciones · $1 en UPRO 3x'],
+      [/tecnología pesa el ([\d.]+%).*VTI/i, '39% en VTI · $1 tecnología'],
+      [/salario de (\$[\d,.]+) equivale al ([\d.]+%)/i, 'Sueldo = $2 del patrimonio · $35,000 RSU'],
+      [/salario anual equivale al ([\d.]+%)/i, 'Sueldo = $1 del patrimonio neto']
+    ] : [
+      [/run out at (\d+).*(\$[\d,.]+) gap/i, 'Runs out at $1 · $2 gap'],
+      [/hold (\$[\d,.]+).*?(\$[\d,.]+) of planned spending/i, '$1 in retirement · $2 unpaid'],
+      [/gap is (\$[\d,.]+).*?(\$[\d,.]+) a year more/i, '$1 gap · +$2/yr needed'],
+      [/cash of (\$[\d,.]+) covers about ([\d.]+) months/i, '$1 cash ($2 months)'],
+      [/(\$[\d,.]+) of whole life.*against (\$[\d,.]+)/i, '$1 cover vs $2 recommended'],
+      [/Timothy is short (\$[\d,.]+) and Melanie (\$[\d,.]+)/i, 'Short $1 (Timothy) & $2 (Melanie)'],
+      [/shortfalls of (\$[\d,.]+) for Daniel and (\$[\d,.]+)/i, 'Short $1 (Daniel) & $2 (Emily)'],
+      [/(\$[\d,.]+) home and the (\$[\d,.]+) Porsche/i, '$1 home & $2 Porsche uninsured'],
+      [/recommended minimum is (\$[\d,.]+)/i, '$1 recommended · $0 today'],
+      [/(\$[\d,.]+) gap.*liability/i, '$1 liability gap'],
+      [/(\$[\d,.]+) gap\. Adding it is worth (\d+) points/i, '$1 gap (+$2 score pts)'],
+      [/net cash flow is (-\$[\d,.]+) a year/i, '$1/yr negative cash flow'],
+      [/(\$[\d,.]+) a year short/i, '-$1/yr after expenses & savings'],
+      [/free cash flow of (\$[\d,.]+) a year/i, 'Only $1/yr free cash flow'],
+      [/Amex Platinum balance is (\$[\d,.]+) at ([\d.]+%)/i, '$1 at $2 APR'],
+      [/(\$[\d,.]+) at ([\d.]+%) against (\$[\d,.]+)/i, '$1 at $2 APR vs $3 cash'],
+      [/(\$[\d,.]+) card is the most expensive/i, '$1 card at 24.9% APR'],
+      [/(\$[\d,.]+) more is possible.*(\$[\d,.]+) in tax/i, '+$1 401(k) room · saves $2/yr'],
+      [/(\$[\d,.]+) a year in an HSA/i, 'Up to $1 HSA & $7,500 IRA unused'],
+      [/costs about (\$[\d,.]+) a year/i, '$1/yr in investment tax drag'],
+      [/tax saving.*about (\$[\d,.]+) a year/i, 'Up to $1/yr tax savings'],
+      [/(\$[\d,.]+) is still needed.*529/i, '$1 needed · $0 in 529'],
+      [/(\$[\d,.]+) in 529s against a (\$[\d,.]+)/i, '$1 in 529 · $2 gap'],
+      [/(\$[\d,.]+) gap remains after the (\$[\d,.]+)/i, '$1 gap ($2 in 529)'],
+      [/(\$[\d,.]+) sits above.*earns about ([\d.]+%)/i, '$1 idle earning $2'],
+      [/only (\$[\d,.]+) sits above the reserve/i, 'Only $1 above reserve'],
+      [/accessible cash of (\$[\d,.]+).*gap of (\$[\d,.]+)/i, '$1 cash · $2 reserve gap'],
+      [/(\$[\d,.]+) purchase.*(\$[\d,.]+) down payment/i, '$1 home · $2 down payment'],
+      [/([\d.]+%) stocks.*UPRO\) at (\$[\d,.]+)/i, '$1 stocks · $2 in 3x UPRO'],
+      [/cutting VTI from ([\d.]+%) to ([\d.]+%)/i, 'VTI at $1 (target $2)'],
+      [/(\$[\d,.]+) salary equals ([\d.]+%)/i, 'Salary = $2 of net worth · $35,000 RSUs'],
+      [/annual salary is ([\d.]+%)/i, 'Salary = $1 of net worth']
+    ];
+    for (const [rx, rep] of metricRules) {
+      const m = src.match(rx);
+      if (m) { keyMetric = m[0].replace(rx, rep); break; }
+    }
+    if (!keyMetric) {
+      // Generic fallback for any future unseen JSON: first 2 figures + short context, max 54 chars
+      const nums = (raw.match(/-?\$[\d,.]+(?:[BMKT])?|\b\d+(?:\.\d+)?%/g) || []).slice(0, 2);
+      const firstClause = (body || title).split(/[.;]/)[0].trim();
+      keyMetric = firstClause.length <= 54
+        ? firstClause
+        : (nums.length ? `${nums.join(' · ')}` : firstClause.slice(0, 51) + '…');
+    }
+    return { shortTitle, keyMetric };
+  }
+
   function humanizeConcernObject(item, lang) {
     const rawDetail = String((item && item.detail) || '');
     const cleaned = stripTechnicalMarkers(rawDetail);
@@ -578,19 +729,25 @@
     if (lang === 'EN') {
       const title = rawTitle || 'Plan priority';
       const body = rawBody || cleaned;
+      const compact = compactConcern(title, body, cleaned, 'EN');
       return Object.assign({}, item, {
         topic,
         title,
         body,
+        shortTitle: compact.shortTitle,
+        keyMetric: compact.keyMetric,
         detail: body ? `**${title}.** ${body}` : `**${title}.**`
       });
     }
     const titleES = translateTitleToES(rawTitle || cleaned);
     const bodyES = translateBodyToES(rawBody);
+    const compact = compactConcern(titleES, bodyES, cleaned, 'ES');
     return Object.assign({}, item, {
       topic,
       title: titleES,
       body: bodyES,
+      shortTitle: compact.shortTitle,
+      keyMetric: compact.keyMetric,
       detail: bodyES ? `**${titleES}.** ${bodyES}` : `**${titleES}.**`
     });
   }
@@ -905,7 +1062,19 @@
           ? `Contraste clave: lo que más te inquieta hoy es «${top1.title}», mientras que en los números del plan el mayor salto de puntuación (${singleDelta}${comboNote}) exige actuar también sobre «${bestMoveTitle}». En el Basecamp conectaremos tu prioridad #1 en el primer nodo sin descuidar este punto ciego.`
           : `Key contrast: what worries you most today is "${top1.title}", whereas the largest score jump in the numbers (${singleDelta}${comboNote}) also requires acting on "${bestMoveTitle}". In Basecamp we will address your #1 priority at the first node while closing this blind spot.`);
 
-    return { top1, bestSingle, bestCombined, aligned, worryText, impactText, blindSpotText, topic: top1Topic };
+    const shortMoveTitle = bestSingle
+      ? (bestSingle.title || bestSingle.action).split(/\s+/).slice(0, 5).join(' ')
+      : (es ? 'Medida principal' : 'Primary move');
+    const shortImpactMetric = `Score ${singleDelta}${bestCombined && bestCombined.score_after ? ` (${es ? 'hasta' : 'up to'} ${bestCombined.score_after})` : ''}`;
+    const shortTakeaway = aligned
+      ? (es
+          ? `Tu #1 coincide con el mayor salto del plan (${singleDelta}). Empezamos aquí.`
+          : `Your #1 matches the plan's biggest score jump (${singleDelta}). Starting here.`)
+      : (es
+          ? `Punto ciego: te preocupa «${top1.shortTitle || top1.title}», pero «${shortMoveTitle}» mueve más el score (${singleDelta}).`
+          : `Blind spot: "${top1.shortTitle || top1.title}" worries you, yet "${shortMoveTitle}" moves your score most (${singleDelta}).`);
+
+    return { top1, bestSingle, bestCombined, aligned, worryText, impactText, blindSpotText, shortMoveTitle, shortImpactMetric, shortTakeaway, topic: top1Topic };
   }
 
   // Adapt narrative reframe to the emotional thermometer (1..5) and #1 priority
@@ -1116,6 +1285,7 @@
       lang,
       irlDay: 0,
       fearOrder: [],
+      showAllConcerns: false,
       thermometer: 3,
       subjectiveConcern: '',
       votes: {},
@@ -1442,7 +1612,7 @@
     </aside>`;
   }
 
-  // Render Phase 1A: Wide 2-column centered overlay with Top-3 ranking, emotional thermometer, optional question, and unified couple Turn A -> Turn B
+  // Render Phase 1A: Ultra-scannable 2x3 centered grid with Top-3 ranking, minimalist thermometer, optional 1-line note, and unified couple Turn A -> Turn B
   function renderEvaluationOverlay(state, data, persona, s, couple) {
     const lang = langOf(state);
     const es = lang === 'ES';
@@ -1456,8 +1626,12 @@
     const turnVotes = (couple && state.votes && state.votes[turn]) || {};
     const currentPriority = turnVotes.priority || state.priorityFocus || 'deuda-proteccion';
     const currentSubjective = couple ? (turnVotes.subjective != null ? turnVotes.subjective : '') : (state.subjectiveConcern || '');
+    const allConcerns = persona.objectiveConcerns || [];
+    const showAll = !!state.showAllConcerns;
+    const visibleConcerns = showAll ? allConcerns : allConcerns.slice(0, 6);
+    const hiddenCount = Math.max(0, allConcerns.length - 6);
 
-    const cardsHtml = (persona.objectiveConcerns || []).map(c => {
+    const cardsHtml = visibleConcerns.map(c => {
       const rankIdx = top3.indexOf(c.id);
       const isSelected = rankIdx >= 0;
       const badgeText = isSelected ? rankLabels[rankIdx] : words[lang].pickRank;
@@ -1465,12 +1639,16 @@
       return `<div class="concern-card ${rankClass}" data-action="toggle-concern" data-concern-id="${esc(c.id)}" role="button" tabindex="0" aria-pressed="${isSelected ? 'true' : 'false'}">
         <input type="checkbox" class="sr-only" data-fear="${esc(c.id)}" ${isSelected ? 'checked' : ''} tabindex="-1" aria-hidden="true">
         <div class="concern-card-head">
-          <span class="concern-title">${esc(c.title)}</span>
+          <span class="concern-title">${esc(c.shortTitle || c.title)}</span>
           <span class="rank-badge ${rankClass}" data-rank="${isSelected ? rankIdx + 1 : ''}">${esc(badgeText)}</span>
         </div>
-        <p class="concern-body">${esc(c.body)}</p>
+        <span class="concern-metric">${esc(c.keyMetric || '')}</span>
       </div>`;
     }).join('');
+
+    const moreToggleHtml = hiddenCount > 0
+      ? `<div class="concerns-more-row"><button type="button" class="link-toggle-btn" data-action="toggle-more-concerns">${showAll ? esc(t(state, 'showLess')) : `+ ${es ? 'Ver' : 'Show'} ${hiddenCount} ${esc(t(state, 'showMore'))}`}</button></div>`
+      : '';
 
     const thermoButtons = [1, 2, 3, 4, 5].map(lvl => {
       const active = thermo === lvl;
@@ -1496,10 +1674,10 @@
 
     const selectedSummary = top3.length
       ? top3.map((id, i) => {
-          const found = (persona.objectiveConcerns || []).find(x => x.id === id);
-          return `<span class="top3-chip"><strong>${esc(rankLabels[i])}:</strong> ${esc(found ? found.title : id)}</span>`;
+          const found = allConcerns.find(x => x.id === id);
+          return `<span class="top3-chip"><strong>${esc(rankLabels[i])}</strong> ${esc(found ? (found.shortTitle || found.title) : id)}</span>`;
         }).join(' ')
-      : `<span class="top3-empty">${es ? 'Toca hasta 3 tarjetas para ordenarlas (1º, 2º, 3º).' : 'Click up to 3 cards to rank them (1st, 2nd, 3rd).'}</span>`;
+      : `<span class="top3-empty">${t(state, 'fearHelp')}</span>`;
 
     const primaryCtaLabel = couple
       ? (turn === 'A' ? `${t(state, 'save')} ${esc(nextPerson)}` : t(state, 'matches'))
@@ -1509,11 +1687,9 @@
       <div class="eval-head">
         <div>
           <p class="eyebrow">${couple ? t(state, 'team') : t(state, 'fears')}</p>
-          <h1>${couple ? `${t(state, 'private')} ${esc(currentPerson)}: ${t(state, 'fearTitle')}` : t(state, 'fearTitle')}</h1>
-          <p class="body-copy">${t(state, 'fearHelp')}</p>
+          <h1>${couple ? `${t(state, 'private')} ${esc(currentPerson)} · ${t(state, 'fearTitle')}` : t(state, 'fearTitle')}</h1>
         </div>
         <div class="top3-status" aria-live="polite">
-          <span class="eyebrow">${t(state, 'top3Counter')} (${top3.length}/3)</span>
           <div class="top3-chips">${selectedSummary}</div>
         </div>
       </div>
@@ -1521,14 +1697,15 @@
       <div class="concerns-grid" role="group" aria-label="${t(state, 'fearTitle')}">
         ${cardsHtml}
       </div>
+      ${moreToggleHtml}
       <div class="eval-footer-grid">
         <div class="thermometer-box">
-          <label class="eyebrow" for="thermoRange">${t(state, 'thermometerTitle')}: <strong>${esc(thermoLabels[lang][thermo])}</strong></label>
+          <span class="eyebrow">${t(state, 'thermometerTitle')}</span>
           <div class="thermometer-pills" role="group" aria-label="${t(state, 'thermometerTitle')}">${thermoButtons}</div>
           <input id="thermoRange" type="range" min="1" max="5" step="1" value="${thermo}" data-thermometer class="sr-only">
         </div>
         <div class="subjective-box">
-          <label class="eyebrow" for="subjective">${t(state, 'fearAsk')}</label>
+          <span class="eyebrow">${t(state, 'fearAsk')}</span>
           <input id="subjective" type="text" data-subjective value="${esc(currentSubjective)}" placeholder="${esc(t(state, 'fearPlaceholder'))}">
         </div>
       </div>
@@ -1541,73 +1718,69 @@
     </aside>`;
   }
 
-  // Render Pre-Basecamp Contrast & Couple Diagnosis screen (phase === 'contrast' or 'cross')
+  // Render Pre-Basecamp Contrast & Couple Diagnosis screen: 100% visible without scroll, extended text folded inside <details>
   function renderContrastOverlay(state, data, persona, s, couple) {
     const lang = langOf(state);
     const es = lang === 'ES';
     const contrast = buildContrastSummary(state, data);
     const reframeText = buildThermometerReframe(state, data);
     const rankLabels = words[lang].rankBadge;
+    const allConcerns = persona.objectiveConcerns || [];
     const top3Ids = (state.fearOrder || []).slice(0, 3);
     const top3Html = top3Ids.map((id, i) => {
-      const c = (persona.objectiveConcerns || []).find(x => x.id === id);
-      return `<span class="top3-chip"><strong>${esc(rankLabels[i] || `#${i + 1}`)}:</strong> ${esc(c ? c.title : id)}</span>`;
+      const c = allConcerns.find(x => x.id === id);
+      return `<span class="top3-chip"><strong>${esc(rankLabels[i] || `#${i + 1}`)}</strong> ${esc(c ? (c.shortTitle || c.title) : id)}</span>`;
     }).join(' ');
 
-    let coupleSection = '';
+    let coupleRowHtml = '';
+    let coupleDetailsHtml = '';
     if (couple) {
       const a = (state.votes && state.votes.A) || { fears: top3Ids, thermometer: state.thermometer || 3, priority: 'crecimiento' };
       const b = (state.votes && state.votes.B) || { fears: top3Ids, thermometer: state.thermometer || 3, priority: 'deuda-proteccion' };
       const people = (state.voters && state.voters.length ? state.voters : s.people) || ['A', 'B'];
-      const common = (a.fears || []).filter(id => (b.fears || []).includes(id));
-      const sharedHtml = common.length
-        ? common.map(id => {
-            const c = (persona.objectiveConcerns || []).find(x => x.id === id);
-            return `<li>${c ? detail(id, c, lang) : esc(id)}</li>`;
-          }).join('')
-        : `<li>${esc(persona.D6 || (es ? 'Proteger la estabilidad familiar y los hijos.' : 'Protect family stability and the children.'))}</li>`;
-
+      const ownersMeta = ((data.meta && data.meta.owners) || []);
+      const profLabel = p => {
+        if (!es) return p || 'Moderate';
+        return { Growth: 'Crecimiento', Moderate: 'Moderado', Aggressive: 'Agresivo', Conservative: 'Conservador' }[p] || p || 'Moderado';
+      };
+      const profA = profLabel(ownersMeta[0] && ownersMeta[0].risk_profile);
+      const profB = profLabel(ownersMeta[1] && ownersMeta[1].risk_profile);
       const thermoA = Number(a.thermometer) || 3;
       const thermoB = Number(b.thermometer) || 3;
-      const gap = Math.abs(thermoA - thermoB);
-      const gapDesc = gap === 0
-        ? (es ? 'Sintonía emocional plena (mismo nivel en el termómetro).' : 'Full emotional alignment (same thermometer level).')
-        : gap >= 2
-          ? (es ? `Brecha emocional relevante (${gap} niveles de diferencia): conviene pactar pasos automáticos para reducir la presión de quien siente mayor urgencia.`
-                : `Significant emotional gap (${gap} levels apart): agree on automated steps to relieve pressure for the more stressed partner.`)
-          : (es ? `Diferencia suave (${gap} nivel): fácil de armonizar con un calendario común.`
-                : `Mild difference (${gap} level): easy to align with a shared schedule.`);
-
-      const aTop = ((persona.objectiveConcerns || []).find(x => x.id === (a.fears && a.fears[0])) || {}).title || '—';
-      const bTop = ((persona.objectiveConcerns || []).find(x => x.id === (b.fears && b.fears[0])) || {}).title || '—';
-      const priorityDiff = a.priority && b.priority && a.priority !== b.priority
-        ? `<p><strong>${t(state, 'different')}:</strong> ${esc(people[0])} (${t(state, a.priority === 'crecimiento' ? 'growth' : 'debt')}) ${es ? 'frente a' : 'vs.'} ${esc(people[1])} (${t(state, b.priority === 'crecimiento' ? 'growth' : 'debt')}).</p>`
-        : `<p>${t(state, 'common')}</p>`;
+      const common = (a.fears || []).filter(id => (b.fears || []).includes(id));
+      const sharedChips = common.length
+        ? common.map(id => {
+            const c = allConcerns.find(x => x.id === id);
+            return `<span class="top3-chip">${esc(c ? (c.shortTitle || c.title) : id)}</span>`;
+          }).join(' ')
+        : `<span class="top3-chip">${es ? 'Protección familiar' : 'Family protection'}</span>`;
 
       const pactText = (state.aiPact && state.aiPact.lang === lang && state.aiPact.text) || s.pact;
 
-      coupleSection = `<div class="couple-diagnosis-grid">
+      coupleRowHtml = `<div class="couple-diagnosis-grid">
         <div class="contrast-card">
-          <h2>${t(state, 'agree')}</h2>
-          <p class="preview"><strong>${esc(people[0])} #1:</strong> ${esc(aTop)} · <strong>${esc(people[1])} #1:</strong> ${esc(bTop)}</p>
-          <ul>${sharedHtml}</ul>
+          <p class="eyebrow">${t(state, 'agree')}</p>
+          <div class="top3-chips">${sharedChips}</div>
         </div>
         <div class="contrast-card">
-          <h2>${t(state, 'thermoGapTitle')} &amp; ${t(state, 'profileSplitTitle')}</h2>
-          <p><strong>${esc(people[0])}:</strong> ${esc(thermoLabels[lang][thermoA])} · <strong>${esc(people[1])}:</strong> ${esc(thermoLabels[lang][thermoB])}</p>
-          <p>${esc(gapDesc)}</p>
-          <p><strong>${t(state, 'profileSplitTitle')}:</strong> ${esc(persona.D4Human || '')}</p>
-          ${priorityDiff}
+          <p class="eyebrow">${t(state, 'thermoGapTitle')}</p>
+          <p class="compact-line"><strong>${esc(people[0])}</strong> (${thermoA}/5 · ${esc(profA)}) vs <strong>${esc(people[1])}</strong> (${thermoB}/5 · ${esc(profB)})</p>
+          <p class="compact-sub"><strong>${t(state, 'pact')}:</strong> ${esc(pactText)}</p>
         </div>
-      </div>
-      <div class="contrast-card">
-        <h2>${t(state, 'friction')}</h2>
-        ${(persona.tensions || []).slice(0, 2).map(x => `<p>${detail(x.id, x, lang)}</p>`).join('')}
-        <p class="reframe"><strong>${t(state, 'pact')}:</strong> ${esc(pactText)}</p>
       </div>`;
+
+      coupleDetailsHtml = `<p><strong>${t(state, 'profileSplitTitle')}:</strong> ${esc(persona.D4Human || '')}</p>`
+        + (persona.tensions || []).map(x => `<p>${detail(x.id, x, lang)}</p>`).join('');
+    } else {
+      coupleDetailsHtml = (persona.tensions || []).map(x => `<p>${detail(x.id, x, lang)}</p>`).join('');
     }
 
-    return `<aside class="floating-panel eval-overlay" data-phase="contrast">
+    const exactBlock = mathSummary(data, state).replace(
+      '<ul>',
+      `<div class="exact-context-notes"><p>${esc(contrast.worryText)}</p><p>${esc(contrast.impactText)}</p><p>${esc(reframeText)}</p>${coupleDetailsHtml}</div><ul>`
+    );
+
+    return `<aside class="floating-panel eval-overlay contrast-compact" data-phase="contrast">
       <div class="eval-head">
         <div>
           <p class="eyebrow">${t(state, 'cross')}</p>
@@ -1618,24 +1791,25 @@
       <div class="contrast-grid">
         <div class="contrast-card is-worry">
           <p class="eyebrow">${t(state, 'whatWorries')}</p>
-          <h2>${esc(contrast.top1.title)}</h2>
-          <p>${esc(contrast.top1.body)}</p>
+          <h2>${esc(contrast.top1.shortTitle || contrast.top1.title)}</h2>
+          <p class="compact-line">${esc(contrast.top1.keyMetric || '')}</p>
         </div>
         <div class="contrast-card is-impact">
           <p class="eyebrow">${t(state, 'whatImpacts')}</p>
-          <h2>${esc(contrast.bestSingle ? contrast.bestSingle.title : s.pact)}</h2>
-          <p>${esc(contrast.impactText)}</p>
+          <h2>${esc(contrast.shortMoveTitle)}</h2>
+          <p class="compact-line">${esc(contrast.shortImpactMetric)}</p>
         </div>
       </div>
-      <div class="contrast-callout">
-        <strong>${t(state, 'blindSpot')}:</strong> ${esc(contrast.blindSpotText)}
+      <div class="contrast-callout" data-ai-reframe>
+        <strong>${t(state, 'blindSpot')}:</strong> ${esc(contrast.shortTakeaway)}
       </div>
-      <p class="reframe" data-ai-reframe>${esc(reframeText)}</p>
-      ${coupleSection}
-      ${mathSummary(data, state)}
-      <div class="button-row">
-        <button class="primary" data-action="start-expedition">${t(state, 'enter')}</button>
-        <button data-action="edit-fears">${t(state, 'backEval')}</button>
+      ${coupleRowHtml}
+      <div class="eval-actions">
+        ${exactBlock}
+        <div class="button-row">
+          <button class="primary" data-action="start-expedition">${t(state, 'enter')}</button>
+          <button data-action="edit-fears">${t(state, 'backEval')}</button>
+        </div>
       </div>
     </aside>`;
   }
@@ -2049,6 +2223,12 @@
         state.votes[turn] = cur;
       }
       state.thermometer = lvl;
+      rerender();
+      return true;
+    }
+
+    if (action === 'toggle-more-concerns') {
+      state.showAllConcerns = !state.showAllConcerns;
       rerender();
       return true;
     }
