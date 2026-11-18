@@ -2258,6 +2258,8 @@
     const thermoText = thermoLabels[lang][activeThermometer(state)];
 
     let panel = '';
+    const campFab = `<button type="button" class="floating-overview-cta ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'is-hidden'}" data-action="focus-active" title="${esc(t(state, 'focusActive'))}" aria-label="${esc(t(state, 'focusActive'))}" ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'hidden'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M4.5 20L12 5l7.5 15M12 5V3M9.5 20l2.5-6 2.5 6"/></svg></button>`;
+
     if (view === 'brief') {
       panel = `<aside class="floating-panel panel-wide">
         <p class="eyebrow">${t(state, 'brief')}</p>
@@ -2304,7 +2306,7 @@
     } else if ((state.blocked && focusedIdx === stageIdx) || activeRiskIdx != null) {
       const cardHtml = renderRiskInspectionCard(state, data, persona, s, activeRiskIdx != null ? activeRiskIdx : Math.max(0, entries.length - 1));
       panel = (dialogVisible ? cardHtml : cardHtml.replace('class="floating-dialog"', 'class="floating-dialog is-dialog-hidden" hidden'))
-        + `<div class="floating-overview-cta ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'is-hidden'}" ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'hidden'}><span>${t(state, 'panoramicHint')}</span><button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button></div>`;
+        + campFab;
     } else {
       const inspectingOther = (focusedIdx !== stageIdx) || state.summit || view === 'overview';
       const focusedBiome = biome(focusedIdx, lang);
@@ -2382,7 +2384,7 @@
            </div>`
         : activeCampBody;
       panel = `<aside class="floating-dialog ${dialogVisible ? '' : 'is-dialog-hidden'}" data-dialog="decision" ${dialogVisible ? '' : 'hidden'}>${dialogContent}</aside>
-        <div class="floating-overview-cta ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'is-hidden'}" ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'hidden'}><span>${t(state, 'panoramicHint')}</span><button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button></div>`;
+        ${campFab}`;
     }
 
     return `${renderHeader(state, data)}<main class="page-shell page-mountain-full">${wallpaper}${panel}</main>`;
