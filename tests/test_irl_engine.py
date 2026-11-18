@@ -131,6 +131,44 @@ class TestCaseResolution(unittest.TestCase):
                 with self.assertRaises(FileNotFoundError):
                     load_case_data("non-existent-case")
 
+    def test_env_vars_override_repo_root_cases_dir(self) -> None:
+        src = Path(load_case_data("michael-carter")["case_dir"])
+        with tempfile.TemporaryDirectory() as tmp:
+            fake_repo = Path(tmp) / "repo"
+            repo_case = fake_repo / "cases" / "michael-carter"
+            repo_case.mkdir(parents=True)
+            sherpas_dir = Path(tmp) / "sherpas_override"
+            sherpas_case = sherpas_dir / "michael-carter"
+            sherpas_case.mkdir(parents=True)
+            cases_dir = Path(tmp) / "cases_override"
+            cases_case = cases_dir / "michael-carter"
+            cases_case.mkdir(parents=True)
+
+            for fname in ("financial-health.json", "investment-analysis.json", "persona.md"):
+                raw = (src / fname).read_text(encoding="utf-8-sig")
+                (repo_case / fname).write_text(raw, encoding="utf-8")
+                (sherpas_case / fname).write_text(raw, encoding="utf-8")
+                (cases_case / fname).write_text(raw, encoding="utf-8")
+
+            with mock.patch("backend.irl_engine._repo_root", return_value=fake_repo):
+                with mock.patch.dict(os.environ, {"SHERPAS_CASES_DIR": str(sherpas_dir)}, clear=False):
+                    resolved_sherpas = load_case_data("michael-carter")
+                    self.assertEqual(
+                        Path(resolved_sherpas["case_dir"]).resolve(),
+                        sherpas_case.resolve(),
+                    )
+
+                env_without_sherpas = {
+                    k: v for k, v in os.environ.items() if k != "SHERPAS_CASES_DIR"
+                }
+                env_without_sherpas["CASES_DIR"] = str(cases_dir)
+                with mock.patch.dict(os.environ, env_without_sherpas, clear=True):
+                    resolved_cases = load_case_data("michael-carter")
+                    self.assertEqual(
+                        Path(resolved_cases["case_dir"]).resolve(),
+                        cases_case.resolve(),
+                    )
+
 
 class TestIRLEngineTimelineAndFocus(unittest.TestCase):
     def test_focus_mode_day_0_exposes_single_3min_step_for_all_cases(self) -> None:

@@ -1591,16 +1591,15 @@ def resolve_case_dir(case_id: str, cases_dir: str | Path | None = None) -> Path:
 
     repo_root = _repo_root()
     cwd = Path.cwd()
-    candidates: list[Path] = [
-        repo_root / "cases" / case_id,
-        cwd / "cases" / case_id,
-    ]
+    candidates: list[Path] = []
     for env_var in ("SHERPAS_CASES_DIR", "CASES_DIR"):
         env_dir = os.environ.get(env_var)
         if env_dir:
             candidates.append(Path(env_dir) / case_id)
     candidates.extend(
         [
+            repo_root / "cases" / case_id,
+            cwd / "cases" / case_id,
             repo_root.parent / "cases" / case_id,
             repo_root.parent / "hackathon-upv-2026" / "cases" / case_id,
             cwd.parent / "hackathon-upv-2026" / "cases" / case_id,
