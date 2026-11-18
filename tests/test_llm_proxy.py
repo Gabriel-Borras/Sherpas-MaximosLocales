@@ -388,6 +388,58 @@ class BehavioralNarratorTests(unittest.TestCase):
                 with self.assertRaises(FileNotFoundError):
                     resolve_cases_dir(cases_dir=tmp_path / "nonexistent_cases")
 
+    def test_env_vars_override_existing_project_root_cases_dir(self) -> None:
+        real_dir = load_case("michael-carter").case_dir.parent
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            fake_repo_root = tmp_path / "repo"
+            fake_repo_file = fake_repo_root / "backend" / "behavioral_narrator.py"
+            fake_repo_file.parent.mkdir(parents=True)
+
+            # Populate project_root/cases AND two distinct env override folders
+            root_cases = fake_repo_root / "cases"
+            env_sherpas = tmp_path / "override_sherpas"
+            env_cases = tmp_path / "override_cases"
+            for target_root in (root_cases, env_sherpas, env_cases):
+                src = real_dir / "michael-carter"
+                dst = target_root / "michael-carter"
+                dst.mkdir(parents=True)
+                for fname in ("financial-health.json", "investment-analysis.json", "persona.md"):
+                    (dst / fname).write_bytes((src / fname).read_bytes())
+
+            with (
+                patch.object(narrator_mod, "__file__", str(fake_repo_file)),
+                patch.object(Path, "cwd", return_value=fake_repo_root),
+            ):
+                with patch.dict(
+                    os.environ,
+                    {"SHERPAS_CASES_DIR": str(env_sherpas), "CASES_DIR": str(env_cases)},
+                    clear=False,
+                ):
+                    self.assertEqual(resolve_cases_dir(), env_sherpas)
+
+                with patch.dict(
+                    os.environ,
+                    {"SHERPAS_CASES_DIR": "", "CASES_DIR": str(env_cases)},
+                    clear=False,
+                ):
+                    self.assertEqual(resolve_cases_dir(), env_cases)
+
+                with patch.dict(
+                    os.environ,
+                    {"SHERPAS_CASES_DIR": "", "CASES_DIR": ""},
+                    clear=False,
+                ):
+                    self.assertEqual(resolve_cases_dir(), root_cases)
+
+                # Explicit cases_dir always wins over env vars and project_root/cases
+                with patch.dict(
+                    os.environ,
+                    {"SHERPAS_CASES_DIR": str(env_sherpas), "CASES_DIR": str(env_cases)},
+                    clear=False,
+                ):
+                    self.assertEqual(resolve_cases_dir(cases_dir=root_cases), root_cases)
+
     def test_dual_lens_plain_and_math_no_invented_numbers(self) -> None:
         topics = ("overview", "liquidity", "debt", "retirement", "protection", "investments", "home_purchase")
         for case_id in SUPPORTED_CASES:

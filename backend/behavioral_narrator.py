@@ -1738,7 +1738,7 @@ def _ensure_embedded_cases_dir() -> Path:
 
 
 def resolve_cases_dir(cases_dir: str | Path | None = None) -> Path:
-    """Locate the `cases/` directory via portable paths, env vars, or embedded canonical fallback."""
+    """Locate the `cases/` directory via explicit arg, env vars, portable paths, or embedded fallback."""
     if cases_dir is not None:
         explicit = Path(cases_dir)
         if not explicit.is_dir():
@@ -1746,15 +1746,14 @@ def resolve_cases_dir(cases_dir: str | Path | None = None) -> Path:
         return explicit
 
     candidates: list[Path] = []
-    project_root = Path(__file__).resolve().parent.parent
-    candidates.append(project_root / "cases")
-    candidates.append(Path.cwd() / "cases")
-
     for env_key in ("SHERPAS_CASES_DIR", "CASES_DIR"):
         env_dir = os.environ.get(env_key)
         if env_dir:
             candidates.append(Path(env_dir))
 
+    project_root = Path(__file__).resolve().parent.parent
+    candidates.append(project_root / "cases")
+    candidates.append(Path.cwd() / "cases")
     candidates.append(project_root.parent / "cases")
     candidates.append(project_root.parent / "hackathon-upv-2026" / "cases")
     candidates.append(Path.cwd().parent / "hackathon-upv-2026" / "cases")
