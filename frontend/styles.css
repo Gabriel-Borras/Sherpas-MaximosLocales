@@ -28,6 +28,11 @@
   --radius-lg: 12px;
   --header-h: 52px;
   --canvas-max: 1180px;
+  --bg-paper: #ffffff;
+  --ink-deep: #141414;
+  --ink-mid: rgba(20, 20, 20, 0.65);
+  --ink-wash: rgba(20, 20, 20, 0.22);
+  --ink-mist: rgba(20, 20, 20, 0.07);
 }
 
 * { box-sizing: border-box; box-shadow: none; }
@@ -64,7 +69,10 @@ p, li, .body-copy { max-width: 70ch; text-wrap: pretty; margin: 0 0 8px; }
   font-variant-numeric: tabular-nums;
 }
 
-/* Full-bleed permanent 100vw x 100vh Sumi-e Mountain Wallpaper */
+/* Full-bleed permanent 100vw x 100vh Sumi-e Mountain Wallpaper on pure paper white */
+body.is-mountain-viewport {
+  background: var(--bg-paper);
+}
 .mountain-stage.mountain-fullscreen {
   position: fixed;
   inset: 0;
@@ -74,7 +82,10 @@ p, li, .body-copy { max-width: 70ch; text-wrap: pretty; margin: 0 0 8px; }
   padding: 0;
   overflow: hidden;
   z-index: 1;
-  background: radial-gradient(circle at 72% 18%, #FFFFFF 0%, #FBF9F5 58%, #F3EFE6 100%);
+  background:
+    radial-gradient(ellipse 68% 46% at 62% 24%, rgba(20, 20, 20, 0.04) 0%, transparent 72%),
+    radial-gradient(ellipse 55% 40% at 24% 72%, rgba(20, 20, 20, 0.07) 0%, transparent 70%),
+    var(--bg-paper);
 }
 .mountain-fullscreen .mountain-svg {
   width: 100vw;
@@ -782,24 +793,16 @@ details.exact-math dl {
 .waterfall-detail dt { color: var(--ink-muted); font-weight: 500; }
 .waterfall-detail dd { margin: 0; font-weight: 600; }
 
-/* Sumi-e SVG ink-wash & interactive nodes */
-.mountain-svg .sumi-wash { mix-blend-mode: multiply; }
-.mountain-svg .sumi-ridge-soft {
-  stroke: #1a1a1e;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  vector-effect: non-scaling-stroke;
-}
+/* Sumi-e SVG ink-wash & monochromatic interactive nodes */
 .mountain-svg .route-guide {
-  stroke: #1e1e24;
-  opacity: .24;
+  stroke: rgba(20, 20, 20, 0.2);
   fill: none;
   stroke-dasharray: 3.5 5.5;
   vector-effect: non-scaling-stroke;
 }
 .mountain-svg .route-ink {
-  stroke: #141419;
-  opacity: .84;
+  stroke: var(--ink-deep);
+  opacity: .88;
   fill: none;
   stroke-linecap: round;
   vector-effect: non-scaling-stroke;
@@ -810,7 +813,7 @@ details.exact-math dl {
   vector-effect: non-scaling-stroke;
 }
 .mountain-svg .risk-path {
-  stroke: #C83A2B;
+  stroke: #9E2A2B;
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -821,19 +824,19 @@ details.exact-math dl {
 }
 .mountain-svg .risk-node:hover .risk-node-halo {
   r: 7.5;
-  opacity: .38;
+  opacity: .36;
 }
 .mountain-svg .micro-camp { cursor: pointer; }
 .mountain-svg .micro-camp .camp-beacon {
   fill: none;
-  stroke: #141311;
-  stroke-width: .45;
-  opacity: .34;
+  stroke: var(--ink-deep);
+  stroke-width: .55;
+  opacity: .32;
 }
-.mountain-svg .micro-camp.is-active .camp-beacon { stroke: #4565d6; opacity: .95; }
-.mountain-svg .micro-camp.is-reached .camp-tent { fill: #141311; }
-.mountain-svg .micro-camp:hover .camp-beacon { stroke: #4565d6; opacity: 1; }
-.mountain-svg .sherpas-flag { fill: #141311; }
+.mountain-svg .micro-camp.is-active .camp-beacon { stroke: var(--ink-deep); stroke-width: .9; opacity: .92; }
+.mountain-svg .micro-camp.is-reached .camp-tent { fill: var(--ink-deep); }
+.mountain-svg .micro-camp:hover .camp-beacon { stroke: var(--ink-deep); stroke-width: .9; opacity: 1; }
+.mountain-svg .sherpas-flag { fill: var(--ink-deep); }
 
 .yearly-chart { width: 100%; height: auto; display: block; margin: 6px 0; }
 .crack {
