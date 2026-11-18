@@ -317,12 +317,8 @@ body.is-mountain-viewport {
   line-height: 1.32;
 }
 .choice.choice-compact:has(input:checked) {
-  border-color: rgba(20, 20, 20, 0.34);
-  background: rgba(255, 255, 255, 0.92);
-}
-.choice.choice-compact.is-risk-opt:has(input:checked) {
-  border-color: rgba(158, 42, 43, 0.45);
-  background: rgba(254, 242, 242, 0.86);
+  border-color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.94);
 }
 .choice-text {
   flex: 1;
