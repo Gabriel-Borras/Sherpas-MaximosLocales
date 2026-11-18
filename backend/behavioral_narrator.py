@@ -21,9 +21,7 @@ SUPPORTED_CASES = (
     "daniel-emily-johnson",
 )
 
-FALLBACK_CASES_DIR = Path(
-    r"C:\Users\Silvia\.gemini\antigravity\scratch\hackathon-upv-2026\cases"
-)
+FALLBACK_CASES_DIR = Path(__file__).resolve().parent.parent / "cases"
 
 BIAS_CATALOG: tuple[dict[str, str], ...] = (
     {
@@ -367,7 +365,7 @@ class CaseData:
 
 
 def resolve_cases_dir(cases_dir: str | Path | None = None) -> Path:
-    """Locate the `cases/` directory using project root, `SHERPAS_CASES_DIR`, and fallback."""
+    """Locate the `cases/` directory via portable project-relative paths and env vars."""
     candidates: list[Path] = []
     if cases_dir is not None:
         candidates.append(Path(cases_dir))
@@ -376,11 +374,14 @@ def resolve_cases_dir(cases_dir: str | Path | None = None) -> Path:
     candidates.append(project_root / "cases")
     candidates.append(Path.cwd() / "cases")
 
-    env_dir = os.environ.get("SHERPAS_CASES_DIR")
-    if env_dir:
-        candidates.append(Path(env_dir))
+    for env_key in ("SHERPAS_CASES_DIR", "CASES_DIR"):
+        env_dir = os.environ.get(env_key)
+        if env_dir:
+            candidates.append(Path(env_dir))
 
-    candidates.append(FALLBACK_CASES_DIR)
+    candidates.append(project_root.parent / "cases")
+    candidates.append(project_root.parent / "hackathon-upv-2026" / "cases")
+    candidates.append(Path.cwd().parent / "hackathon-upv-2026" / "cases")
 
     for candidate in candidates:
         if candidate.is_dir() and any((candidate / c).is_dir() for c in SUPPORTED_CASES):
@@ -389,7 +390,7 @@ def resolve_cases_dir(cases_dir: str | Path | None = None) -> Path:
         if candidate.is_dir():
             return candidate
     raise FileNotFoundError(
-        "Could not locate Sherpas cases directory in project root, SHERPAS_CASES_DIR, or fallback."
+        "Could not locate Sherpas cases directory in project root, SHERPAS_CASES_DIR, CASES_DIR, or sibling folders."
     )
 
 
@@ -545,9 +546,9 @@ def load_case(case_id: str, cases_dir: str | Path | None = None) -> CaseData:
     if not fh_path.is_file() or not ia_path.is_file() or not persona_path.is_file():
         raise FileNotFoundError(f"Missing required case files inside {case_dir}.")
 
-    fh = json.loads(fh_path.read_text(encoding="utf-8"))
-    ia = json.loads(ia_path.read_text(encoding="utf-8"))
-    persona_text = persona_path.read_text(encoding="utf-8")
+    fh = json.loads(fh_path.read_text(encoding="utf-8-sig"))
+    ia = json.loads(ia_path.read_text(encoding="utf-8-sig"))
+    persona_text = persona_path.read_text(encoding="utf-8-sig")
     persona = parse_persona_markdown(persona_text)
     return CaseData(
         case_id=case_id,

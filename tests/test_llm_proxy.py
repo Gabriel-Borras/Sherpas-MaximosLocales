@@ -24,6 +24,7 @@ import backend.llm_proxy as llm_proxy_mod
 
 from backend.behavioral_narrator import (
     ALL_BIAS_IDS,
+    FALLBACK_CASES_DIR,
     SECTION_4_BIAS_IDS,
     SUPPORTED_CASES,
     BehavioralNarrator,
@@ -327,11 +328,27 @@ class BehavioralNarratorTests(unittest.TestCase):
             self.assertEqual(len(case.per_event_drawdowns), 11)
             self.assertGreaterEqual(len(case.savings_waterfall), 16)
 
-    def test_cases_dir_resolution_via_env_var(self) -> None:
+    def test_cases_dir_resolution_via_env_var_and_utf8_bom(self) -> None:
         real_dir = load_case("michael-carter").case_dir.parent
+        self.assertEqual(FALLBACK_CASES_DIR, _ROOT / "cases")
+        narrator_src = (_ROOT / "backend" / "behavioral_narrator.py").read_text(encoding="utf-8")
+        self.assertNotIn("C:\\Users\\", narrator_src)
         with patch.dict(os.environ, {"SHERPAS_CASES_DIR": str(real_dir)}):
             c = load_case("samantha-lewis")
             self.assertEqual(c.case_id, "samantha-lewis")
+
+        with tempfile.TemporaryDirectory() as tmp:
+            bom_root = Path(tmp) / "cases"
+            src = real_dir / "michael-carter"
+            dst = bom_root / "michael-carter"
+            dst.mkdir(parents=True)
+            for fname in ("financial-health.json", "investment-analysis.json", "persona.md"):
+                raw = (src / fname).read_text(encoding="utf-8")
+                (dst / fname).write_bytes(b"\xef\xbb\xbf" + raw.encode("utf-8"))
+            with patch.dict(os.environ, {"SHERPAS_CASES_DIR": "", "CASES_DIR": str(bom_root)}, clear=False):
+                loaded = load_case("michael-carter")
+                self.assertEqual(loaded.case_dir.parent, bom_root)
+                self.assertEqual(loaded.published_score, 26)
 
     def test_dual_lens_plain_and_math_no_invented_numbers(self) -> None:
         topics = ("overview", "liquidity", "debt", "retirement", "protection", "investments", "home_purchase")

@@ -131,7 +131,7 @@ def _parse_dotenv_file(path: Path) -> dict[str, str]:
     if not path.is_file():
         return values
     try:
-        content = path.read_text(encoding="utf-8")
+        content = path.read_text(encoding="utf-8-sig")
     except OSError:
         return values
     for raw_line in content.splitlines():
