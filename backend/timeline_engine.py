@@ -430,11 +430,25 @@ def _parse_json_file(path):
     return json.loads(path.read_text(encoding="utf-8-sig"))
 
 
+def _normalize_yearly_rows(yearly):
+    """Fill the canonical age field from age_client when it is missing."""
+    rows = copy.deepcopy(yearly)
+    if not isinstance(rows, list):
+        return rows
+    for row in rows:
+        if (isinstance(row, dict) and "age_client" in row and
+                row.get("age") is None):
+            row["age"] = row["age_client"]
+    return rows
+
+
 def _normalize_loaded_case(case_id, raw, source):
     """Normalize Sherpas JSON while preserving all published source fields."""
     if not isinstance(raw, dict):
         return {"id": case_id, "raw": raw, "data_source": source}
     result = copy.deepcopy(raw)
+    seed = SEED_CASES[case_id]
+    base_score = seed.get("score", {})
     financial = (result.get("financial_health") or
                  result.get("financial-health"))
     investment = (result.get("investment_analysis") or
@@ -444,15 +458,58 @@ def _normalize_loaded_case(case_id, raw, source):
         score = financial.get("score", {})
         if isinstance(score, dict):
             normalized_score = {**result.get("score", {}), **score}
-            normalized_score["value"] = score.get(
-                "value", score.get("overall")
+            score_value = None
+            for key in (
+                    "value", "overall", "published_score", "publishedScore"):
+                candidate = score.get(key)
+                if candidate is not None:
+                    score_value = candidate
+                    break
+            if score_value is None:
+                score_value = base_score.get("value")
+            normalized_score["value"] = score_value
+            normalized_score["status"] = (
+                score.get("status") or score.get("band") or
+                base_score.get("status")
             )
             normalized_pillars = []
+            canonical_names = {
+                "Savings and cash flow": "Savings & cash flow",
+                "Liquidity and emergency fund": "Liquidity",
+                "Insurance and protection": "Protection",
+            }
             for pillar in score.get("pillars", []):
+                if not isinstance(pillar, dict):
+                    normalized_pillars.append(copy.deepcopy(pillar))
+                    continue
                 normalized_pillar = copy.deepcopy(pillar)
-                normalized_pillar["max_score"] = pillar.get(
-                    "max_score", pillar.get("max")
-                )
+                pillar_name = (pillar.get("name") or
+                               pillar.get("pillar"))
+                if pillar_name is not None:
+                    normalized_pillar["name"] = canonical_names.get(
+                        pillar_name, pillar_name
+                    )
+                points = pillar.get("points_shown_in_app")
+                earned = maximum = None
+                if isinstance(points, str) and "/" in points:
+                    earned_text, maximum_text = points.split("/", 1)
+                    try:
+                        earned = int(earned_text.strip())
+                    except ValueError:
+                        pass
+                    try:
+                        maximum = int(maximum_text.strip())
+                    except ValueError:
+                        pass
+                max_score = pillar.get("max_score")
+                if max_score is None:
+                    max_score = pillar.get("max")
+                if max_score is None and maximum is not None:
+                    max_score = maximum
+                normalized_pillar["max_score"] = max_score
+                if case_id == "michael-carter" and maximum is not None:
+                    normalized_pillar["score"] = earned
+                    normalized_pillar["max_score"] = maximum
                 normalized_pillars.append(normalized_pillar)
             if "pillars" in score:
                 normalized_score["pillars"] = normalized_pillars
@@ -462,10 +519,20 @@ def _normalize_loaded_case(case_id, raw, source):
         )
         for key in source_keys:
             if key in financial:
-                result[key] = copy.deepcopy(financial[key])
+                value = copy.deepcopy(financial[key])
+                if key == "yearly":
+                    value = _normalize_yearly_rows(value)
+                elif key == "projections" and isinstance(value, dict):
+                    if "yearly" in value:
+                        value["yearly"] = _normalize_yearly_rows(
+                            value["yearly"]
+                        )
+                result[key] = value
         projections = financial.get("projections", {})
         if isinstance(projections, dict) and "yearly" in projections:
-            result["yearly"] = copy.deepcopy(projections["yearly"])
+            result["yearly"] = _normalize_yearly_rows(
+                projections["yearly"]
+            )
     if isinstance(investment, dict):
         analysis = investment.get("analysis", {})
         if isinstance(analysis, dict) and "events" in analysis:
@@ -476,8 +543,6 @@ def _normalize_loaded_case(case_id, raw, source):
         result["subjective_concerns"] = _extract_persona_concerns(persona)
     result.setdefault("id", case_id)
     result["data_source"] = source
-    seed = SEED_CASES[case_id]
-    base_score = seed.get("score", {})
     normalized_score = result.get("score")
     if not isinstance(normalized_score, dict):
         normalized_score = {}

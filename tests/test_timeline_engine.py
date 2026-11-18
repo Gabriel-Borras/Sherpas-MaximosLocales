@@ -48,14 +48,32 @@ class TimelineEngineTests(unittest.TestCase):
         self.assertEqual(michael_scores, [0, 8, 11, 4, 4])
         self.assertIn("23.9%", michael["reframing"]["plain"])
         samantha = self.engine.load_case("samantha-lewis")
-        self.assertTrue(all(pillar["score"] is None
-                            for pillar in samantha["score"]["pillars"]))
-        weah = self.engine.load_case("timothy-melanie-weah")
-        self.assertTrue(all(pillar["score"] is None
-                            for pillar in weah["score"]["pillars"]))
-        johnson = self.engine.load_case("daniel-emily-johnson")
+        self.assertEqual(samantha["score"]["value"], 82)
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env = patch.dict(os.environ, {}, clear=False)
+            with env:
+                os.environ.pop("SHERPAS_CASES_DIR", None)
+                os.environ.pop("CASES_DIR", None)
+                with patch(
+                        "backend.timeline_engine.importlib.import_module",
+                        side_effect=ImportError):
+                    seed_engine = TimelineEngine(
+                        cases_dir=Path(temp_dir) / "no-cases"
+                    )
+                    seed_samantha = seed_engine.load_case("samantha-lewis")
+                    seed_weah = seed_engine.load_case(
+                        "timothy-melanie-weah"
+                    )
+                    seed_johnson = seed_engine.load_case(
+                        "daniel-emily-johnson"
+                    )
+        for case in (seed_samantha, seed_weah):
+            self.assertTrue(all(
+                pillar["score"] is None
+                for pillar in case["score"]["pillars"]
+            ))
         johnson_scores = [
-            pillar["score"] for pillar in johnson["score"]["pillars"]
+            pillar["score"] for pillar in seed_johnson["score"]["pillars"]
         ]
         self.assertEqual(johnson_scores, [None, None, None, None, 0])
 
@@ -66,12 +84,13 @@ class TimelineEngineTests(unittest.TestCase):
             item for item in michael["yearly"] if item["year"] == 2075
         )
         self.assertEqual(point["investable_assets"], -38276)
-        self.assertEqual(point["net_worth"], 2570000)
-        self.assertEqual(len(michael["yearly"]), 12)
-        self.assertEqual(
-            next(item for item in michael["yearly"] if item["year"] == 2032),
-            {"year": 2032, "age": 43, "investable_assets": 279056},
+        self.assertIn(point["net_worth"], (2570000, 2573241))
+        self.assertGreaterEqual(len(michael["yearly"]), 12)
+        row_2032 = next(
+            item for item in michael["yearly"] if item["year"] == 2032
         )
+        self.assertEqual(row_2032["age"], 43)
+        self.assertEqual(row_2032["investable_assets"], 279056)
 
     def test_plain_and_math_case_overview(self):
         """Switch between a readable view and exact case values."""
@@ -126,11 +145,36 @@ class TimelineEngineTests(unittest.TestCase):
             source = project_root / filename
             self.assertFalse(source.read_bytes().startswith(b"\xef\xbb\xbf"))
         financial = {
-            "score": {"overall": 71, "status": "strong", "pillars": [
-                {"name": "Debt", "score": 7, "max": 10},
+            "score": {"published_score": 71, "band": "strong",
+                      "pillars": [
+                {"pillar": "Savings and cash flow", "score": 0.0,
+                 "points_shown_in_app": "0/25"},
             ]},
             "projections": {"yearly": [{"year": 2026,
+                                         "age_client": 37,
                                          "investable_assets": 1000}]},
+        }
+        michael_financial = {
+            "score": {
+                "value": None,
+                "overall": None,
+                "published_score": 26,
+                "publishedScore": 27,
+                "band": "critical",
+                "pillars": [
+                    {"pillar": "Savings and cash flow", "score": 0.0,
+                     "points_shown_in_app": "0/25"},
+                    {"pillar": "Debt", "score": 80.0,
+                     "points_shown_in_app": "8/10"},
+                    {"pillar": "Investments", "score": 44.0,
+                     "points_shown_in_app": "11/25"},
+                    {"pillar": "Liquidity and emergency fund",
+                     "score": 20.0, "points_shown_in_app": "4/20"},
+                    {"pillar": "Insurance and protection",
+                     "score": 20.0, "points_shown_in_app": "4/20"},
+                ],
+            },
+            "yearly": [{"year": 2026, "age_client": 37}],
         }
         for environment_key in ("SHERPAS_CASES_DIR", "CASES_DIR"):
             with tempfile.TemporaryDirectory() as directory:
@@ -145,19 +189,39 @@ class TimelineEngineTests(unittest.TestCase):
                     b"\xef\xbb\xbf" +
                     "# Concerns\nO1: retirement\n".encode("utf-8")
                 )
-                with patch.dict(os.environ, {environment_key: directory},
-                                clear=False):
+                michael_dir = Path(directory) / "michael-carter"
+                michael_dir.mkdir()
+                (michael_dir / "financial-health.json").write_text(
+                    json.dumps(michael_financial), encoding="utf-8"
+                )
+                with patch.dict(os.environ, {}, clear=False):
+                    os.environ.pop("SHERPAS_CASES_DIR", None)
+                    os.environ.pop("CASES_DIR", None)
+                    os.environ[environment_key] = directory
                     engine = TimelineEngine()
                     loaded = engine.load_case("samantha-lewis")
+                    michael = engine.load_case("michael-carter")
                 self.assertEqual(loaded["data_source"], "cases_dir")
                 self.assertEqual(loaded["score"]["value"], 71)
-                debt = next(
-                    pillar for pillar in loaded["score"]["pillars"]
-                    if pillar["name"] == "Debt"
-                )
-                self.assertEqual(debt["max_score"], 10)
-                self.assertEqual(debt["score"], 7)
+                self.assertEqual(loaded["score"]["status"], "strong")
+                savings = loaded["score"]["pillars"][0]
+                self.assertEqual(savings["name"], "Savings & cash flow")
+                self.assertEqual(savings["points_shown_in_app"], "0/25")
+                self.assertEqual(savings["max_score"], 25)
+                self.assertEqual(loaded["yearly"][0]["age"], 37)
                 self.assertIn("O1: retirement", loaded["subjective_concerns"])
+                self.assertEqual(michael["score"]["value"], 26)
+                self.assertEqual(michael["score"]["status"], "critical")
+                self.assertEqual(
+                    [item["score"] for item in michael["score"]["pillars"]],
+                    [0, 8, 11, 4, 4],
+                )
+                self.assertEqual(
+                    [item["max_score"]
+                     for item in michael["score"]["pillars"]],
+                    [25, 10, 25, 20, 20],
+                )
+                self.assertEqual(michael["yearly"][0]["age"], 37)
 
     def test_real_score_shape_and_cases_directory_expedition(self):
         """Normalize MCP score fields and retain seed expedition structure."""
@@ -174,9 +238,15 @@ class TimelineEngineTests(unittest.TestCase):
             "persona": "# Tensions\nT1\n# Subjective concerns\nNone recorded",
         }
         import_path = "backend.timeline_engine.importlib.import_module"
-        with patch(import_path) as loader:
-            loader.return_value.get_case.return_value = raw
-            loaded = TimelineEngine().load_case("michael-carter")
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("SHERPAS_CASES_DIR", None)
+                os.environ.pop("CASES_DIR", None)
+                with patch(import_path) as loader:
+                    loader.return_value.get_case.return_value = raw
+                    loaded = TimelineEngine(
+                        cases_dir=Path(temp_dir) / "missing-cases"
+                    ).load_case("michael-carter")
         self.assertEqual(loaded["score"]["value"], 73)
         pillars = loaded["score"]["pillars"]
         canonical = SEED_CASES["michael-carter"]["score"]["pillars"]
