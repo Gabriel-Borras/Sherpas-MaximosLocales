@@ -53,6 +53,24 @@
       showMore: 'más',
       showLess: 'Ver menos',
       focusBanner: 'Foco #1',
+      youAre: 'Eres',
+      copyLinkFor: 'Copiar enlace para',
+      copied: '¡Copiado!',
+      openPartnerTab: 'Abrir',
+      inNewTab: 'en nueva pestaña',
+      sameDevice: 'Mismo dispositivo',
+      twoDevices: '2 dispositivos',
+      submitEval: 'Enviar mi evaluación',
+      waitingFor: 'Esperando a',
+      waitingEvalSub: 'Al enviar su respuesta, la comparativa se abrirá en ambos dispositivos.',
+      waitingDecSub: 'En cuanto elija camino, veréis la comparativa aquí.',
+      yourChoice: 'Tu elección',
+      alignedAdvancing: 'Coincidís → Avanzando',
+      pathCompareTitle: 'Comparativa de caminos',
+      safeRoute: 'Camino seguro',
+      riskRoute: 'Desvío de riesgo',
+      agreeAdvance: 'Acordar camino seguro y avanzar',
+      seeRedBranch: 'Ver desvío rojo',
       blocked: 'Desvío detectado en la ruta', stopped: 'Análisis del camino erróneo', impact: 'Consecuencia proyectada',
       context: 'Contexto adicional', tensions: 'Por qué ocurre (tensiones y hechos)', rewind: 'Rebobinar al campamento',
       phase: 'Basecamp · Ruta de ascenso', route: 'Una ruta, cuatro campamentos', choose: 'Elige el paso en este campamento',
@@ -115,6 +133,24 @@
       showMore: 'more',
       showLess: 'Show less',
       focusBanner: 'Focus #1',
+      youAre: 'You are',
+      copyLinkFor: 'Copy link for',
+      copied: 'Copied!',
+      openPartnerTab: 'Open',
+      inNewTab: 'in new tab',
+      sameDevice: 'Same device',
+      twoDevices: '2 devices',
+      submitEval: 'Submit my assessment',
+      waitingFor: 'Waiting for',
+      waitingEvalSub: 'Once they submit, the comparison unlocks on both devices.',
+      waitingDecSub: 'Once they pick a path, you will see the comparison here.',
+      yourChoice: 'Your choice',
+      alignedAdvancing: 'Aligned → Advancing',
+      pathCompareTitle: 'Path comparison',
+      safeRoute: 'Safe path',
+      riskRoute: 'Risk deviation',
+      agreeAdvance: 'Agree on safe path & advance',
+      seeRedBranch: 'Inspect red deviation',
       blocked: 'Route deviation detected', stopped: 'Failed path analysis', impact: 'Projected consequence',
       context: 'Additional context', tensions: 'Why it happens (tensions and facts)', rewind: 'Rewind to camp',
       phase: 'Basecamp · Ascent route', route: 'One route, four camps', choose: 'Choose the step at this camp',
@@ -959,7 +995,7 @@
     const raw = dataFor(state && state.caseId) || {};
     const isCouple = !!(raw.meta && raw.meta.isCouple);
     if (isCouple && state.phase === 'fears') {
-      const turn = state.voteTurn === 'B' ? 'B' : 'A';
+      const turn = state.coupleSyncMode === 'remote' ? (state.memberRole === 'B' ? 'B' : 'A') : (state.voteTurn === 'B' ? 'B' : 'A');
       const turnVotes = (state.votes && state.votes[turn]) || {};
       return Array.isArray(turnVotes.fears) ? turnVotes.fears.slice(0, 3) : [];
     }
@@ -971,7 +1007,7 @@
     const raw = dataFor(state && state.caseId) || {};
     const isCouple = !!(raw.meta && raw.meta.isCouple);
     if (isCouple && state.phase === 'fears') {
-      const turn = state.voteTurn === 'B' ? 'B' : 'A';
+      const turn = state.coupleSyncMode === 'remote' ? (state.memberRole === 'B' ? 'B' : 'A') : (state.voteTurn === 'B' ? 'B' : 'A');
       const turnVotes = (state.votes && state.votes[turn]) || {};
       const val = Number(turnVotes.thermometer);
       return Number.isFinite(val) && val >= 1 && val <= 5 ? val : 3;
@@ -1077,11 +1113,10 @@
     return { top1, bestSingle, bestCombined, aligned, worryText, impactText, blindSpotText, shortMoveTitle, shortImpactMetric, shortTakeaway, topic: top1Topic };
   }
 
-  // Adapt narrative reframe to the emotional thermometer (1..5) and #1 priority
+  // Build concise narrative reframe anchored to #1 priority and literal plan score
   function buildThermometerReframe(state, data) {
     const lang = langOf(state);
     const es = lang === 'ES';
-    const level = activeThermometer(state);
     const contrast = buildContrastSummary(state, data);
     const top1 = contrast.top1;
     const score = (data.score && data.score.published_score) ?? 0;
@@ -1091,21 +1126,9 @@
     }
 
     if (es) {
-      if (level >= 4) {
-        return `Termómetro ${level}/5 (alta presión): Respira; no tienes que resolver todo el plan hoy. Con un score actual de ${score}/100, vamos a empezar paso a paso por lo que más te pesa («${top1.title}») con una sola acción concreta y medible en el Campamento Base.`;
-      }
-      if (level <= 2) {
-        return `Termómetro ${level}/5 (calma estratégica): Aprovechemos tu tranquilidad para optimizar el plan (score actual ${score}/100). Tu prioridad #1 («${top1.title}») abre el recorrido en el Campamento Base antes de capturar los puntos de mayor retorno cuantitativo.`;
-      }
-      return `Termómetro ${level}/5 (enfoque equilibrado): Partimos de un score de ${score}/100. Hemos colocado tu prioridad #1 («${top1.title}») como foco de arranque en el Campamento Base para ordenar liquidez, riesgo y retiro sin fricción.`;
+      return `Score actual ${score}/100 · Empezamos por tu #1 («${top1.shortTitle || top1.title}») en este campamento.`;
     }
-    if (level >= 4) {
-      return `Thermometer ${level}/5 (high pressure): Take a breath—you don't need to fix the entire plan at once. Starting from a ${score}/100 score, we will begin at Basecamp with one clear, concrete step addressing "${top1.title}".`;
-    }
-    if (level <= 2) {
-      return `Thermometer ${level}/5 (strategic calm): Let's use your calm perspective to fine-tune the plan (current score ${score}/100). Your #1 priority ("${top1.title}") leads the first Basecamp node before locking in the highest-return score levers.`;
-    }
-    return `Thermometer ${level}/5 (balanced focus): Starting from a ${score}/100 score, we placed your #1 priority ("${top1.title}") at the opening Basecamp node so liquidity, protection, and long-term growth move in sync.`;
+    return `Current score ${score}/100 · Starting with your #1 ("${top1.shortTitle || top1.title}") at this camp.`;
   }
 
   // Evaluate exact point along the mountain ascent curve for any fraction in [0, 1]
@@ -1275,10 +1298,301 @@
     };
   }
 
+  // Multi-device couple room helpers & dual sync client (backend /api/rooms/* + localStorage + BroadcastChannel)
+  function makeRoomId() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let out = 'SH-';
+    for (let i = 0; i < 4; i++) out += chars[Math.floor(Math.random() * chars.length)];
+    return out;
+  }
+
+  function readRoomParams() {
+    try {
+      const search = root.location && root.location.search ? root.location.search : '';
+      const params = new URLSearchParams(search);
+      const caseParam = params.get('case');
+      const roomParam = params.get('room');
+      const memberParam = String(params.get('member') || '').toUpperCase();
+      return {
+        caseId: caseParam && ids.includes(caseParam) ? caseParam : null,
+        roomId: roomParam ? roomParam.trim() : null,
+        memberRole: memberParam === 'B' ? 'B' : 'A',
+        fromUrl: !!(roomParam || memberParam)
+      };
+    } catch (_) {
+      return { caseId: null, roomId: null, memberRole: 'A', fromUrl: false };
+    }
+  }
+
+  function buildPartnerUrl(state) {
+    const other = state.memberRole === 'B' ? 'A' : 'B';
+    const q = `?case=${encodeURIComponent(state.caseId)}&room=${encodeURIComponent(state.roomId || makeRoomId())}&member=${other}`;
+    try {
+      if (root.location && root.location.origin && root.location.origin !== 'null') {
+        return `${root.location.origin}${root.location.pathname || '/'}${q}`;
+      }
+    } catch (_) {}
+    return q;
+  }
+
+  function createCoupleRoomSync() {
+    const memoryRooms = {};
+    const listeners = {};
+    let bc = null;
+    try {
+      if (root.document && typeof root.BroadcastChannel === 'function') {
+        bc = new root.BroadcastChannel('sherpas-room');
+      }
+    } catch (_) {}
+
+    const storageKey = roomId => `sherpas_room_${roomId}`;
+    const emptyRoom = (roomId, caseId) => ({
+      room_id: roomId,
+      case_id: caseId || 'timothy-melanie-weah',
+      evaluation: { A: null, B: null },
+      evaluation_ready: false,
+      decisions: {}
+    });
+
+    const normalizeRoom = (roomId, caseId, raw) => {
+      const base = emptyRoom(roomId, caseId);
+      if (!raw || typeof raw !== 'object') return base;
+      const ev = raw.evaluation || {};
+      const aEval = ev.A || null;
+      const bEval = ev.B || null;
+      const decs = {};
+      const rawDecs = raw.decisions || {};
+      for (const k of Object.keys(rawDecs)) {
+        const d = rawDecs[k] || {};
+        const hasA = !!d.A;
+        const hasB = !!d.B;
+        decs[String(k)] = {
+          A: d.A || null,
+          B: d.B || null,
+          ready: !!(hasA && hasB),
+          aligned: !!(hasA && hasB && d.A.route === d.B.route)
+        };
+      }
+      return {
+        room_id: raw.room_id || roomId,
+        case_id: raw.case_id || caseId || base.case_id,
+        evaluation: { A: aEval, B: bEval },
+        evaluation_ready: !!(aEval && bEval),
+        decisions: decs
+      };
+    };
+
+    const mergeRooms = (roomId, caseId, a, b) => {
+      const na = normalizeRoom(roomId, caseId, a);
+      const nb = normalizeRoom(roomId, caseId, b);
+      const mergedDecs = {};
+      const keys = new Set([...Object.keys(na.decisions), ...Object.keys(nb.decisions)]);
+      for (const k of keys) {
+        const da = na.decisions[k] || {};
+        const db = nb.decisions[k] || {};
+        const voteA = db.A || da.A || null;
+        const voteB = db.B || da.B || null;
+        mergedDecs[k] = {
+          A: voteA,
+          B: voteB,
+          ready: !!(voteA && voteB),
+          aligned: !!(voteA && voteB && voteA.route === voteB.route)
+        };
+      }
+      const evA = nb.evaluation.A || na.evaluation.A || null;
+      const evB = nb.evaluation.B || na.evaluation.B || null;
+      return {
+        room_id: roomId,
+        case_id: nb.case_id || na.case_id,
+        evaluation: { A: evA, B: evB },
+        evaluation_ready: !!(evA && evB),
+        decisions: mergedDecs
+      };
+    };
+
+    const readLocal = (roomId, caseId) => {
+      let fromStorage = null;
+      try {
+        if (root.localStorage) {
+          const txt = root.localStorage.getItem(storageKey(roomId));
+          if (txt) fromStorage = JSON.parse(txt);
+        }
+      } catch (_) {}
+      return mergeRooms(roomId, caseId, memoryRooms[roomId], fromStorage);
+    };
+
+    const notify = (roomId, data) => {
+      const set = listeners[roomId];
+      if (set) set.forEach(fn => { try { fn(data); } catch (_) {} });
+    };
+
+    const writeLocal = (roomId, caseId, data) => {
+      const norm = normalizeRoom(roomId, caseId, data);
+      memoryRooms[roomId] = norm;
+      try {
+        if (root.localStorage) root.localStorage.setItem(storageKey(roomId), JSON.stringify(norm));
+      } catch (_) {}
+      try {
+        if (bc) bc.postMessage({ type: 'room-update', roomId, data: norm });
+      } catch (_) {}
+      notify(roomId, norm);
+      return norm;
+    };
+
+    const canHttp = () => typeof root.fetch === 'function' && root.location && /^https?:$/i.test(root.location.protocol || '');
+
+    const postJson = (url, body) => {
+      if (!canHttp()) return Promise.resolve(null);
+      try {
+        const ctrl = typeof root.AbortController === 'function' ? new root.AbortController() : null;
+        const timer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (_) {} }, 1500) : null;
+        return root.fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+          signal: ctrl ? ctrl.signal : undefined
+        }).then(r => {
+          if (timer) clearTimeout(timer);
+          return r && r.ok ? r.json() : null;
+        }).catch(() => {
+          if (timer) clearTimeout(timer);
+          return null;
+        });
+      } catch (_) {
+        return Promise.resolve(null);
+      }
+    };
+
+    const getJson = url => {
+      if (!canHttp()) return Promise.resolve(null);
+      try {
+        const ctrl = typeof root.AbortController === 'function' ? new root.AbortController() : null;
+        const timer = ctrl ? setTimeout(() => { try { ctrl.abort(); } catch (_) {} }, 1500) : null;
+        return root.fetch(url, { signal: ctrl ? ctrl.signal : undefined }).then(r => {
+          if (timer) clearTimeout(timer);
+          return r && r.ok ? r.json() : null;
+        }).catch(() => {
+          if (timer) clearTimeout(timer);
+          return null;
+        });
+      } catch (_) {
+        return Promise.resolve(null);
+      }
+    };
+
+    if (bc) {
+      bc.onmessage = ev => {
+        const msg = ev && ev.data;
+        if (msg && msg.type === 'room-update' && msg.roomId) {
+          const merged = mergeRooms(msg.roomId, msg.data && msg.data.case_id, memoryRooms[msg.roomId], msg.data);
+          memoryRooms[msg.roomId] = merged;
+          notify(msg.roomId, merged);
+        }
+      };
+    }
+    if (typeof root.addEventListener === 'function') {
+      root.addEventListener('storage', ev => {
+        if (!ev || !ev.key || !ev.key.startsWith('sherpas_room_') || !ev.newValue) return;
+        const rid = ev.key.slice('sherpas_room_'.length);
+        try {
+          const parsed = JSON.parse(ev.newValue);
+          const merged = mergeRooms(rid, parsed && parsed.case_id, memoryRooms[rid], parsed);
+          memoryRooms[rid] = merged;
+          notify(rid, merged);
+        } catch (_) {}
+      });
+    }
+
+    return {
+      readLocal,
+      createRoom(caseId, roomId) {
+        const rid = roomId || makeRoomId();
+        const cur = readLocal(rid, caseId);
+        writeLocal(rid, caseId, cur);
+        postJson('/api/rooms', { case_id: caseId, room_id: rid }).then(res => {
+          if (res && res.room_id) writeLocal(rid, caseId, mergeRooms(rid, caseId, readLocal(rid, caseId), res));
+        });
+        return cur;
+      },
+      submitEvaluation(roomId, caseId, member, vote) {
+        const m = member === 'B' ? 'B' : 'A';
+        const cur = readLocal(roomId, caseId);
+        const payload = {
+          member: m,
+          top_fears: Array.isArray(vote.fears) ? vote.fears.slice(0, 3) : (Array.isArray(vote.top_fears) ? vote.top_fears.slice(0, 3) : []),
+          fears: Array.isArray(vote.fears) ? vote.fears.slice(0, 3) : (Array.isArray(vote.top_fears) ? vote.top_fears.slice(0, 3) : []),
+          thermometer: Number(vote.thermometer) || 3,
+          priority: vote.priority || 'deuda-proteccion',
+          subjective: vote.subjective || ''
+        };
+        cur.evaluation[m] = payload;
+        cur.evaluation_ready = !!(cur.evaluation.A && cur.evaluation.B);
+        const saved = writeLocal(roomId, caseId, cur);
+        postJson(`/api/rooms/${encodeURIComponent(roomId)}/evaluation`, payload).then(res => {
+          if (res) writeLocal(roomId, caseId, mergeRooms(roomId, caseId, readLocal(roomId, caseId), res));
+        });
+        return saved;
+      },
+      submitDecision(roomId, caseId, member, stage, route, label) {
+        const m = member === 'B' ? 'B' : 'A';
+        const stKey = String(Number(stage) || 0);
+        const cur = readLocal(roomId, caseId);
+        const entry = cur.decisions[stKey] || { A: null, B: null, ready: false, aligned: false };
+        entry[m] = { route: route === 'bad' ? 'bad' : 'good', label: label || '' };
+        entry.ready = !!(entry.A && entry.B);
+        entry.aligned = !!(entry.ready && entry.A.route === entry.B.route);
+        cur.decisions[stKey] = entry;
+        const saved = writeLocal(roomId, caseId, cur);
+        postJson(`/api/rooms/${encodeURIComponent(roomId)}/decision`, {
+          member: m,
+          stage: Number(stage) || 0,
+          route: entry[m].route,
+          label: entry[m].label
+        }).then(res => {
+          if (res) writeLocal(roomId, caseId, mergeRooms(roomId, caseId, readLocal(roomId, caseId), res));
+        });
+        return saved;
+      },
+      fetchRoom(roomId, caseId) {
+        const local = readLocal(roomId, caseId);
+        return getJson(`/api/rooms/${encodeURIComponent(roomId)}`).then(res => {
+          if (res) return writeLocal(roomId, caseId, mergeRooms(roomId, caseId, local, res));
+          return local;
+        });
+      },
+      subscribe(roomId, caseId, onUpdate) {
+        if (!roomId || typeof onUpdate !== 'function') return () => {};
+        if (!listeners[roomId]) listeners[roomId] = new Set();
+        listeners[roomId].add(onUpdate);
+        let timer = null;
+        if (canHttp()) {
+          timer = setInterval(() => {
+            getJson(`/api/rooms/${encodeURIComponent(roomId)}`).then(res => {
+              if (res) {
+                const merged = mergeRooms(roomId, caseId, readLocal(roomId, caseId), res);
+                memoryRooms[roomId] = merged;
+                onUpdate(merged);
+              }
+            });
+          }, 1800);
+        }
+        return () => {
+          if (listeners[roomId]) listeners[roomId].delete(onUpdate);
+          if (timer) clearInterval(timer);
+        };
+      }
+    };
+  }
+  const CoupleRoomSync = createCoupleRoomSync();
+
   function createInitialState(id) {
     const lang = loadLang();
+    const urlParams = readRoomParams();
+    const resolvedId = ids.includes(id) ? id : (urlParams.caseId || ids[0]);
+    const roomId = urlParams.roomId || makeRoomId();
+    const memberRole = urlParams.memberRole || 'A';
     return {
-      caseId: ids.includes(id) ? id : ids[0],
+      caseId: resolvedId,
       view: viewName('expedition', lang, 0),
       phase: 'fears',
       mode: 'Plain',
@@ -1289,7 +1603,14 @@
       thermometer: 3,
       subjectiveConcern: '',
       votes: {},
-      voteTurn: 'A',
+      voteTurn: memberRole,
+      roomId,
+      memberRole,
+      coupleSyncMode: 'remote',
+      roomWaiting: false,
+      roomCopied: false,
+      roomDecisions: {},
+      roomAlignedBanner: false,
       timerStartedAt: null,
       aiReframe: null,
       aiPact: null,
@@ -1612,14 +1933,39 @@
     </aside>`;
   }
 
-  // Render Phase 1A: Ultra-scannable 2x3 centered grid with Top-3 ranking, minimalist thermometer, optional 1-line note, and unified couple Turn A -> Turn B
+  // Compact multi-device room bar for couples
+  function renderCoupleRoomBar(state, s, couple) {
+    if (!couple) return '';
+    const people = (state.voters && state.voters.length ? state.voters : s.people) || ['A', 'B'];
+    const role = state.memberRole === 'B' ? 'B' : 'A';
+    const me = people[role === 'B' ? 1 : 0] || people[0];
+    const partner = people[role === 'B' ? 0 : 1] || people[1] || 'B';
+    const isRemote = state.coupleSyncMode !== 'local';
+    if (!isRemote) {
+      return `<div class="room-bar is-local">
+        <span class="room-badge"><span class="room-dot is-${role.toLowerCase()}"></span>${t(state, 'sameDevice')}</span>
+        <button type="button" class="room-btn-ghost" data-action="toggle-sync-mode">${t(state, 'twoDevices')}</button>
+      </div>`;
+    }
+    return `<div class="room-bar" data-room="${esc(state.roomId || '')}" data-member="${role}">
+      <span class="room-badge"><span class="room-dot is-${role.toLowerCase()}"></span>${t(state, 'youAre')} <strong>${esc(me)}</strong> <small class="room-code">${esc(state.roomId || '')}</small></span>
+      <div class="room-bar-actions">
+        <button type="button" class="room-btn" data-action="copy-room-link">${state.roomCopied ? t(state, 'copied') : `${t(state, 'copyLinkFor')} ${esc(partner)}`}</button>
+        <button type="button" class="room-btn-ghost" data-action="open-partner-tab">${t(state, 'openPartnerTab')} ${esc(partner)} ${t(state, 'inNewTab')}</button>
+        <button type="button" class="room-btn-ghost" data-action="toggle-sync-mode">${t(state, 'sameDevice')}</button>
+      </div>
+    </div>`;
+  }
+
+  // Render Phase 1A: Ultra-scannable 2x3 centered grid with Top-3 ranking, minimalist thermometer, optional 1-line note, and unified couple multi-device / local turn
   function renderEvaluationOverlay(state, data, persona, s, couple) {
     const lang = langOf(state);
     const es = lang === 'ES';
-    const turn = state.voteTurn === 'B' ? 'B' : 'A';
+    const isRemoteCouple = couple && state.coupleSyncMode !== 'local';
+    const turn = isRemoteCouple ? (state.memberRole === 'B' ? 'B' : 'A') : (state.voteTurn === 'B' ? 'B' : 'A');
     const people = (state.voters && state.voters.length ? state.voters : s.people) || ['A', 'B'];
     const currentPerson = people[turn === 'B' ? 1 : 0] || people[0];
-    const nextPerson = people[1] || 'B';
+    const partnerPerson = people[turn === 'B' ? 0 : 1] || people[1] || 'B';
     const top3 = activeTop3(state);
     const thermo = activeThermometer(state);
     const rankLabels = words[lang].rankBadge;
@@ -1627,11 +1973,30 @@
     const currentPriority = turnVotes.priority || state.priorityFocus || 'deuda-proteccion';
     const currentSubjective = couple ? (turnVotes.subjective != null ? turnVotes.subjective : '') : (state.subjectiveConcern || '');
     const allConcerns = persona.objectiveConcerns || [];
-    const showAll = !!state.showAllConcerns;
-    const visibleConcerns = showAll ? allConcerns : allConcerns.slice(0, 6);
-    const hiddenCount = Math.max(0, allConcerns.length - 6);
+    const roomBarHtml = renderCoupleRoomBar(state, s, couple);
 
-    const cardsHtml = visibleConcerns.map(c => {
+    if (isRemoteCouple && state.roomWaiting === 'eval') {
+      const myChips = top3.map((id, i) => {
+        const found = allConcerns.find(x => x.id === id);
+        return `<span class="top3-chip"><strong>${esc(rankLabels[i])}</strong> ${esc(found ? (found.shortTitle || found.title) : id)}</span>`;
+      }).join(' ');
+      return `<aside class="floating-panel eval-overlay" data-phase="fears" data-waiting="eval">
+        ${roomBarHtml}
+        <div class="room-wait-box">
+          <p class="eyebrow">${t(state, 'team')}</p>
+          <h1>${t(state, 'waitingFor')} ${esc(partnerPerson)}...</h1>
+          <p class="compact-line">${t(state, 'waitingEvalSub')}</p>
+          <div class="top3-chips">${myChips}</div>
+          <div class="button-row">
+            <button type="button" class="primary" data-action="copy-room-link">${state.roomCopied ? t(state, 'copied') : `${t(state, 'copyLinkFor')} ${esc(partnerPerson)}`}</button>
+            <button type="button" data-action="open-partner-tab">${t(state, 'openPartnerTab')} ${esc(partnerPerson)} ${t(state, 'inNewTab')}</button>
+            <button type="button" data-action="toggle-sync-mode">${t(state, 'sameDevice')}</button>
+          </div>
+        </div>
+      </aside>`;
+    }
+
+    const cardsHtml = allConcerns.map(c => {
       const rankIdx = top3.indexOf(c.id);
       const isSelected = rankIdx >= 0;
       const badgeText = isSelected ? rankLabels[rankIdx] : words[lang].pickRank;
@@ -1646,10 +2011,6 @@
       </div>`;
     }).join('');
 
-    const moreToggleHtml = hiddenCount > 0
-      ? `<div class="concerns-more-row"><button type="button" class="link-toggle-btn" data-action="toggle-more-concerns">${showAll ? esc(t(state, 'showLess')) : `+ ${es ? 'Ver' : 'Show'} ${hiddenCount} ${esc(t(state, 'showMore'))}`}</button></div>`
-      : '';
-
     const thermoButtons = [1, 2, 3, 4, 5].map(lvl => {
       const active = thermo === lvl;
       return `<button type="button" class="thermo-pill ${active ? 'active' : ''}" data-action="set-thermometer" data-level="${lvl}" aria-pressed="${active ? 'true' : 'false'}">${esc(thermoLabels[lang][lvl])}</button>`;
@@ -1657,8 +2018,7 @@
 
     const coupleHeader = couple
       ? `<div class="couple-turn-banner" data-turn="${turn}">
-          <span class="turn-pill">${es ? `Turno ${turn === 'A' ? '1/2' : '2/2'}` : `Turn ${turn === 'A' ? '1/2' : '2/2'}`} · <strong>${esc(currentPerson)}</strong></span>
-          <span class="turn-hint">${t(state, 'blindHint')}</span>
+          <span class="turn-pill">${isRemoteCouple ? `${t(state, 'youAre')} <strong>${esc(currentPerson)}</strong>` : `${es ? `Turno ${turn === 'A' ? '1/2' : '2/2'}` : `Turn ${turn === 'A' ? '1/2' : '2/2'}`} · <strong>${esc(currentPerson)}</strong>`}</span>
           <div class="couple-priority-switches">
             <label class="priority-chip ${currentPriority === 'crecimiento' ? 'active' : ''}">
               <input type="radio" name="priority" value="crecimiento" data-priority ${currentPriority === 'crecimiento' ? 'checked' : ''}>
@@ -1680,14 +2040,15 @@
       : `<span class="top3-empty">${t(state, 'fearHelp')}</span>`;
 
     const primaryCtaLabel = couple
-      ? (turn === 'A' ? `${t(state, 'save')} ${esc(nextPerson)}` : t(state, 'matches'))
+      ? (isRemoteCouple ? t(state, 'submitEval') : (turn === 'A' ? `${t(state, 'save')} ${esc(partnerPerson)}` : t(state, 'matches')))
       : t(state, 'continue');
 
     return `<aside class="floating-panel eval-overlay" data-phase="fears">
+      ${roomBarHtml}
       <div class="eval-head">
         <div>
           <p class="eyebrow">${couple ? t(state, 'team') : t(state, 'fears')}</p>
-          <h1>${couple ? `${t(state, 'private')} ${esc(currentPerson)} · ${t(state, 'fearTitle')}` : t(state, 'fearTitle')}</h1>
+          <h1>${couple ? `${esc(currentPerson)} · ${t(state, 'fearTitle')}` : t(state, 'fearTitle')}</h1>
         </div>
         <div class="top3-status" aria-live="polite">
           <div class="top3-chips">${selectedSummary}</div>
@@ -1696,18 +2057,6 @@
       ${coupleHeader}
       <div class="concerns-grid" role="group" aria-label="${t(state, 'fearTitle')}">
         ${cardsHtml}
-      </div>
-      ${moreToggleHtml}
-      <div class="eval-footer-grid">
-        <div class="thermometer-box">
-          <span class="eyebrow">${t(state, 'thermometerTitle')}</span>
-          <div class="thermometer-pills" role="group" aria-label="${t(state, 'thermometerTitle')}">${thermoButtons}</div>
-          <input id="thermoRange" type="range" min="1" max="5" step="1" value="${thermo}" data-thermometer class="sr-only">
-        </div>
-        <div class="subjective-box">
-          <span class="eyebrow">${t(state, 'fearAsk')}</span>
-          <input id="subjective" type="text" data-subjective value="${esc(currentSubjective)}" placeholder="${esc(t(state, 'fearPlaceholder'))}">
-        </div>
       </div>
       <div class="eval-actions">
         ${mathSummary(data, state)}
@@ -1764,7 +2113,7 @@
         </div>
         <div class="contrast-card">
           <p class="eyebrow">${t(state, 'thermoGapTitle')}</p>
-          <p class="compact-line"><strong>${esc(people[0])}</strong> (${thermoA}/5 · ${esc(profA)}) vs <strong>${esc(people[1])}</strong> (${thermoB}/5 · ${esc(profB)})</p>
+          <p class="compact-line"><strong>${esc(people[0])}</strong> (${esc(profA)}) vs <strong>${esc(people[1])}</strong> (${esc(profB)})</p>
           <p class="compact-sub"><strong>${t(state, 'pact')}:</strong> ${esc(pactText)}</p>
         </div>
       </div>`;
@@ -1911,9 +2260,63 @@
       const activeMove = stepGoodOption(state, data, s, stageIdx);
       const campRiskIdx = entries.findIndex(e => Number(e.stage) === focusedIdx);
       const focusBannerHtml = stageIdx === 0 && contrast.top1
-        ? `<div class="focus-priority-pill"><strong>${t(state, 'focusBanner')}:</strong> ${esc(contrast.top1.title)} · <span>${esc(thermoText)}</span></div>`
+        ? `<div class="focus-priority-pill"><strong>${t(state, 'focusBanner')}:</strong> ${esc(contrast.top1.shortTitle || contrast.top1.title)}</div>`
         : '';
       const campReframe = stageIdx === 0 ? buildThermometerReframe(state, data) : s.reframe;
+      const isRemoteCouple = couple && state.coupleSyncMode !== 'local';
+      const roomBarCampHtml = isRemoteCouple ? renderCoupleRoomBar(state, s, couple) : '';
+      const stageDec = (state.roomDecisions && state.roomDecisions[String(stageIdx)]) || null;
+      const peopleNames = (state.voters && state.voters.length ? state.voters : s.people) || ['A', 'B'];
+      const myRole = state.memberRole === 'B' ? 'B' : 'A';
+      const partnerName = peopleNames[myRole === 'B' ? 0 : 1] || 'B';
+      const myStageVote = stageDec && stageDec[myRole];
+      const showPathCompare = isRemoteCouple && stageDec && stageDec.ready && (!stageDec.aligned || stageDec.A.route === 'bad' || stageDec.B.route === 'bad');
+      const showDecisionWait = isRemoteCouple && state.roomWaiting === 'decision' && myStageVote && !(stageDec && stageDec.ready);
+
+      let activeCampBody = '';
+      if (showDecisionWait) {
+        activeCampBody = `${roomBarCampHtml}
+          <div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'phase')} · ${esc(stage.label)}</p><h2>${t(state, 'waitingFor')} ${esc(partnerName)}...</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
+          <p class="compact-line"><strong>${t(state, 'yourChoice')}:</strong> ${esc(myStageVote.label || (myStageVote.route === 'bad' ? t(state, 'riskRoute') : t(state, 'safeRoute')))}</p>
+          <p class="compact-sub">${t(state, 'waitingDecSub')}</p>
+          <div class="button-row">
+            <button type="button" class="primary" data-action="copy-room-link">${state.roomCopied ? t(state, 'copied') : `${t(state, 'copyLinkFor')} ${esc(partnerName)}`}</button>
+            <button type="button" data-action="open-partner-tab">${t(state, 'openPartnerTab')} ${esc(partnerName)} ${t(state, 'inNewTab')}</button>
+          </div>`;
+      } else if (showPathCompare) {
+        const aIsBad = stageDec.A.route === 'bad';
+        const bIsBad = stageDec.B.route === 'bad';
+        activeCampBody = `${roomBarCampHtml}
+          <div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'pathCompareTitle')} · ${esc(shortLabels[stageIdx])}</p><h2>${esc(activeMove.title)}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
+          <div class="path-compare-grid">
+            <div class="path-card ${aIsBad ? 'is-risk' : 'is-safe'}">
+              <span class="path-badge ${aIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[0])} · ${aIsBad ? t(state, 'riskRoute') : t(state, 'safeRoute')}</span>
+              <p class="compact-sub">${esc(stageDec.A.label || (aIsBad ? activeMove.badLabel : activeMove.label))}</p>
+            </div>
+            <div class="path-card ${bIsBad ? 'is-risk' : 'is-safe'}">
+              <span class="path-badge ${bIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[1])} · ${bIsBad ? t(state, 'riskRoute') : t(state, 'safeRoute')}</span>
+              <p class="compact-sub">${esc(stageDec.B.label || (bIsBad ? activeMove.badLabel : activeMove.label))}</p>
+            </div>
+          </div>
+          <p class="compact-line"><strong>${t(state, 'impact')}:</strong> ${esc(fail.label)}</p>
+          <div class="button-row">
+            <button class="primary" data-action="room-agree-good">${t(state, 'agreeAdvance')}</button>
+            ${campRiskIdx >= 0 ? `<button data-action="inspect-risk" data-risk-index="${campRiskIdx}">${t(state, 'seeRedBranch')}</button>` : ''}
+          </div>`;
+      } else {
+        activeCampBody = `${roomBarCampHtml}
+           <div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'phase')} · ${esc(stage.label)}</p><h2>${t(state, 'choose')}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
+           ${state.roomAlignedBanner ? `<div class="focus-priority-pill">${t(state, 'alignedAdvancing')}</div>` : focusBannerHtml}
+           <p class="reframe">${esc(campReframe)}</p>
+           <div class="choice-list">
+             <label class="choice"><input type="radio" name="route" value="good" checked><span>${esc(activeMove.label)}</span></label>
+             <label class="choice"><input type="radio" name="route" value="bad"><span>${esc(activeMove.badLabel || t(state, 'ignore'))}</span></label>
+           </div>
+           <p class="preview" data-preview>${esc(preview(state, data, 'good'))}</p>
+           ${mathSummary(data, state)}
+           <div class="button-row"><button class="primary" data-action="advance">${t(state, 'confirm')}</button></div>`;
+      }
+
       const dialogContent = inspectingOther
         ? `<div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'inspectCamp')} · ${esc(focusedBiome.label)}</p><h2>${esc(shortLabels[focusedIdx])}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
            <p class="reframe">${esc(focusedMove.label)}</p>
@@ -1925,16 +2328,7 @@
              <button data-action="zoom-out">${t(state, 'panoramic')}</button>
              ${state.summit ? `<button data-action="repeat">${t(state, 'repeat')}</button>` : ''}
            </div>`
-        : `<div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'phase')} · ${esc(stage.label)}</p><h2>${t(state, 'choose')}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
-           ${focusBannerHtml}
-           <p class="reframe">${esc(campReframe)}</p>
-           <div class="choice-list">
-             <label class="choice"><input type="radio" name="route" value="good" checked><span>${esc(activeMove.label)}</span></label>
-             <label class="choice"><input type="radio" name="route" value="bad"><span>${esc(activeMove.badLabel || t(state, 'ignore'))}</span></label>
-           </div>
-           <p class="preview" data-preview>${esc(preview(state, data, 'good'))}</p>
-           ${mathSummary(data, state)}
-           <div class="button-row"><button class="primary" data-action="advance">${t(state, 'confirm')}</button></div>`;
+        : activeCampBody;
       panel = `<aside class="floating-dialog ${dialogVisible ? '' : 'is-dialog-hidden'}" data-dialog="decision" ${dialogVisible ? '' : 'hidden'}>${dialogContent}</aside>
         <div class="floating-overview-cta ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'is-hidden'}" ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'hidden'}><span>${t(state, 'panoramicHint')}</span><button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button></div>`;
     }
@@ -2186,6 +2580,100 @@
     return arr;
   }
 
+  function ensureStageRiskEntry(state) {
+    const raw = dataFor(state.caseId) || {};
+    const dataES = localizeData(raw, 'ES');
+    const dataEN = localizeData(raw, 'EN');
+    const goodES = stepGoodOption({ caseId: state.caseId, lang: 'ES', fearOrder: state.fearOrder }, dataES, getSpec(state.caseId, 'ES', raw), state.stage);
+    const goodEN = stepGoodOption({ caseId: state.caseId, lang: 'EN', fearOrder: state.fearOrder }, dataEN, getSpec(state.caseId, 'EN', raw), state.stage);
+    const existingIdx = state.history.findIndex(h => Number(h.stage) === Number(state.stage));
+    const entry = {
+      stage: state.stage,
+      campLabel: { ES: biomes[state.stage].ES, EN: biomes[state.stage].EN },
+      decisionChosen: { ES: goodES.badLabel || words.ES.ignore, EN: goodEN.badLabel || words.EN.ignore },
+      recommendedMove: { ES: goodES.label, EN: goodEN.label, scoreBefore: goodEN.scoreBefore, scoreAfter: goodEN.scoreAfter },
+      detailKey: 'D3',
+      detail: (dataES.persona || {}).D3 || ''
+    };
+    if (existingIdx >= 0) {
+      state.history[existingIdx] = entry;
+      return existingIdx;
+    }
+    state.history.push(entry);
+    return state.history.length - 1;
+  }
+
+  function applyRoomSnapshot(state, roomData, el, rerender, onSummit) {
+    if (!state || !roomData || state.coupleSyncMode === 'local') return false;
+    const raw = dataFor(state.caseId) || {};
+    if (!(raw.meta && raw.meta.isCouple)) return false;
+    let changed = false;
+
+    const ev = roomData.evaluation || {};
+    if (ev.A) {
+      state.votes = state.votes || {};
+      state.votes.A = {
+        fears: (ev.A.fears || ev.A.top_fears || []).slice(0, 3),
+        thermometer: Number(ev.A.thermometer) || 3,
+        priority: ev.A.priority || 'crecimiento',
+        subjective: ev.A.subjective || ''
+      };
+    }
+    if (ev.B) {
+      state.votes = state.votes || {};
+      state.votes.B = {
+        fears: (ev.B.fears || ev.B.top_fears || []).slice(0, 3),
+        thermometer: Number(ev.B.thermometer) || 3,
+        priority: ev.B.priority || 'deuda-proteccion',
+        subjective: ev.B.subjective || ''
+      };
+    }
+
+    if (roomData.evaluation_ready && state.phase === 'fears' && state.roomWaiting === 'eval') {
+      const allConcernIds = ((raw.persona && raw.persona.objectiveConcerns) || []).map(c => c.id);
+      const aFears = (state.votes.A && state.votes.A.fears) || [];
+      const bFears = (state.votes.B && state.votes.B.fears) || [];
+      const merged = [...new Set([aFears[0], bFears[0], ...aFears, ...bFears].filter(Boolean))].slice(0, 3);
+      state.fearOrder = merged.length ? merged : allConcernIds.slice(0, 3);
+      state.roomWaiting = false;
+      state.phase = 'cross';
+      changed = true;
+    }
+
+    const decs = roomData.decisions || {};
+    state.roomDecisions = Object.assign({}, decs);
+    const stKey = String(Number(state.stage) || 0);
+    const curDec = decs[stKey];
+    if (curDec && curDec.ready && state.phase === 'expedition') {
+      if (state.roomWaiting === 'decision') {
+        state.roomWaiting = false;
+        changed = true;
+      }
+      if (curDec.aligned && curDec.A && curDec.A.route === 'good') {
+        const fromStage = Number(state.stage) || 0;
+        const isSummitStep = fromStage >= 3;
+        const toStage = isSummitStep ? 3 : fromStage + 1;
+        state.roomAlignedBanner = true;
+        if (isSummitStep) {
+          if (typeof onSummit === 'function') onSummit();
+        } else {
+          state.stage = toStage;
+          state.focusedNode = toStage;
+          state.inspectedRisk = null;
+          state.dialogVisible = true;
+          state.initialViewBox = campCamera(toStage);
+          changed = true;
+        }
+      } else if (!curDec.aligned || (curDec.A && curDec.A.route === 'bad') || (curDec.B && curDec.B.route === 'bad')) {
+        ensureStageRiskEntry(state);
+        changed = true;
+      }
+    }
+
+    if (changed && typeof rerender === 'function') rerender();
+    return changed;
+  }
+
   function handleMountainAction(action, trigger, el, state, rerender, onSummit) {
     const syncViewportClass = () => {
       if (root.document && root.document.body) {
@@ -2193,13 +2681,43 @@
       }
     };
 
+    if (action === 'copy-room-link') {
+      const url = buildPartnerUrl(state);
+      try {
+        if (root.navigator && root.navigator.clipboard && root.navigator.clipboard.writeText) {
+          root.navigator.clipboard.writeText(url);
+        }
+      } catch (_) {}
+      state.roomCopied = true;
+      rerender();
+      if (typeof setTimeout === 'function') {
+        setTimeout(() => { state.roomCopied = false; try { rerender(); } catch (_) {} }, 1800);
+      }
+      return true;
+    }
+
+    if (action === 'open-partner-tab') {
+      const url = buildPartnerUrl(state);
+      CoupleRoomSync.createRoom(state.caseId, state.roomId);
+      try { if (typeof root.open === 'function') root.open(url, '_blank'); } catch (_) {}
+      return true;
+    }
+
+    if (action === 'toggle-sync-mode') {
+      state.coupleSyncMode = state.coupleSyncMode === 'local' ? 'remote' : 'local';
+      state.roomWaiting = false;
+      state.voteTurn = state.coupleSyncMode === 'local' ? 'A' : (state.memberRole || 'A');
+      rerender();
+      return true;
+    }
+
     if (action === 'toggle-concern') {
       const id = trigger.dataset.concernId;
       if (!id) return true;
       const raw = dataFor(state.caseId) || {};
       const isCouple = !!(raw.meta && raw.meta.isCouple);
       if (isCouple && state.phase === 'fears') {
-        const turn = state.voteTurn === 'B' ? 'B' : 'A';
+        const turn = state.coupleSyncMode !== 'local' ? (state.memberRole === 'B' ? 'B' : 'A') : (state.voteTurn === 'B' ? 'B' : 'A');
         state.votes = state.votes || {};
         const cur = state.votes[turn] || { fears: [], thermometer: 3, priority: turn === 'A' ? 'crecimiento' : 'deuda-proteccion' };
         cur.fears = toggleConcernInList(cur.fears, id);
@@ -2216,7 +2734,7 @@
       const raw = dataFor(state.caseId) || {};
       const isCouple = !!(raw.meta && raw.meta.isCouple);
       if (isCouple && state.phase === 'fears') {
-        const turn = state.voteTurn === 'B' ? 'B' : 'A';
+        const turn = state.coupleSyncMode !== 'local' ? (state.memberRole === 'B' ? 'B' : 'A') : (state.voteTurn === 'B' ? 'B' : 'A');
         state.votes = state.votes || {};
         const cur = state.votes[turn] || { fears: [], thermometer: 3, priority: turn === 'A' ? 'crecimiento' : 'deuda-proteccion' };
         cur.thermometer = lvl;
@@ -2235,7 +2753,8 @@
 
     if (action === 'edit-fears') {
       state.phase = 'fears';
-      state.voteTurn = 'A';
+      state.roomWaiting = false;
+      state.voteTurn = state.coupleSyncMode === 'local' ? 'A' : (state.memberRole || 'A');
       rerender();
       return true;
     }
@@ -2243,6 +2762,7 @@
     if (action === 'next-fears' || action === 'submit-vote') {
       const raw = dataFor(state.caseId) || {};
       const isCouple = !!(raw.meta && raw.meta.isCouple);
+      const isRemoteCouple = isCouple && state.coupleSyncMode !== 'local';
       const allConcernIds = ((raw.persona && raw.persona.objectiveConcerns) || []).map(c => c.id);
       const checkedInDom = [...el.querySelectorAll('[data-fear]:checked,[data-vote-fear]:checked')].map(x => x.dataset.fear || x.dataset.voteFear).filter(Boolean);
       const subVal = ((el.querySelector('[data-subjective]') || {}).value || '').trim();
@@ -2250,7 +2770,7 @@
       state.voters = getSpec(state.caseId, langOf(state), raw).people;
 
       if (isCouple) {
-        const turn = state.voteTurn === 'B' ? 'B' : 'A';
+        const turn = isRemoteCouple ? (state.memberRole === 'B' ? 'B' : 'A') : (state.voteTurn === 'B' ? 'B' : 'A');
         state.votes = state.votes || {};
         const existing = state.votes[turn] || {};
         const picked = (existing.fears && existing.fears.length)
@@ -2265,6 +2785,18 @@
         };
         if (subVal && !state.advisorDoubts.includes(subVal)) {
           state.advisorDoubts.push(`${state.voters[turn === 'B' ? 1 : 0]}: ${subVal}`);
+        }
+        if (isRemoteCouple) {
+          const roomSnap = CoupleRoomSync.submitEvaluation(state.roomId, state.caseId, turn, state.votes[turn]);
+          if (roomSnap.evaluation_ready) {
+            state.roomWaiting = 'eval';
+            applyRoomSnapshot(state, roomSnap, el, rerender, onSummit);
+            SherpasAI.request('pact', { case_id: state.caseId, member_a_votes: state.votes.A, member_b_votes: state.votes.B }, { mode: 'deterministic' });
+          } else {
+            state.roomWaiting = 'eval';
+            rerender();
+          }
+          return true;
         }
         if (turn === 'A') {
           state.voteTurn = 'B';
@@ -2303,8 +2835,32 @@
       return true;
     }
 
+    if (action === 'room-agree-good') {
+      const fromStage = Number(state.stage) || 0;
+      const isSummitStep = fromStage >= 3;
+      const toStage = isSummitStep ? 3 : fromStage + 1;
+      state.roomWaiting = false;
+      state.roomAlignedBanner = false;
+      state.inspectedRisk = null;
+      if (isSummitStep) {
+        onSummit();
+      } else {
+        state.stage = toStage;
+        state.focusedNode = toStage;
+        state.cameraMode = 'camp';
+        state.dialogVisible = true;
+        state.initialViewBox = campCamera(toStage);
+        rerender();
+        state.initialViewBox = null;
+      }
+      syncViewportClass();
+      return true;
+    }
+
     if (action === 'start-expedition') {
       state.phase = 'expedition';
+      state.roomWaiting = false;
+      state.roomAlignedBanner = false;
       state.view = viewName('expedition', langOf(state), state.irlDay);
       state.cameraMode = 'camp';
       state.focusedNode = state.stage || 0;
@@ -2325,30 +2881,39 @@
       const route = (el.querySelector('[name="route"]:checked') || {}).value || 'good';
       const svg = el.querySelector('.mountain-svg[data-camera]');
       const prevBox = svg ? parseViewBox(svg) : fullCamera.slice();
+      const raw = dataFor(state.caseId) || {};
+      const isRemoteCouple = !!(raw.meta && raw.meta.isCouple) && state.coupleSyncMode !== 'local';
       SherpasAI.request('reframe', strictCasePayload(state.caseId, langOf(state), state.stage, state), { mode: 'deterministic' });
 
-      if (route === 'bad') {
-        const raw = dataFor(state.caseId) || {};
-        const dataES = localizeData(raw, 'ES');
-        const dataEN = localizeData(raw, 'EN');
-        const goodES = stepGoodOption({ caseId: state.caseId, lang: 'ES', fearOrder: state.fearOrder }, dataES, getSpec(state.caseId, 'ES', raw), state.stage);
-        const goodEN = stepGoodOption({ caseId: state.caseId, lang: 'EN', fearOrder: state.fearOrder }, dataEN, getSpec(state.caseId, 'EN', raw), state.stage);
-        const existingIdx = state.history.findIndex(h => Number(h.stage) === Number(state.stage));
-        const entry = {
-          stage: state.stage,
-          campLabel: { ES: biomes[state.stage].ES, EN: biomes[state.stage].EN },
-          decisionChosen: { ES: goodES.badLabel || words.ES.ignore, EN: goodEN.badLabel || words.EN.ignore },
-          recommendedMove: { ES: goodES.label, EN: goodEN.label, scoreBefore: goodEN.scoreBefore, scoreAfter: goodEN.scoreAfter },
-          detailKey: 'D3',
-          detail: (dataES.persona || {}).D3 || ''
-        };
-        if (existingIdx >= 0) {
-          state.history[existingIdx] = entry;
-          state.inspectedRisk = existingIdx;
+      if (isRemoteCouple) {
+        const loc = localizeData(raw, langOf(state));
+        const opt = stepGoodOption(state, loc, getSpec(state.caseId, langOf(state), raw), state.stage);
+        const chosenLabel = route === 'bad' ? (opt.badLabel || t(state, 'ignore')) : opt.label;
+        const role = state.memberRole === 'B' ? 'B' : 'A';
+        const roomSnap = CoupleRoomSync.submitDecision(state.roomId, state.caseId, role, state.stage, route, chosenLabel);
+        state.roomDecisions = Object.assign({}, roomSnap.decisions || {});
+        const stDec = state.roomDecisions[String(Number(state.stage) || 0)];
+        if (stDec && stDec.ready) {
+          state.roomWaiting = false;
+          if (stDec.aligned && stDec.A.route === 'good') {
+            state.roomAlignedBanner = true;
+            // Fall through to normal good advance below
+          } else {
+            ensureStageRiskEntry(state);
+            rerender();
+            syncViewportClass();
+            return true;
+          }
         } else {
-          state.history.push(entry);
-          state.inspectedRisk = state.history.length - 1;
+          state.roomWaiting = 'decision';
+          rerender();
+          syncViewportClass();
+          return true;
         }
+      }
+
+      if (route === 'bad') {
+        state.inspectedRisk = ensureStageRiskEntry(state);
         state.blocked = true;
         state.phase = 'blocked';
         state.cameraMode = 'camp';
@@ -2499,6 +3064,17 @@
         root.document.body.classList.add('is-mountain-viewport');
       }
     };
+    let unsubRoom = null;
+    const attachRoom = () => {
+      if (unsubRoom) { try { unsubRoom(); } catch (_) {} unsubRoom = null; }
+      const raw = dataFor(state.caseId) || {};
+      if (raw.meta && raw.meta.isCouple && state.roomId) {
+        CoupleRoomSync.createRoom(state.caseId, state.roomId);
+        unsubRoom = CoupleRoomSync.subscribe(state.roomId, state.caseId, roomData => {
+          applyRoomSnapshot(state, roomData, el, update, onSummit);
+        });
+      }
+    };
     const update = () => {
       cancelMotion();
       el.innerHTML = render(state);
@@ -2521,6 +3097,7 @@
         const next = createInitialState(n.value);
         next.lang = state.lang;
         state = next;
+        attachRoom();
         update();
       });
       el.querySelectorAll('[data-action]').forEach(n => n.onclick = (ev) => {
@@ -2602,6 +3179,7 @@
       state.dialogVisible = false;
       state.initialViewBox = fullCamera.slice();
     }
+    attachRoom();
     update();
     if (isMountainPhase(state) && hasRaf()) {
       const svg = el.querySelector('.mountain-svg[data-camera]');
@@ -2612,7 +3190,7 @@
       state,
       getState: () => state,
       render: () => render(state),
-      setState(next) { state = next; update(); return state; },
+      setState(next) { state = next; attachRoom(); update(); return state; },
       dispatch(a, v) {
         if (a === 'mode') state.mode = v;
         else if (a === 'nav') state.view = v;
@@ -2621,7 +3199,7 @@
         update();
         return state;
       },
-      unmount() { cancelMotion(); el.innerHTML = ''; if (root.document && root.document.body) root.document.body.classList.remove('is-mountain-viewport'); }
+      unmount() { if (unsubRoom) { try { unsubRoom(); } catch (_) {} unsubRoom = null; } cancelMotion(); el.innerHTML = ''; if (root.document && root.document.body) root.document.body.classList.remove('is-mountain-viewport'); }
     };
   }
 
@@ -2643,6 +3221,9 @@
     buildContrastSummary,
     buildThermometerReframe,
     orderedTopMoves,
+    CoupleRoomSync,
+    applyRoomSnapshot,
+    buildPartnerUrl,
     failTags,
     persistLanguage,
     SherpasAI,

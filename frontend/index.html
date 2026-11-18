@@ -15,10 +15,12 @@
   <script>
     document.addEventListener('DOMContentLoaded', function () {
       if (window.SherpaCasesData && window.SherpaPostCima && document.querySelector('#app')) {
-        window.SherpaCasesData.loadCaseData('michael-carter').then(function (loaded) {
-          window.SherpaPostCima.mount('#app', { caseId: loaded && loaded.meta ? loaded.meta.slug : 'michael-carter' });
+        var params = new URLSearchParams(window.location.search || '');
+        var requestedCase = params.get('case') || 'michael-carter';
+        window.SherpaCasesData.loadCaseData(requestedCase).then(function (loaded) {
+          window.SherpaPostCima.mount('#app', { caseId: loaded && loaded.meta ? loaded.meta.slug : requestedCase });
         }).catch(function () {
-          window.SherpaPostCima.mount('#app', { caseId: 'michael-carter' });
+          window.SherpaPostCima.mount('#app', { caseId: requestedCase });
         });
       }
     });
