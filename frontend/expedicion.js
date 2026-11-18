@@ -224,6 +224,7 @@
     [[804, 209], [836, 168], [858, 145]]
   ];
   const TRAIL_LENGTH = 757;
+  const TRAIL_FRACS = [0.1104, 0.4883, 0.6713, 1];
   const fullCamera = [0, 0, 1200, 750];
 
   const biomes = [
@@ -1231,33 +1232,42 @@
     return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
   }
 
-  // Build logical failure path: climbs along the mountain route up to the exhaustion age/year fraction, then drops to the bad point
+  // Build organic failure path: 24 smooth ridge steps from exact camp fraction to exhaustion age, then gravity cubic C drop
   function riskCoordinates(record, stagePoint, stageIdx) {
     const idx = Math.max(0, Math.min(3, Number(stageIdx) || 0));
     const [sx, sy] = stagePoint || biomes[idx].point;
     if (!record || !record.hasExhaustion) {
-      const bx = Math.min(1140, Math.round(sx + 42 + idx * 6));
-      const by = Math.min(685, Math.round(sy + 14));
-      return { sx, sy, rx: sx, ry: sy, x: bx, y: by, wall: true, d: `M ${sx} ${sy} L ${bx} ${by}` };
+      const bx = Math.min(1140, Math.round(sx + 62 + idx * 8));
+      const by = Math.min(685, Math.round(sy + 26));
+      const c1x = Math.round(sx + (bx - sx) * 0.45);
+      const c1y = Math.round(sy + 2);
+      const c2x = Math.round(sx + (bx - sx) * 0.85);
+      const c2y = Math.round(sy + (by - sy) * 0.45);
+      return { sx, sy, rx: sx, ry: sy, x: bx, y: by, wall: true, d: `M ${sx} ${sy} C ${c1x} ${c1y} ${c2x} ${c2y} ${bx} ${by}` };
     }
-    const startFrac = idx / 3;
+    const startFrac = TRAIL_FRACS[idx] != null ? TRAIL_FRACS[idx] : idx / 3;
     const exhaustFrac = record.length > 1 ? record.index / (record.length - 1) : startFrac;
-    const climbFrac = Math.max(startFrac + 0.05, Math.min(0.96, exhaustFrac));
-    const steps = 8;
+    const climbFrac = Math.max(startFrac + 0.08, Math.min(0.95, exhaustFrac));
+    const steps = 24;
     const climbPts = [];
     for (let i = 0; i <= steps; i++) {
-      const f = startFrac + (climbFrac - startFrac) * (i / steps);
-      climbPts.push(trailPointAtFraction(f));
+      const t = i / steps;
+      const f = startFrac + (climbFrac - startFrac) * t;
+      const [px, py] = trailPointAtFraction(f);
+      const driftY = Math.round(4.8 * Math.pow(t, 1.45) * 10) / 10;
+      climbPts.push([i === 0 ? sx : px, i === 0 ? sy : Math.round((py + driftY) * 10) / 10]);
     }
     const [rx, ry] = climbPts[climbPts.length - 1];
     const offsetSpread = idx * 18;
-    const bx = Math.min(1130, Math.round(rx + 64 + offsetSpread));
-    const by = Math.min(690, Math.round(ry + 82 + idx * 10));
-    const ctrlX = Math.round(rx + (bx - rx) * 0.55);
-    const ctrlY = Math.round(ry + 14);
+    const bx = Math.min(1130, Math.round(rx + 74 + offsetSpread));
+    const by = Math.min(685, Math.round(ry + 92 + idx * 10));
+    const c1x = Math.round(rx + (bx - rx) * 0.42);
+    const c1y = Math.round(ry + 4);
+    const c2x = Math.round(rx + (bx - rx) * 0.88);
+    const c2y = Math.round(ry + (by - ry) * 0.38);
     const climbD = climbPts.map((pt, i) => `${i === 0 ? 'M' : 'L'} ${pt[0]} ${pt[1]}`).join(' ');
-    const d = `${climbD} Q ${ctrlX} ${ctrlY} ${bx} ${by}`;
-    return { sx, sy, rx, ry, x: bx, y: by, wall: false, climbFrac, exhaustFrac, d };
+    const d = `${climbD} C ${c1x} ${c1y} ${c2x} ${c2y} ${bx} ${by}`;
+    return { sx, sy, rx, ry, x: bx, y: by, wall: false, steps, climbFrac, exhaustFrac, d };
   }
 
   function blockedCopy(id, mode, persona, state) {
@@ -1786,7 +1796,7 @@
         ? `<path d="M ${coord.x} ${coord.y - 9} L ${coord.x} ${coord.y + 9}" stroke="#9E2A2B" stroke-width="1.35" stroke-linecap="round"/>`
         : `<circle cx="${coord.rx}" cy="${coord.ry}" r="2.1" fill="#9E2A2B" opacity=".88"/>`;
       return `<g class="risk-group" data-risk-stage="${originIdx}" data-risk-index="${idx}">
-        <path class="risk-path" data-active-risk="${isLatest ? 'true' : 'false'}" data-risk-break="${coord.x},${coord.y}" data-exhaustion="${record && record.hasExhaustion ? 'true' : 'false'}" data-year="${record && record.year ? record.year : ''}" data-age="${record && record.age != null ? record.age : ''}" data-investable-assets="${record && record.investable_assets != null ? record.investable_assets : ''}" d="${coord.d}" stroke-width="${isInspected ? '2.4' : '1.9'}" opacity="${isInspected ? '0.96' : '0.84'}"/>
+        <path class="risk-path" data-active-risk="${isLatest ? 'true' : 'false'}" data-risk-break="${coord.x},${coord.y}" data-exhaustion="${record && record.hasExhaustion ? 'true' : 'false'}" data-year="${record && record.year ? record.year : ''}" data-age="${record && record.age != null ? record.age : ''}" data-investable-assets="${record && record.investable_assets != null ? record.investable_assets : ''}" d="${coord.d}" stroke-width="${isInspected ? '2.4' : '1.9'}" opacity="${isInspected ? '0.96' : '0.84'}" filter="url(#dryBrush)"/>
         ${stopWall}
         <g class="risk-node ${isInspected ? 'is-active' : ''}" data-action="inspect-risk" data-risk-index="${idx}" data-risk-stage="${originIdx}" transform="translate(${coord.x} ${coord.y})" role="button" tabindex="0" aria-label="${esc(nodeLabel)}">
           <circle class="risk-hit" cx="0" cy="0" r="16" fill="transparent"/>
@@ -2543,28 +2553,86 @@
       const risks = svg.querySelectorAll('.risk-path');
       const risk = svg.querySelector('.risk-path[data-active-risk="true"]') || risks[risks.length - 1];
       if (!risk) { if (done) done(); return; }
-      const pts = String(risk.dataset.riskBreak || '620,295').split(',').map(Number);
+      const group = risk.closest ? risk.closest('.risk-group') : null;
+      const activeNode = group ? group.querySelector('.risk-node') : null;
+      const markerEl = svg.querySelector('#climberMarker');
+      const pts = String(risk.dataset.riskBreak || '684,319').split(',').map(Number);
       const w = 696, h = 435;
       const crash = [Math.max(0, Math.min(fullCamera[2] - w, pts[0] - w * 0.55)), Math.max(0, Math.min(fullCamera[3] - h, pts[1] - h * 0.45)), w, h];
-      const len = risk.getTotalLength ? risk.getTotalLength() : 220;
+      const len = risk.getTotalLength ? risk.getTotalLength() : 260;
+
+      if (!hasRaf()) {
+        risk.style.strokeDasharray = String(len);
+        risk.style.strokeDashoffset = '0';
+        if (activeNode) activeNode.style.opacity = '1';
+        if (markerEl && typeof risk.getPointAtLength === 'function') {
+          const endPt = risk.getPointAtLength(len);
+          markerEl.setAttribute('transform', `translate(${endPt.x.toFixed(2)} ${endPt.y.toFixed(2)})`);
+        }
+        setViewBox(svg, crash);
+        if (done) done();
+        return;
+      }
+
       risk.style.strokeDasharray = String(len);
       risk.style.strokeDashoffset = String(len);
-      animateViewBox(svg, from, fullCamera.slice(), 340, () => {
-        animateSteps(920, tk, p => {
-          const e = easeInOut(p);
-          risk.style.strokeDashoffset = String(len * (1 - e));
+      if (activeNode) activeNode.style.opacity = '0';
+
+      // Natural 3-phase pacing: steady ridge ascent (0..0.68), tension pause at break (0.68..0.78), gravity drop (0.78..1)
+      const riskPacing = p => {
+        if (p < 0.68) return (p / 0.68) * 0.74;
+        if (p < 0.78) return 0.74 + ((p - 0.68) / 0.10) * 0.04;
+        const dropT = (p - 0.78) / 0.22;
+        return 0.78 + (dropT * dropT) * 0.22;
+      };
+
+      const act2Ms = Math.max(1950, Math.min(2350, Math.round(1750 + len * 1.1)));
+      let curBox = from.slice();
+
+      // Act 1 (520ms, easeInOut): smooth pullback to open mountain context
+      animateSteps(520, tk, p => {
+        const e = easeInOut(p);
+        curBox = from.map((n, i) => n + (fullCamera[i] - n) * e);
+        setViewBox(svg, curBox);
+      }, () => {
+        // Act 2 (1950-2350ms): organic ink draw + #climberMarker riding tip + exponentially damped camera follow
+        animateSteps(act2Ms, tk, p => {
+          const prog = riskPacing(p);
+          risk.style.strokeDashoffset = String(len * (1 - prog));
           if (typeof risk.getPointAtLength === 'function') {
-            const pt = risk.getPointAtLength(len * e);
-            const curW = fullCamera[2] + (w - fullCamera[2]) * e;
-            const curH = fullCamera[3] + (h - fullCamera[3]) * e;
-            const curX = Math.max(0, Math.min(fullCamera[2] - curW, pt.x - curW * 0.56));
-            const curY = Math.max(0, Math.min(fullCamera[3] - curH, pt.y - curH * 0.44));
-            setViewBox(svg, [curX, curY, curW, curH]);
+            const pt = risk.getPointAtLength(len * prog);
+            if (markerEl) {
+              markerEl.setAttribute('transform', `translate(${pt.x.toFixed(2)} ${pt.y.toFixed(2)})`);
+            }
+            const zoomT = easeInOut(Math.min(1, p * 1.05));
+            const targetW = fullCamera[2] + (w - fullCamera[2]) * zoomT;
+            const targetH = fullCamera[3] + (h - fullCamera[3]) * zoomT;
+            const targetX = Math.max(0, Math.min(fullCamera[2] - targetW, pt.x - targetW * 0.55));
+            const targetY = Math.max(0, Math.min(fullCamera[3] - targetH, pt.y - targetH * 0.45));
+            const desired = [targetX, targetY, targetW, targetH];
+            curBox = curBox.map((n, i) => n + (desired[i] - n) * 0.09);
+            setViewBox(svg, curBox);
           } else {
-            setViewBox(svg, fullCamera.map((n, i) => n + (crash[i] - n) * e));
+            const desired = fullCamera.map((n, i) => n + (crash[i] - n) * easeInOut(p));
+            curBox = curBox.map((n, i) => n + (desired[i] - n) * 0.09);
+            setViewBox(svg, curBox);
           }
-        }, done);
-      }, tk);
+        }, () => {
+          // Act 3 (420ms): fade in red node + settle camera into exact riskCameraBox, then 160ms breath before dialog
+          const settleFrom = curBox.slice();
+          animateSteps(420, tk, p => {
+            const e = easeOut(p);
+            if (activeNode) activeNode.style.opacity = String(e.toFixed(3));
+            setViewBox(svg, settleFrom.map((n, i) => n + (crash[i] - n) * e));
+          }, () => {
+            if (activeNode) activeNode.style.opacity = '1';
+            setViewBox(svg, crash);
+            if (done) {
+              setTimeout(() => { if (tk === activeToken) done(); }, 160);
+            }
+          });
+        });
+      });
       return;
     }
     if (type === 'enter') {
