@@ -97,8 +97,10 @@
       hold: 'Mantén el plan y evita vender en el mínimo.', householdDrop: 'Caída del hogar',
       back: 'La cartera volvió a su nivel', benchmark: 'Referencia', recovery: 'recuperación',
       divergence: 'Divergencia', source: 'Fuente', maxDrop: 'Máxima caída a 3 años',
-      prioritized: 'Miedos priorizados', subjective: 'Miedo subjetivo', team: 'Pacto y roces de cordada',
-      selected: 'miedos marcados', priority: 'prioridad', noPriority: 'Sin prioridad seleccionada',
+      prioritized: 'Top-3 preocupaciones y termómetro', subjective: 'Duda o inquietud subjetiva',
+      contrast: 'Contraste: Preocupación #1 vs. Impacto cuantitativo',
+      team: 'Diagnóstico, perfil de riesgo y pacto de pareja',
+      selected: 'Top-3 elegido', priority: 'enfoque', noPriority: 'Sin enfoque seleccionado',
       none: 'ninguno', irl: 'Estado IRL e inercia', questions: 'Dudas para el asesor',
       housing: 'Hitos y transiciones', copy: 'Copiar resumen en texto plano',
       noQuestions: 'Sin dudas enviadas.', noDays: 'con recuperación en curso (sin días cerrados aún)'
@@ -117,8 +119,10 @@
       hold: 'Keep the plan and avoid selling at the low.', householdDrop: 'Household drawdown',
       back: 'The portfolio returned to its prior level', benchmark: 'Benchmark', recovery: 'recovery',
       divergence: 'Divergence', source: 'Source', maxDrop: 'Three-year maximum drawdown',
-      prioritized: 'Prioritized fears', subjective: 'Subjective fear', team: 'Rope-team pact and tensions',
-      selected: 'selected fears', priority: 'priority', noPriority: 'No priority selected',
+      prioritized: 'Top-3 concerns and thermometer', subjective: 'Open question or subjective note',
+      contrast: 'Contrast: Priority #1 vs. Quantitative impact',
+      team: 'Couple diagnosis, risk profile, and pact',
+      selected: 'Top-3 picked', priority: 'focus', noPriority: 'No focus selected',
       none: 'none', irl: 'IRL state and inertia', questions: 'Questions for the advisor',
       housing: 'Milestones and transitions', copy: 'Copy plain-text summary',
       noQuestions: 'No questions sent.', noDays: 'recovery still underway (no closed day count)'
@@ -141,7 +145,7 @@
 
   function dates(data, lang) {
     const found = new Map();
-    const raw = (data.persona.transitionAlerts || '').replace(/\*\*/g, '');
+    const raw = ((data.persona && data.persona.transitionAlerts) || '').replace(/\*\*/g, '');
     const months = { January: 0, February: 1, March: 2, April: 3, May: 4, June: 5, July: 6, August: 7, September: 8, October: 9, November: 10, December: 11 };
     for (const m of raw.matchAll(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+(20\d{2})[^.\n]*/g)) {
       const date = new Date(Date.UTC(Number(m[2]), months[m[1]], 1)).toISOString().slice(0, 10);
@@ -205,14 +209,23 @@
 
     const raw = dataFor(state.caseId);
     const d = expedition.localizeData(raw, lang);
-    const steps = plans[lang][state.caseId];
-    const current = steps[Math.min(state.step, steps.length - 1)];
+    const steps = plans[lang][state.caseId] || [];
+    const current = steps[Math.min(state.step, Math.max(0, steps.length - 1))] || '';
     const checks = state.checks[state.step] || [];
-    const couple = d.meta.isCouple;
-    const docInertia = documentedInertia[lang][state.caseId] || '';
+    const couple = !!(d.meta && d.meta.isCouple);
+    const docInertia = (documentedInertia[lang] && documentedInertia[lang][state.caseId]) || '';
     const record = expedition.riskRecord(state.caseId, lang);
     const campIdx = state.summit ? 3 : (state.irlDay < 14 ? 0 : state.irlDay < 365 ? 1 : 2);
     const campBiome = expedition.biomes[campIdx];
+    const contrast = expedition.buildContrastSummary(state, d);
+    const rankLabels = expedition.text[lang].rankBadge;
+    const top3List = ((state.fearOrder && state.fearOrder.length ? state.fearOrder : ((d.persona.objectiveConcerns || []).slice(0, 3).map(c => c.id))) || []).slice(0, 3);
+    const top3Formatted = top3List.map((id, idx) => {
+      const found = (d.persona.objectiveConcerns || []).find(c => c.id === id);
+      return `${rankLabels[idx] || `#${idx + 1}`}: ${found ? found.title : id}`;
+    }).join(' · ');
+    const thermoLvl = Math.max(1, Math.min(5, Number(state.thermometer) || 3));
+    const thermoText = (expedition.thermoLabels && expedition.thermoLabels[lang] && expedition.thermoLabels[lang][thermoLvl]) || `${thermoLvl}/5`;
 
     // Full-bleed permanent 100vw x 100vh Sumi-e Mountain Wallpaper behind Día X, Brief, and Radio
     const wallpaper = `<div class="mountain-stage mountain-fullscreen" data-biome="${campBiome.id}">
@@ -225,15 +238,20 @@
       const wf = (d.savingsWaterfall || []).find(x => Number(x.step) === (state.step === 0 ? (state.caseId === 'samantha-lewis' ? 2 : 8) : 13)) || {};
       const done = state.step >= steps.length;
       const inertiaText = `${elapsed} ${lang === 'ES' ? 'días con paso pendiente ·' : 'days with pending step ·'} ${docInertia}.`;
+      const peopleList = owners[state.caseId] || ((d.meta && d.meta.owners) || []).map(o => o.name) || ['A'];
 
       panel = `<aside class="floating-panel post-view">
         <article class="focus-card">
           <p class="eyebrow">${u(state, 'run')} · ${u(state, 'day')} ${state.irlDay}</p>
+          <div class="irl-eval-recap">
+            <p class="preview"><strong>${esc(top3Formatted)}</strong> · <span>${esc(thermoText)}</span></p>
+            <p class="preview">${esc(contrast.blindSpotText)}</p>
+          </div>
           ${done
             ? `<h2>${u(state, 'completed')}</h2><p>${u(state, 'completedText')}</p>`
             : `<p class="eyebrow">${u(state, 'today')}</p>
                <h2>${esc(current)}</h2>
-               <div class="owner-split">${owners[state.caseId].map((n, i) => `<label><input type="checkbox" data-owner="${i}" ${checks.includes(i) ? 'checked' : ''}> ${u(state, 'owner')} ${i ? 'B' : 'A'} · ${esc(n)}</label>`).join('')}</div>
+               <div class="owner-split">${peopleList.map((n, i) => `<label><input type="checkbox" data-owner="${i}" ${checks.includes(i) ? 'checked' : ''}> ${u(state, 'owner')} ${i ? 'B' : 'A'} · ${esc(n)}</label>`).join('')}</div>
                <div class="button-row"><button class="primary" data-action="done" ${checks.length < (couple ? 2 : 1) ? 'disabled' : ''}>${u(state, 'complete')} (${checks.length}/${couple ? 2 : 1})</button></div>`}
           ${elapsed ? `<aside class="inertia-alert"><strong>${u(state, 'overdue')}</strong><p>${esc(inertiaText)}</p></aside>` : ''}
           <details class="exact-math">
@@ -300,30 +318,36 @@
       </aside>`;
     } else {
       const priority = {
-        crecimiento: lang === 'ES' ? 'Priorizar crecimiento' : 'Prioritize growth',
-        'deuda-proteccion': lang === 'ES' ? 'Priorizar deuda y protección' : 'Prioritize debt and protection',
+        crecimiento: lang === 'ES' ? 'Priorizar crecimiento patrimonial' : 'Prioritize long-term growth',
+        'deuda-proteccion': lang === 'ES' ? 'Priorizar liquidez, deuda y protección' : 'Prioritize liquidity, debt, and protection',
         'liquidez-vivienda': lang === 'ES' ? 'Asegurar liquidez y vivienda' : 'Secure liquidity and housing'
       };
+      const peopleList = owners[state.caseId] || ((d.meta && d.meta.owners) || []).map(o => o.name) || ['A', 'B'];
       panel = `<aside class="floating-panel panel-wide post-view">
         <p class="eyebrow">${t(state, 'brief')}</p>
         <h1>${t(state, 'brief')}</h1>
         <div class="brief-grid">
           <section>
             <h2>${u(state, 'prioritized')}</h2>
-            <p>${(state.fearOrder || []).map(esc).join(' · ') || u(state, 'none')}</p>
+            <p><strong>${esc(top3Formatted)}</strong></p>
+            <p><strong>${t(state, 'thermometerTitle')}:</strong> ${esc(thermoText)}</p>
+            <h2>${u(state, 'contrast')}</h2>
+            <p>${esc(contrast.blindSpotText)}</p>
             <h2>${u(state, 'subjective')}</h2>
             <p>${clean(state.subjectiveConcern || d.persona.subjectiveConcerns)}</p>
             <h2>${u(state, 'team')}</h2>
             <p>${clean(d.persona.D6 || '')}</p>
+            <p><strong>${t(state, 'profileSplitTitle')}:</strong> ${esc(d.persona.D4Human || '')}</p>
             ${couple ? ['A', 'B'].map((k, i) => {
-              const vote = state.votes[k] || {};
-              const fears = (vote.fears || []).map(id => {
+              const vote = (state.votes && state.votes[k]) || {};
+              const fears = (vote.fears || []).map((id, rIdx) => {
                 const c = (d.persona.objectiveConcerns || []).find(x => x.id === id);
-                return c ? clean(c.detail) : clean(id);
+                return `${rankLabels[rIdx] || `#${rIdx + 1}`} ${c ? c.title : id}`;
               });
-              return `<p>${esc(owners[state.caseId][i])}: ${u(state, 'selected')} ${fears.length ? fears.join('; ') : u(state, 'none')}; ${u(state, 'priority')}: ${esc(priority[vote.priority] || u(state, 'noPriority'))}.</p>`;
+              const vThermo = vote.thermometer ? ((expedition.thermoLabels && expedition.thermoLabels[lang][vote.thermometer]) || `${vote.thermometer}/5`) : thermoText;
+              return `<p><strong>${esc(peopleList[i] || k)}:</strong> ${u(state, 'selected')} (${fears.length ? esc(fears.join(', ')) : u(state, 'none')}) · ${esc(vThermo)} · ${u(state, 'priority')}: ${esc(priority[vote.priority] || u(state, 'noPriority'))}.</p>`;
             }).join('') : ''}
-            ${(d.persona.tensions || []).map(x => `<p>${esc(x.id)} · ${clean(x.detail).replace(/^\s*\*\*[^:]*:\*\*\s*/, '')}</p>`).join('')}
+            ${(d.persona.tensions || []).map(x => `<p>${clean(x.detail)}</p>`).join('')}
           </section>
           <section>
             <h2>${t(state, 'discarded')}</h2>
@@ -356,6 +380,17 @@
         root.document.body.classList.add('is-mountain-viewport');
       }
     };
+    let unsubRoom = null;
+    const attachRoom = () => {
+      if (unsubRoom) { try { unsubRoom(); } catch (_) {} unsubRoom = null; }
+      const raw = dataFor(state.caseId) || {};
+      if (raw.meta && raw.meta.isCouple && state.roomId && expedition.CoupleRoomSync) {
+        expedition.CoupleRoomSync.createRoom(state.caseId, state.roomId);
+        unsubRoom = expedition.CoupleRoomSync.subscribe(state.roomId, state.caseId, roomData => {
+          expedition.applyRoomSnapshot(state, roomData, el, render, summit);
+        });
+      }
+    };
     const render = () => {
       el.innerHTML = view(state);
       syncViewport();
@@ -367,6 +402,13 @@
       state.irlDay = 0;
       state.stepAt = 0;
       state.view = viewName('current', langOf(state), state.irlDay);
+      if (expedition.SherpasAI) {
+        expedition.SherpasAI.request('brief', {
+          case_id: state.caseId,
+          fear_ranking: state.fearOrder || [],
+          subjective_concerns: state.subjectiveConcern || ''
+        }, { mode: 'deterministic' });
+      }
       render();
     }
     function bind() {
@@ -374,19 +416,18 @@
         if (b.tagName === 'A' && ev && ev.preventDefault) ev.preventDefault();
         const a = b.dataset.action;
         if (expedition.handleMountainAction(a, b, el, state, render, summit)) return;
-        if (a === 'submit-vote') {
-          const turn = state.voteTurn || 'A';
-          state.votes[turn] = {
-            fears: [...el.querySelectorAll('[data-vote-fear]:checked')].map(x => x.dataset.voteFear),
-            priority: (el.querySelector('[data-priority]:checked') || {}).value || ''
-          };
-          if (turn === 'A') state.voteTurn = 'B';
-          else state.phase = 'cross';
-        } else if (a === 'doubt') {
+        if (a === 'doubt') {
           state.advisorDoubts.push(b.dataset.doubt || '');
         } else if (a === 'nav') {
           state.view = b.dataset.view;
           const vk = viewKey(state.view);
+          if (vk === 'brief' && expedition.SherpasAI) {
+            expedition.SherpasAI.request('brief', {
+              case_id: state.caseId,
+              fear_ranking: state.fearOrder || [],
+              subjective_concerns: state.subjectiveConcern || ''
+            }, { mode: 'deterministic' });
+          }
           if (vk === 'expedition' || vk === 'overview') {
             if (state.summit || vk === 'overview') {
               state.cameraMode = 'panoramic';
@@ -445,6 +486,7 @@
         const lang = state.lang;
         state = initial(c.value);
         state.lang = lang;
+        attachRoom();
         render();
       };
       const s = el.querySelector('[data-shock]');
@@ -459,19 +501,51 @@
         render();
       });
       el.querySelectorAll('[data-fear]').forEach(chk => chk.onchange = () => {
-        state.fearOrder = [...el.querySelectorAll('[data-fear]:checked')].map(x => x.dataset.fear);
+        state.fearOrder = [...el.querySelectorAll('[data-fear]:checked')].map(x => x.dataset.fear).slice(0, 3);
       });
+      el.querySelectorAll('[data-priority]').forEach(n => n.onchange = () => {
+        const raw = dataFor(state.caseId) || {};
+        if (raw.meta && raw.meta.isCouple) {
+          const turn = state.voteTurn === 'B' ? 'B' : 'A';
+          state.votes = state.votes || {};
+          state.votes[turn] = Object.assign({ fears: [], thermometer: 3 }, state.votes[turn], { priority: n.value });
+        }
+        state.priorityFocus = n.value;
+        render();
+      });
+      const th = el.querySelector('[data-thermometer]');
+      if (th) th.oninput = () => {
+        const lvl = Math.max(1, Math.min(5, Number(th.value) || 3));
+        state.thermometer = lvl;
+        const raw = dataFor(state.caseId) || {};
+        if (raw.meta && raw.meta.isCouple && state.phase === 'fears') {
+          const turn = state.voteTurn === 'B' ? 'B' : 'A';
+          state.votes = state.votes || {};
+          state.votes[turn] = Object.assign({ fears: [] }, state.votes[turn], { thermometer: lvl });
+        }
+        render();
+      };
       const sub = el.querySelector('[data-subjective]');
-      if (sub) sub.oninput = () => { state.subjectiveConcern = sub.value; };
+      if (sub) sub.oninput = () => {
+        const raw = dataFor(state.caseId) || {};
+        if (raw.meta && raw.meta.isCouple && state.phase === 'fears') {
+          const turn = state.voteTurn === 'B' ? 'B' : 'A';
+          state.votes = state.votes || {};
+          state.votes[turn] = Object.assign({ fears: [], thermometer: 3 }, state.votes[turn], { subjective: sub.value });
+        } else {
+          state.subjectiveConcern = sub.value;
+        }
+      };
       el.querySelectorAll('[name="route"]').forEach(r => r.onchange = () => {
         const p = el.querySelector('[data-preview]');
         if (p) p.textContent = expedition.preview(state, expedition.localizeData(dataFor(state.caseId), langOf(state)), r.value);
       });
     }
+    attachRoom();
     render();
     return {
       getState: () => state,
-      setState(next) { state = next; render(); return state; },
+      setState(next) { state = next; attachRoom(); render(); return state; },
       dispatch(a, v) {
         if (a === 'nav') state.view = v;
         else if (a === 'mode') state.mode = v;
@@ -488,6 +562,7 @@
         return state;
       },
       unmount() {
+        if (unsubRoom) { try { unsubRoom(); } catch (_) {} unsubRoom = null; }
         el.innerHTML = '';
         if (root.document && root.document.body) root.document.body.classList.remove('is-mountain-viewport');
       }
