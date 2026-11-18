@@ -5,12 +5,17 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 from backend.mcp_client import (SherpasMCPClient, CaseNotFoundError, InvalidSectionError,
-                                MCPAuthError, MCPTransportError)
+                                MCPAuthError, MCPTransportError, load_env_file)
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+def patch_env(**values):
+    return patch.dict(os.environ, values, clear=False)
 
 
 class MCPHandler(BaseHTTPRequestHandler):
@@ -46,6 +51,9 @@ class MCPHandler(BaseHTTPRequestHandler):
                 result = {"content":[{"type":"text","text":json.dumps(cases)}]}
             elif self.mode == "requires_section" and "section" not in args:
                 self._reply(body, error={"code":-32602,"message":"section required"})
+                return
+            elif self.mode == "section_error" and ("section" not in args or args.get("section") == "investment-analysis"):
+                self._reply(body, error={"code":-32602,"message":"section call failed"})
                 return
             elif "section" in args:
                 value = ({"section":args["section"]} if self.mode == "requires_section" else
@@ -108,6 +116,35 @@ class MCPClientTests(unittest.TestCase):
         (folder / "investment-analysis.json").write_text('{"assets":[]}', encoding="utf-8")
         (folder / "persona.md").write_text("persona text", encoding="utf-8")
 
+    def test_namespace_package_and_utf8_files_have_no_bom(self):
+        self.assertFalse((ROOT / "backend" / "__init__.py").exists())
+        for path in (ROOT / ".env.example", ROOT / "backend" / "mcp_client.py", Path(__file__)):
+            self.assertFalse(path.read_bytes().startswith(b"\xef\xbb\xbf"), str(path))
+
+    def test_cases_dir_environment_resolution(self):
+        sherpas_dir = Path(self.tmp.name) / "sherpas-cases"
+        cases_dir = Path(self.tmp.name) / "cases-env"
+        with patch_env(SHERPAS_CASES_DIR=str(sherpas_dir), CASES_DIR=str(cases_dir)):
+            self.assertEqual(SherpasMCPClient(self.url, "secret").cases_dir, sherpas_dir)
+        with patch_env(SHERPAS_CASES_DIR="", CASES_DIR=str(cases_dir)):
+            self.assertEqual(SherpasMCPClient(self.url, "secret").cases_dir, cases_dir)
+
+    def test_local_files_and_env_file_read_utf8_bom(self):
+        folder = self.cases / "demo"
+        folder.mkdir()
+        (folder / "financial-health.json").write_bytes(b"\xef\xbb\xbf" + b'{"name":"BOM","score":3}')
+        (folder / "investment-analysis.json").write_bytes(b"\xef\xbb\xbf" + b'{"assets":[]}')
+        (folder / "persona.md").write_bytes(b"\xef\xbb\xbfpersona")
+        result = self.client(token="").get_case("demo")
+        self.assertEqual(result["financial-health"]["name"], "BOM")
+        self.assertEqual(result["investment-analysis"], {"assets": []})
+        self.assertEqual(result["persona"], "persona")
+        envfile = Path(self.tmp.name) / "bom.env"
+        envfile.write_bytes(b"\xef\xbb\xbf" + b"MCP_TOKEN=bom-token\n")
+        with patch.dict(os.environ, {}, clear=True):
+            load_env_file(envfile)
+            self.assertEqual(os.environ["MCP_TOKEN"], "bom-token")
+
     def test_env_example_exact_keys_no_secret(self):
         lines = (ROOT / ".env.example").read_text().splitlines()
         self.assertEqual(lines, ["MCP_URL=https://mcp-hackathon.sherpaswealth.com/mcp","MCP_TOKEN=","LLM_PROXY_URL=https://llm-hackathon.sherpaswealth.com/v1","TEAM_KEY="])
@@ -139,6 +176,18 @@ class MCPClientTests(unittest.TestCase):
         self.assertEqual(result["financial-health"], {"section":"financial-health"})
         self.assertEqual(result["investment-analysis"], {"section":"investment-analysis"})
         self.assertEqual(result["persona"], '{"section": "persona"}')
+
+    def test_section_rpc_error_falls_back_to_local_or_seed(self):
+        MCPHandler.mode = "section_error"
+        self.make_case()
+        local_client = self.client()
+        local = local_client.get_case("demo")
+        self.assertEqual(local["persona"], "persona text")
+        self.assertEqual(local_client.last_source, "local")
+        seed_client = self.client()
+        seed = seed_client.get_case("michael-carter")
+        self.assertEqual(seed["financial-health"]["score"]["overall"], 26)
+        self.assertEqual(seed_client.last_source, "seed")
 
     def test_sse(self):
         MCPHandler.mode = "sse"

@@ -1,4 +1,4 @@
-﻿"""Cliente HTTP Streamable MCP y fuentes locales/semilla para casos Sherpas."""
+"""Cliente HTTP Streamable MCP y fuentes locales/semilla para casos Sherpas."""
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
 import json
@@ -38,7 +38,7 @@ def load_env_file(path: Optional[str] = None) -> None:
     """Carga pares KEY=VALUE sencillos, sin reemplazar el entorno existente."""
     env_path = Path(path) if path else REPO_ROOT / ".env"
     try:
-        lines = env_path.read_text(encoding="utf-8").splitlines()
+        lines = env_path.read_text(encoding="utf-8-sig").splitlines()
     except OSError:
         return
     for raw in lines:
@@ -136,7 +136,7 @@ class SherpasMCPClient:
             mcp_token = str(mcp_token)
         self.url = mcp_url or os.environ.get("MCP_URL", "https://mcp-hackathon.sherpaswealth.com/mcp")
         self.token = mcp_token or ""
-        self.cases_dir = Path(cases_dir) if cases_dir is not None else Path(os.environ.get("CASES_DIR", CASES_DIR))
+        self.cases_dir = Path(cases_dir) if cases_dir is not None else Path(os.environ.get("SHERPAS_CASES_DIR") or os.environ.get("CASES_DIR") or CASES_DIR)
         self.allow_fallback, self.timeout = allow_fallback, timeout
         self.session_id = None
         self._rpc_id = 0
@@ -253,7 +253,7 @@ class SherpasMCPClient:
         for section, filename in zip(SECTIONS, ("financial-health.json","investment-analysis.json","persona.md")):
             path = folder / filename
             if not path.is_file(): continue
-            raw = path.read_text(encoding="utf-8")
+            raw = path.read_text(encoding="utf-8-sig")
             if section == "persona": data[section] = raw
             else:
                 try: data[section] = json.loads(raw)
@@ -296,18 +296,10 @@ class SherpasMCPClient:
                         merged[requested_section] = self._unwrap(
                             self._tool("get_case", {"case_id": case_id, "section": requested_section}),
                             expect_json=requested_section != "persona")
-                except (MCPAuthError, MCPTransportError) as fallback_error:
+                except MCPClientError as fallback_error:
                     self._fallback_or_raise(fallback_error)
-                    local = self._local(case_id)
-                    if local is not None:
-                        self.last_source = "local"
-                        return local
-                    seed = self._seed_case(case_id)
-                    if seed is not None:
-                        self.last_source = "seed"
-                        return seed
-                    raise fallback_error
-                return merged
+                else:
+                    return merged
             self._fallback_or_raise(exc)
         local = self._local(case_id)
         if local is not None:
