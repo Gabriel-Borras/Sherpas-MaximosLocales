@@ -71,6 +71,7 @@
       riskRoute: 'Desvío de riesgo',
       agreeAdvance: 'Acordar camino seguro y avanzar',
       seeRedBranch: 'Ver desvío rojo',
+      redoEval: 'Rehacer evaluación',
       blocked: 'Desvío detectado en la ruta', stopped: 'Análisis del camino erróneo', impact: 'Consecuencia proyectada',
       context: 'Contexto adicional', tensions: 'Por qué ocurre (tensiones y hechos)', rewind: 'Rebobinar al campamento',
       phase: 'Basecamp · Ruta de ascenso', route: 'Una ruta, cuatro campamentos', choose: 'Elige el paso en este campamento',
@@ -151,6 +152,7 @@
       riskRoute: 'Risk deviation',
       agreeAdvance: 'Agree on safe path & advance',
       seeRedBranch: 'Inspect red deviation',
+      redoEval: 'Redo evaluation',
       blocked: 'Route deviation detected', stopped: 'Failed path analysis', impact: 'Projected consequence',
       context: 'Additional context', tensions: 'Why it happens (tensions and facts)', rewind: 'Rewind to camp',
       phase: 'Basecamp · Ascent route', route: 'One route, four camps', choose: 'Choose the step at this camp',
@@ -1681,24 +1683,79 @@
   }
   const CoupleRoomSync = createCoupleRoomSync();
 
+  // Per-profile evaluation persistence (localStorage + in-memory fallback)
+  const memoryProfileEvals = {};
+  const ProfileEvalStore = {
+    key: id => `sherpas_profile_eval_${id}`,
+    load(caseId) {
+      if (!caseId) return null;
+      try {
+        if (root.localStorage) {
+          const raw = root.localStorage.getItem(this.key(caseId));
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.evaluationDone) {
+              memoryProfileEvals[caseId] = parsed;
+              return parsed;
+            }
+          }
+        }
+      } catch (_) {}
+      const mem = memoryProfileEvals[caseId];
+      return mem && mem.evaluationDone ? mem : null;
+    },
+    save(caseId, state) {
+      if (!caseId || !state) return null;
+      const record = {
+        evaluationDone: true,
+        fearOrder: Array.isArray(state.fearOrder) ? state.fearOrder.slice(0, 3) : [],
+        votes: state.votes && typeof state.votes === 'object' ? JSON.parse(JSON.stringify(state.votes)) : {},
+        priority: state.priorityFocus || '',
+        updatedAt: Date.now()
+      };
+      memoryProfileEvals[caseId] = record;
+      try {
+        if (root.localStorage) root.localStorage.setItem(this.key(caseId), JSON.stringify(record));
+      } catch (_) {}
+      return record;
+    },
+    clear(caseId) {
+      if (!caseId) return;
+      delete memoryProfileEvals[caseId];
+      try {
+        if (root.localStorage) root.localStorage.removeItem(this.key(caseId));
+      } catch (_) {}
+    }
+  };
+
   function createInitialState(id) {
     const lang = loadLang();
     const urlParams = readRoomParams();
     const resolvedId = ids.includes(id) ? id : (urlParams.caseId || ids[0]);
     const roomId = urlParams.roomId || makeRoomId();
     const memberRole = urlParams.memberRole || 'A';
+    const savedEval = ProfileEvalStore.load(resolvedId);
+    const joiningUnfinishedPartnerRoom = !!(
+      urlParams.fromUrl &&
+      urlParams.roomId &&
+      urlParams.memberRole === 'B' &&
+      !CoupleRoomSync.readLocal(urlParams.roomId, resolvedId).evaluation_ready
+    );
+    const skipEval = !!(savedEval && savedEval.evaluationDone && !joiningUnfinishedPartnerRoom);
     return {
       caseId: resolvedId,
       view: viewName('expedition', lang, 0),
-      phase: 'fears',
+      phase: skipEval ? 'expedition' : 'fears',
+      evaluationDone: skipEval,
       mode: 'Plain',
       lang,
       irlDay: 0,
-      fearOrder: [],
+      fearOrder: skipEval ? (savedEval.fearOrder || []).slice(0, 3) : [],
+      priorityFocus: skipEval ? (savedEval.priority || '') : '',
       showAllConcerns: false,
       thermometer: 3,
       subjectiveConcern: '',
-      votes: {},
+      votes: skipEval && savedEval.votes ? JSON.parse(JSON.stringify(savedEval.votes)) : {},
       voteTurn: memberRole,
       roomId,
       memberRole,
@@ -2285,6 +2342,9 @@
           ${entries.map(x => `<p><strong>${esc(biome(x.stage || 0, lang).label)}:</strong> ${esc((x.decisionChosen && x.decisionChosen[lang]) || t(state, 'ignore'))} → ${esc(fail.label)}</p>`).join('') || `<p>${t(state, 'noDiscarded')}</p>`}
         </div>
         ${mathSummary(data, state)}
+        <div class="button-row">
+          <button type="button" class="room-btn-ghost" data-action="redo-eval">${t(state, 'redoEval')}</button>
+        </div>
       </aside>`;
     } else if (view === 'current') {
       panel = `<aside class="floating-panel">
@@ -2757,6 +2817,8 @@
       const merged = [...new Set([aFears[0], bFears[0], ...aFears, ...bFears].filter(Boolean))].slice(0, 3);
       state.fearOrder = merged.length ? merged : allConcernIds.slice(0, 3);
       state.roomWaiting = false;
+      state.evaluationDone = true;
+      ProfileEvalStore.save(state.caseId, state);
       state.phase = 'cross';
       changed = true;
     }
@@ -2978,7 +3040,27 @@
       return true;
     }
 
+    if (action === 'redo-eval') {
+      ProfileEvalStore.clear(state.caseId);
+      state.evaluationDone = false;
+      state.phase = 'fears';
+      state.view = viewName('expedition', langOf(state), state.irlDay);
+      state.fearOrder = [];
+      state.votes = {};
+      state.voteTurn = state.coupleSyncMode === 'local' ? 'A' : (state.memberRole || 'A');
+      state.roomWaiting = false;
+      state.stage = 0;
+      state.focusedNode = 0;
+      state.summit = false;
+      state.blocked = false;
+      state.history = [];
+      rerender();
+      return true;
+    }
+
     if (action === 'start-expedition') {
+      state.evaluationDone = true;
+      ProfileEvalStore.save(state.caseId, state);
       state.phase = 'expedition';
       state.roomWaiting = false;
       state.roomAlignedBanner = false;
@@ -3343,6 +3425,7 @@
     buildThermometerReframe,
     orderedTopMoves,
     CoupleRoomSync,
+    ProfileEvalStore,
     applyRoomSnapshot,
     buildPartnerUrl,
     failTags,
