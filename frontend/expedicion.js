@@ -2460,6 +2460,17 @@
     </div>`;
   }
 
+  function telegramRadioUrl(state) {
+    const cleanPart = (val, fallback) => {
+      const s = String(val || '').trim().replace(/\s+/g, '_').replace(/[^A-Za-z0-9_-]/g, '');
+      return s || fallback;
+    };
+    const casePart = cleanPart(state && state.caseId, 'demo');
+    const voterRaw = (state && Array.isArray(state.voters) && state.voters[0]) ? state.voters[0] : '';
+    const voterPart = cleanPart(voterRaw, 'client');
+    return `https://t.me/SherpasRadioBot?start=${`${casePart}_${voterPart}`.slice(0, 64)}`;
+  }
+
   function renderHeader(state, data) {
     const lang = langOf(state);
     const es = lang !== 'EN';
@@ -2467,14 +2478,14 @@
     const basecampActive = view === 'expedition' || view === 'overview';
     const dayActive = view === 'current';
     const briefActive = view === 'brief';
-    const radioActive = view === 'radio';
     const packOpen = state.openOverlay === 'pack';
     const healthOpen = state.openOverlay === 'health';
     const options = ids.map(id => `<option value="${id}" ${id === state.caseId ? 'selected' : ''}>${esc(((dataFor(id) || {}).meta || {}).household || id)}</option>`).join('');
 
     const currentLabel = dayLabel(lang, state.irlDay);
     const briefTitle = words[lang].brief;
-    const radioTitle = words[lang].radio;
+    const radioTitle = es ? 'Sintonizar Radio en Telegram' : 'Tune Radio on Telegram';
+    const radioHref = telegramRadioUrl(state);
     const packAria = es ? 'Tu mochila · Balance real' : 'Your pack · Real balance';
     const redoAria = es ? 'Rehacer encuesta de miedos' : 'Redo priorities survey';
     const healthLabel = es ? 'Salud' : 'Health';
@@ -2501,9 +2512,9 @@
         <button class="nav-icon-btn ${briefActive ? 'active' : ''}" data-action="nav" data-view="${esc(briefTitle)}" title="${esc(briefTitle)}" aria-label="${esc(briefTitle)}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
         </button>
-        <button class="nav-icon-btn ${radioActive ? 'active' : ''}" data-action="nav" data-view="${esc(radioTitle)}" title="${esc(radioTitle)}" aria-label="${esc(radioTitle)}">
+        <a class="nav-icon-btn" href="${esc(radioHref)}" target="_blank" rel="noopener noreferrer" title="${esc(radioTitle)}" aria-label="${esc(radioTitle)}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.2 19.1 19.1"/><circle cx="12" cy="12" r="2"/></svg>
-        </button>
+        </a>
       </nav>
       <div class="language-toggle" aria-label="${lang === 'ES' ? 'Idioma' : 'Language'}">
         <button data-action="lang" data-lang="ES" class="${lang === 'ES' ? 'active' : ''}">ES</button>
@@ -4158,6 +4169,7 @@
     createInitialState,
     render,
     renderHeader,
+    telegramRadioUrl,
     renderPackPopover,
     renderHealthModal,
     bindOverlayDismiss,

@@ -54,7 +54,7 @@ Ejecuta estos pasos desde la raíz del repositorio antes de empezar la presentac
 ### `1:30 – 2:15` · Momento 3: Basecamp con rama roja real por edad
 - **Caso sugerido:** `samantha-lewis` (para el contraste con Score `82`) o `michael-carter` (Score `26`).
 - **Qué hacer en pantalla:**
-  1. En **Basecamp · Ruta de ascenso** (4 campamentos), enseña brevemente el toggle `Plain ↔ Math`.
+  1. En **Basecamp · Ruta de ascenso** (4 campamentos, vista panorámica inicial monocromática sin bioma ni bandera en la cima), abre **Tu mochila** y **Salud** (pentágono de 5 pilares) en la barra superior, y entra al Campamento Base (se activa el bioma `forest`; al avanzar progresa `forest → rock → snow → summit` con crossfade *sumi-e* sincronizado con la cámara; el botón circular junto a la mochila permite rehacer la encuesta de miedos en cualquier momento).
   2. Elige una opción de inercia/errónea para provocar la **rama roja** en la montaña.
   3. Abre el detalle del bloqueo (*Por qué ocurre: tensiones y hechos*) y pulsa **Rebobinar al campamento** (*Rewind*) para elegir la palanca viable (`top_moves`) y coronar la cima.
 - **Qué decir a los jueces:**
@@ -62,10 +62,10 @@ Ejecuta estos pasos desde la raíz del repositorio antes de empezar la presentac
 
 ---
 
-### `2:15 – 3:00` · Momento 4: Día 0 + Radio `.ics` + Resumen del Asesor (`Advisor Brief`)
+### `2:15 – 3:00` · Momento 4: Día 0 + Radio Telegram + Resumen del Asesor (`Advisor Brief`)
 - **Qué hacer en pantalla:**
   1. Al llegar a **Cima alcanzada**, pasa a la vista de enfoque **Día 0** (*Run IRL*), mostrando el próximo paso inmediato accionable.
-  2. Abre **La Radio del Sherpa**: muestra la alerta basada en shocks históricos reales del caso (`analysis.events`) y pulsa **Descargar calendario `.ics`** (`sherpas-run-irl.ics`).
+  2. Pulsa el icono de **La Radio del Sherpa** en la barra superior: es únicamente un hipervínculo directo al bot de Telegram (`https://t.me/SherpasRadioBot?start=<caseId>_<voter|client>`), sin UI ni lógica adicional en el frontend.
   3. Abre la pestaña de **Resumen del Asesor (`Advisor Brief`)** (`POST /api/ai/brief`) y muestra el botón de copiar resumen en texto plano.
 - **Qué decir a los jueces:**
   - *"Tras la cima no volvemos a abrumar con 30 años de gráficos: el cliente solo ve su **Día 0** ejecutable. **La Radio del Sherpa** exporta sus hitos reales a `.ics` y aporta calma ante caídas de mercado con los shocks históricos reales de su cartera. Y el asesor recibe un **Advisor Brief** listo para la reunión con miedos, pacto de pareja y dudas."*
