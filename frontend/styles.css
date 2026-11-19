@@ -65,7 +65,7 @@ button.primary, .primary { background: var(--accent-primary); color: #ffffff; bo
 a { color: inherit; }
 h1, h2, h3 { font-family: var(--font-display); letter-spacing: -0.02em; line-height: 1.18; text-wrap: balance; margin: 0 0 8px; }
 p, li, .body-copy { max-width: 70ch; text-wrap: pretty; margin: 0 0 8px; }
-.numbers, .reframe, .advisor-brief, .fear-note, .crack, .preview, .workspace-section, .score, .metric, .year-label, .micro-pillar, .exact-math {
+.numbers, .reframe, .advisor-brief, .fear-note, .crack, .preview, .workspace-section, .score, .metric, .year-label, .exact-math {
   font-variant-numeric: tabular-nums;
 }
 
