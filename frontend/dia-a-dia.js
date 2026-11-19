@@ -53,11 +53,15 @@
   }
   const dayPoint = day => pointAt(day / HORIZON);
 
-  function cameraFor(day) {
+  const MIN_W = 300, MAX_W = FULL[2];            // de ~4x de aumento a la montaña entera
+  const clampW = w => Math.max(MIN_W, Math.min(MAX_W, Number(w) || CAM_W));
+
+  function cameraFor(day, width) {
+    const w = clampW(width || CAM_W), h = w * CAM_H / CAM_W;
     const [cx, cy] = dayPoint(day);
-    const x = Math.max(0, Math.min(FULL[2] - CAM_W, cx - CAM_W * 0.5));
-    const y = Math.max(0, Math.min(FULL[3] - CAM_H, cy - CAM_H * 0.5));
-    return [x, y, CAM_W, CAM_H];
+    const x = Math.max(0, Math.min(FULL[2] - w, cx - w * 0.5));
+    const y = Math.max(0, Math.min(FULL[3] - h, cy - h * 0.5));
+    return [x, y, w, h];
   }
 
   // --- Estado de cada paso a partir de lo marcado como hecho ---
@@ -65,7 +69,7 @@
   const isDone = (step, completed) => missing(step, completed).length === 0;
 
   // --- Montaña ---
-  function svg(plan, day, completed, lang) {
+  function svg(plan, day, completed, lang, zoomW) {
     const steps = (plan && plan.steps) || [];
     const byDay = {};
     steps.forEach(s => { (byDay[s.day] = byDay[s.day] || []).push(s); });
@@ -101,7 +105,7 @@
           <circle r="3.6" fill="#141414" stroke="#fff" stroke-width="1.2"/>
         </g>`;
 
-    return `<svg class="mountain-svg dd-mountain" viewBox="${cameraFor(day).map(n => n.toFixed(1)).join(' ')}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${lang === 'EN' ? `Day-by-day climb, day ${day} of ${HORIZON}` : `Escalada día a día, día ${day} de ${HORIZON}`}" data-day="${day}">
+    return `<svg class="mountain-svg dd-mountain" viewBox="${cameraFor(day, zoomW).map(n => n.toFixed(1)).join(' ')}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${lang === 'EN' ? `Day-by-day climb, day ${day} of ${HORIZON}` : `Escalada día a día, día ${day} de ${HORIZON}`}" data-day="${day}">
       <defs>
         <filter id="ddDryBrush" x="-5%" y="-5%" width="110%" height="110%">
           <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" result="noise"/>
@@ -136,11 +140,34 @@
     })(t0);
   }
 
+  // Ampliar/alejar la cámara. (cx, cy) = punto de pantalla que se queda fijo (null = centro).
+  function zoomAt(svgEl, factor, cx, cy, onChange) {
+    if (!svgEl) return null;
+    svgEl._ddAnim = (svgEl._ddAnim || 0) + 1;
+    const rect = svgEl.getBoundingClientRect();
+    const box = readBox(svgEl);
+    const rw = rect.width || 1, rh = rect.height || 1;
+    const px = (cx == null ? rect.left + rw / 2 : cx) - (rect.left + rw / 2);
+    const py = (cy == null ? rect.top + rh / 2 : cy) - (rect.top + rh / 2);
+    const s = Math.min(box[2] / rw, box[3] / rh);                 // unidades de viewBox por píxel (slice)
+    const w2 = clampW(box[2] * factor), h2 = w2 * box[3] / box[2];
+    const s2 = s * (w2 / box[2]);
+    const pointX = box[0] + box[2] / 2 + px * s, pointY = box[1] + box[3] / 2 + py * s;
+    const next = clampBox([pointX - px * s2 - w2 / 2, pointY - py * s2 - h2 / 2, w2, h2]);
+    writeBox(svgEl, next);
+    if (onChange) onChange(next);
+    return next;
+  }
+
   // Arrastrar con el ratón (o el dedo) para recorrer la montaña. Doble clic: volver al escalador.
   function enablePan(svgEl, onChange) {
     if (!svgEl || svgEl._ddPan || typeof svgEl.addEventListener !== 'function') return;
     svgEl._ddPan = true;
     let drag = null;
+    svgEl.addEventListener('wheel', ev => {
+      ev.preventDefault();
+      zoomAt(svgEl, Math.exp(ev.deltaY * 0.0015), ev.clientX, ev.clientY, onChange);
+    }, { passive: false });
     svgEl.addEventListener('pointerdown', ev => {
       if (ev.button !== 0) return;
       const rect = svgEl.getBoundingClientRect();
@@ -170,19 +197,20 @@
     svgEl.addEventListener('pointercancel', end);
     svgEl.addEventListener('dblclick', () => {
       const day = Number(svgEl.getAttribute('data-day')) || 0;
-      glide(svgEl, cameraFor(day));
-      if (onChange) onChange(null);
+      const w = readBox(svgEl)[2];
+      glide(svgEl, cameraFor(day, w));
+      if (onChange) onChange(null, w);
     });
   }
 
   // Sube el nodo (y la cámara) del día anterior al nuevo.
-  function animate(svgEl, fromDay, toDay, ms, fromBox) {
+  function animate(svgEl, fromDay, toDay, ms, fromBox, zoomW) {
     if (!svgEl || fromDay === toDay || typeof requestAnimationFrame !== 'function') return;
     const climber = svgEl.querySelector('#ddClimber');
     const trail = svgEl.querySelector('#ddTrail');
     const t0 = performance.now(), dur = ms || 650;
     const ease = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
-    const fromCam = fromBox || cameraFor(fromDay), toCam = cameraFor(toDay);
+    const fromCam = fromBox || cameraFor(fromDay, zoomW), toCam = cameraFor(toDay, zoomW);
     const token = (svgEl._ddAnim = (svgEl._ddAnim || 0) + 1);
     function frame(now) {
       if (svgEl._ddAnim !== token || svgEl._ddDragging) return;
@@ -268,5 +296,5 @@
     return `<aside class="floating-panel post-view dd-panel"><article class="focus-card">${head}${body}${nav}</article></aside>`;
   }
 
-  return { svg, card, animate, enablePan, glide, clampBox, dayPoint, cameraFor, isDone, HORIZON, TRAIL_LENGTH: TRAIL.length };
+  return { svg, card, animate, enablePan, zoomAt, glide, clampBox, MIN_W, MAX_W, dayPoint, cameraFor, isDone, HORIZON, TRAIL_LENGTH: TRAIL.length };
 });

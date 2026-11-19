@@ -60,3 +60,18 @@ test('sin n8n configurado no se muestra estado de Telegram', () => {
   assert.doesNotMatch(DD.card({ lang: 'ES', day: 30, plan, status: st, notification: { sent: false, configured: false, title: 'x' } }), /Telegram/);
   assert.match(DD.card({ lang: 'ES', day: 30, plan, status: st, notification: { sent: true, configured: true, title: 'x' } }), /Enviado a Telegram/);
 });
+
+test('zoom: la cámara admite anchos entre 300 y la montaña entera, sin salirse', () => {
+  assert.equal(DD.MIN_W, 300);
+  assert.equal(DD.MAX_W, 1200);
+  for (const w of [100, 300, 660, 1200, 5000]) {
+    const [x, y, bw, bh] = DD.cameraFor(15, w);
+    assert.ok(bw >= 300 && bw <= 1200, `ancho ${w} -> ${bw}`);
+    assert.ok(x >= 0 && y >= 0 && x + bw <= 1200 + 1e-6 && y + bh <= 750 + 1e-6);
+    assert.ok(Math.abs(bw / bh - 660 / 412) < 1e-6, 'mantiene la proporción');
+  }
+});
+
+test('el svg arranca con el zoom guardado', () => {
+  assert.match(DD.svg(plan, 10, {}, 'ES', 400), /viewBox="[\d.]+ [\d.]+ 400\.0 250\.0"/);
+});
