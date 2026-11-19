@@ -227,9 +227,11 @@
     const thermoLvl = Math.max(1, Math.min(5, Number(state.thermometer) || 3));
     const thermoText = (expedition.thermoLabels && expedition.thermoLabels[lang] && expedition.thermoLabels[lang][thermoLvl]) || `${thermoLvl}/5`;
 
+    const activeBiome = expedition.resolveActiveBiome ? expedition.resolveActiveBiome(state) : (state.summit ? 'summit' : null);
+
     // Full-bleed permanent 100vw x 100vh Sumi-e Mountain Wallpaper behind Día X, Brief, and Radio
-    const wallpaper = `<div class="mountain-stage mountain-fullscreen" data-biome="${campBiome.id}">
-      ${expedition.svgMarkup(campBiome.offset, campBiome.point, state.history || [], false, couple, state.votes, record, lang, { stage: campIdx })}
+    const wallpaper = `<div class="mountain-stage mountain-fullscreen" data-biome="${activeBiome || 'none'}">
+      ${expedition.svgMarkup(campBiome.offset, campBiome.point, state.history || [], false, couple, state.votes, record, lang, { stage: campIdx, activeBiome })}
     </div>`;
 
     let panel = '';
@@ -402,6 +404,8 @@
     function summit() {
       state.summit = true;
       state.phase = 'summit';
+      state.hasEnteredCamp = true;
+      state.activeBiome = 'summit';
       state.irlDay = 0;
       state.stepAt = 0;
       state.view = viewName('current', langOf(state), state.irlDay);
@@ -422,6 +426,7 @@
         if (a === 'doubt') {
           state.advisorDoubts.push(b.dataset.doubt || '');
         } else if (a === 'nav') {
+          state.openOverlay = null;
           state.view = b.dataset.view;
           const vk = viewKey(state.view);
           if (vk === 'brief' && expedition.SherpasAI) {
@@ -432,7 +437,7 @@
             }, { mode: 'deterministic' });
           }
           if (vk === 'expedition' || vk === 'overview') {
-            if (state.summit || vk === 'overview') {
+            if (state.summit || vk === 'overview' || !state.hasEnteredCamp) {
               state.cameraMode = 'panoramic';
               state.dialogVisible = false;
               state.initialViewBox = expedition.fullCamera.slice();
@@ -449,6 +454,7 @@
           state.view = viewName(viewKey(state.view), state.lang, state.irlDay);
         } else if (a === 'repeat') {
           const lang = state.lang;
+          if (expedition.ProfileEvalStore) expedition.ProfileEvalStore.clear(state.caseId);
           state = initial(state.caseId);
           state.lang = lang;
         } else if (a === 'day') {
@@ -544,13 +550,14 @@
         if (p) p.textContent = expedition.preview(state, expedition.localizeData(dataFor(state.caseId), langOf(state)), r.value);
       });
     }
+    const unbindOverlay = expedition.bindOverlayDismiss ? expedition.bindOverlayDismiss(el, () => state, render) : () => {};
     attachRoom();
     render();
     return {
       getState: () => state,
       setState(next) { state = next; attachRoom(); render(); return state; },
       dispatch(a, v) {
-        if (a === 'nav') state.view = v;
+        if (a === 'nav') { state.openOverlay = null; state.view = v; }
         else if (a === 'mode') state.mode = v;
         else if (a === 'lang') {
           state.lang = v === 'EN' ? 'EN' : 'ES';
@@ -559,6 +566,8 @@
         } else if (a === 'summit') {
           state.summit = true;
           state.phase = 'summit';
+          state.hasEnteredCamp = true;
+          state.activeBiome = 'summit';
           state.view = viewName('current', langOf(state), state.irlDay);
         }
         render();
@@ -566,6 +575,7 @@
       },
       unmount() {
         if (unsubRoom) { try { unsubRoom(); } catch (_) {} unsubRoom = null; }
+        unbindOverlay();
         el.innerHTML = '';
         if (root.document && root.document.body) root.document.body.classList.remove('is-mountain-viewport');
       }

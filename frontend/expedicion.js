@@ -242,6 +242,58 @@
   ];
   const biome = (i, lang) => Object.assign({}, biomes[i], { label: biomes[i][lang] });
 
+  const BIOME_ASSETS = {
+    forest: 'assets/mountain-biome-forest.jpg',
+    rock: 'assets/mountain-biome-rock.jpg',
+    snow: 'assets/mountain-biome-snow.jpg',
+    summit: 'assets/mountain-biome-summit.jpg'
+  };
+  const BIOME_ORDER = ['forest', 'rock', 'snow', 'summit'];
+  let biomePreloaded = false;
+  function preloadBiomeAssets() {
+    if (biomePreloaded || !root || typeof root.Image !== 'function') return;
+    biomePreloaded = true;
+    BIOME_ORDER.forEach(id => {
+      try {
+        const img = new root.Image();
+        img.decoding = 'async';
+        img.src = BIOME_ASSETS[id];
+      } catch (_) {}
+    });
+  }
+  preloadBiomeAssets();
+
+  function resolveActiveBiome(state) {
+    if (!state) return null;
+    if (state.summit || state.phase === 'summit') return 'summit';
+    if (state.phase === 'fears' || state.phase === 'cross') return null;
+    if (!state.hasEnteredCamp && !(Number(state.stage) > 0)) return null;
+    const idx = Math.max(0, Math.min(3, Number(state.stage) || 0));
+    return biomes[idx] ? biomes[idx].id : null;
+  }
+
+  function applyBiomeToDom(el, biomeId) {
+    if (!el || !el.querySelector) return;
+    const normalized = biomeId && BIOME_ASSETS[biomeId] ? biomeId : null;
+    const stageEl = el.querySelector('.mountain-stage');
+    if (stageEl) stageEl.dataset.biome = normalized || 'none';
+    const baseImg = el.querySelector('#sumiMountainArt');
+    if (baseImg) baseImg.classList.toggle('is-covered', !!normalized);
+    el.querySelectorAll('.mountain-biome-layer').forEach(img => {
+      img.classList.toggle('is-active', !!normalized && img.dataset.biomeLayer === normalized);
+    });
+  }
+
+  function scheduleBiomeCrossfade(el, nextBiome) {
+    if (!hasRaf() || !el) return;
+    const raf = root.requestAnimationFrame;
+    raf(() => {
+      raf(() => {
+        applyBiomeToDom(el, nextBiome);
+      });
+    });
+  }
+
   const specs = {
     'michael-carter': {
       ES: { people: ['Michael'], blocked: 'Consulta el registro anual del plan para ver el punto documentado.', reframe: 'Prioriza tu colchón líquido, un seguro extra ante imprevistos y sacar menos dinero de tus ahorros al año.', pact: 'Ordenar tarjeta, seguro extra y cuánto sacas de tus ahorros al año.', events: [] },
@@ -1795,9 +1847,11 @@
       aiBrief: null,
       stage: 0,
       focusedNode: 0,
+      hasEnteredCamp: false,
+      activeBiome: null,
       inspectedRisk: null,
-      cameraMode: 'camp',
-      dialogVisible: true,
+      cameraMode: 'panoramic',
+      dialogVisible: false,
       blocked: false,
       history: [],
       advisorDoubts: [],
@@ -1913,14 +1967,9 @@
         <text x="0" y="9.5" text-anchor="middle" font-size="3.6" font-family="system-ui" font-weight="600" fill="#141414" opacity=".82">${esc(shortLabels[2])} · 6,900m</text>
       </g>`,
       `<g class="micro-camp ${activeStage === 3 ? 'is-active' : ''}" data-action="focus-node" data-node="3" transform="translate(858 145)">
-        <circle class="camp-hit" cx="8" cy="-12" r="24" fill="transparent"/>
+        <circle class="camp-hit" cx="0" cy="0" r="18" fill="transparent"/>
         <circle class="camp-beacon" cx="0" cy="0" r="7.5"/>
-        <g class="sherpas-flag" aria-label="Sherpas">
-          <path d="M 0 1 V -40" fill="none" stroke="#141414" stroke-width="1.35" stroke-linecap="round"/>
-          <path d="M 0.5 -39 L 44 -28.5 L 0.5 -16 Z" fill="#141414"/>
-          <path d="M 7.5 -27.5 L 14 -32.8 L 20.5 -27.5 L 14 -22.5 Z" fill="#ffffff"/>
-          <text x="5.5" y="-19.5" fill="#ffffff" font-size="4.6" font-family="system-ui" font-weight="700" letter-spacing=".6">SHERPAS</text>
-        </g>
+        <circle cx="0" cy="0" r="2.2" fill="#141414" opacity=".82"/>
         <text x="0" y="9.5" text-anchor="middle" font-size="3.6" font-family="system-ui" font-weight="700" fill="#141414" opacity=".88">${esc(shortLabels[3])} · 8,848m</text>
       </g>`
     ].join('');
@@ -1946,7 +1995,15 @@
           <circle cx="0" cy="0" r="3.1" fill="#141414" stroke="#ffffff" stroke-width="1.2"/>
         </g>`;
 
-    return `<svg class="mountain-svg" data-camera="mountain" viewBox="${initialBox}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${lang === 'EN' ? 'Sumi-e mountain route with Sherpas summit flag' : 'Ruta de montaña sumi-e con bandera Sherpas en la cima'}">
+    const activeBiome = (opts && Object.prototype.hasOwnProperty.call(opts, 'activeBiome'))
+      ? (opts.activeBiome && BIOME_ASSETS[opts.activeBiome] ? opts.activeBiome : null)
+      : null;
+    const biomeLayers = BIOME_ORDER.map(id => {
+      const isActive = activeBiome === id;
+      return `<image id="biomeLayer-${id}" class="mountain-biome-layer${isActive ? ' is-active' : ''}" data-biome-layer="${id}" href="${BIOME_ASSETS[id]}" x="0" y="38" width="1200" height="675" preserveAspectRatio="xMidYMid meet"/>`;
+    }).join('\n        ');
+
+    return `<svg class="mountain-svg" data-camera="mountain" viewBox="${initialBox}" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${lang === 'EN' ? 'Sumi-e mountain expedition route' : 'Ruta de montaña sumi-e de la expedición'}">
       <defs>
         <filter id="dryBrush" x="-5%" y="-5%" width="110%" height="110%">
           <feTurbulence type="fractalNoise" baseFrequency="0.045" numOctaves="3" result="noise"/>
@@ -1954,7 +2011,8 @@
         </filter>
       </defs>
       <g id="cameraRig">
-        <image id="sumiMountainArt" href="assets/mountain-sumi.jpg" x="0" y="38" width="1200" height="675" preserveAspectRatio="xMidYMid meet" style="mix-blend-mode:multiply;filter:grayscale(100%) contrast(1.12);pointer-events:none;"/>
+        <image id="sumiMountainArt" class="mountain-art-base${activeBiome ? ' is-covered' : ''}" href="assets/mountain-sumi.jpg" x="0" y="38" width="1200" height="675" preserveAspectRatio="xMidYMid meet"/>
+        ${biomeLayers}
         <path class="route-guide" d="${TRAIL_PATH}" stroke-width="1.4" filter="url(#dryBrush)"/>
         <path id="activeTrail" class="route-ink" d="${TRAIL_PATH}" stroke-width="2.5" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" filter="url(#dryBrush)"/>
         ${partners}
@@ -1977,51 +2035,444 @@
     return `<div class="preview"><p>${es ? 'Proyección anual: activos invertibles y patrimonio neto' : 'Yearly projection: investable assets and net worth'}</p><svg class="yearly-chart" viewBox="0 0 600 200" role="img" aria-label="${es ? 'Comparación anual entre activos invertibles y patrimonio neto' : 'Yearly comparison of investable assets and net worth'}"><path d="M20 ${y(0)} H580" fill="none" stroke="#94a3b8" stroke-dasharray="4 4"/><text x="24" y="${y(0) - 5}" fill="#64748b" font-size="12">$0</text><path d="${line('investable_assets')}" fill="none" stroke="#4565d6" stroke-width="3"/><path d="${line('net_worth')}" fill="none" stroke="#0d9488" stroke-width="3"/></svg><p>${es ? 'Azul: activos invertibles · Verde: patrimonio neto' : 'Blue: investable assets · Green: net worth'} · ${esc(sample[0].year)}–${esc(sample[sample.length - 1].year)}</p></div>`;
   }
 
-  const pillarShortCode = (pillarName, idx, lang) => {
-    const p = String(pillarName || '').toLowerCase();
-    if (p.includes('cash') || p.includes('ahorro') || p.includes('flujo')) return lang === 'EN' ? 'CF' : 'CF';
-    if (p.includes('debt') || p.includes('deuda')) return 'DB';
-    if (p.includes('inv')) return 'IN';
-    if (p.includes('liq')) return 'LQ';
-    if (p.includes('insur') || p.includes('segur') || p.includes('prot')) return 'PR';
-    return ['CF', 'DB', 'IN', 'LQ', 'PR'][idx] || `P${idx + 1}`;
+  const formatUSD = n => {
+    const num = Math.round(Number(n) || 0);
+    return `${num < 0 ? '-' : ''}$${Math.abs(num).toLocaleString('en-US')}`;
   };
+
+  const formatRatePct = rate => {
+    const pct = Number(rate) * 100;
+    if (!Number.isFinite(pct) || pct <= 0) return '0%';
+    const rounded = Math.round(pct * 10) / 10;
+    return `${Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1)}%`;
+  };
+
+  const PILLAR_META = [
+    { key: 'liquidity', match: /liq/i, ES: 'Liquidez', EN: 'Liquidity' },
+    { key: 'cashflow', match: /cash|sav/i, ES: 'Flujo de caja', EN: 'Cash flow' },
+    { key: 'debt', match: /debt/i, ES: 'Deuda', EN: 'Debt' },
+    { key: 'protection', match: /insur|prot/i, ES: 'Protección', EN: 'Protection' },
+    { key: 'investments', match: /inv/i, ES: 'Inversión', EN: 'Investments' }
+  ];
+
+  function canonicalPillarKey(name) {
+    const s = String(name || '');
+    const found = PILLAR_META.find(m => m.match.test(s));
+    return found ? found.key : 'investments';
+  }
+
+  function explainerSection(explainer, heading) {
+    if (!explainer) return '';
+    const re = new RegExp(`##\\s*${heading}\\s*\\n([\\s\\S]*?)(?=\\n##\\s|$)`, 'i');
+    const m = String(explainer).match(re);
+    return m ? m[1] : '';
+  }
+
+  function pillarSubline(key, data, lang) {
+    const es = lang !== 'EN';
+    const exp = (data && data.score && data.score.explainer) || '';
+    const facts = (data && data.facts) || {};
+    const ratios = facts.ratios || {};
+    const prot = facts.protection || {};
+
+    if (key === 'liquidity') {
+      const sec = explainerSection(exp, 'Liquidity');
+      const mCashAndLiq = sec.match(/about\s+([\d.]+)\s+months[\s\S]*?total liquid assets cover about\s+([\d.]+)\s+months/i);
+      if (mCashAndLiq) {
+        return es
+          ? `${mCashAndLiq[1]} meses en caja · ${mCashAndLiq[2]} meses líquidos`
+          : `${mCashAndLiq[1]} months in cash · ${mCashAndLiq[2]} liquid months`;
+      }
+      const mAfterGoals = sec.match(/covering\s+([\d.]+)\s+months[\s\S]*?falls to\s+([\d.]+)\s+months/i);
+      if (mAfterGoals) {
+        return es
+          ? `${mAfterGoals[1]} meses en caja · ${mAfterGoals[2]} tras metas`
+          : `${mAfterGoals[1]} months in cash · ${mAfterGoals[2]} after goals`;
+      }
+      const mThin = sec.match(/Cash is\s+(\$[\d,]+),\s+about\s+([\d.]+)\s+months/i);
+      if (mThin) {
+        return es
+          ? `${mThin[2]} meses en caja (${mThin[1]})`
+          : `${mThin[2]} months in cash (${mThin[1]})`;
+      }
+      const ef = ratios.emergencyFund || {};
+      const months = ef.emergencyFundMonths != null ? ef.emergencyFundMonths : (prot.emergencyFund && prot.emergencyFund.emergencyFundCoverageEvaluation && prot.emergencyFund.emergencyFundCoverageEvaluation.monthsCovered);
+      const cashAmt = ef.emergencyFund != null ? ef.emergencyFund : (prot.emergencyFund && prot.emergencyFund.cashAndExpensesOverview && prot.emergencyFund.cashAndExpensesOverview.cashReserves);
+      const minM = ef.minRecommendedEFMonths;
+      if (months != null) {
+        const mNum = Number(months);
+        const mWord = es ? (mNum === 1 ? 'mes' : 'meses') : (mNum === 1 ? 'month' : 'months');
+        const targetPart = minM ? (es ? ` vs. ${minM} meses` : ` vs. ${minM} months`) : '';
+        return es
+          ? `${months} ${mWord} en caja (${formatUSD(cashAmt)})${targetPart}`
+          : `${months} ${mWord} in cash (${formatUSD(cashAmt)})${targetPart}`;
+      }
+      return '';
+    }
+
+    if (key === 'cashflow') {
+      const sec = explainerSection(exp, 'Cash flow');
+      const mRet = sec.match(/Retirement saving is about\s+([\d.]+%)\s+of income/i);
+      if (mRet) {
+        return es ? `${mRet[1]} de ingresos a jubilación` : `${mRet[1]} of income to retirement`;
+      }
+      const mDraw = sec.match(/Withdrawals run at about\s+([\d.]+%)\s+of investable assets[\s\S]*?([\d.]+%)\s+sustainable/i);
+      if (mDraw) {
+        return es ? `Retiros al ${mDraw[1]} vs. ${mDraw[2]} sostenible` : `${mDraw[1]} withdrawals vs. ${mDraw[2]} sustainable`;
+      }
+      const mSavNone = sec.match(/savings rate is\s+([\d.]+%),\s+but retirement accounts receive none/i);
+      if (mSavNone) {
+        return es ? `Ahorro ${mSavNone[1]} · 0% a jubilación` : `${mSavNone[1]} savings rate · 0% to retirement`;
+      }
+      const sl = ratios.savingsLevel || {};
+      if (sl.ratio != null) {
+        const pct = (Number(sl.ratio) * 100).toFixed(1).replace(/\.0$/, '');
+        return es
+          ? `Ahorro ${pct}% (${formatUSD(sl.savingAmount)}/año)`
+          : `${pct}% savings (${formatUSD(sl.savingAmount)}/yr)`;
+      }
+      return '';
+    }
+
+    if (key === 'debt') {
+      const sec = explainerSection(exp, 'Debt');
+      if (/has no debt/i.test(sec)) {
+        return es ? 'Sin deudas · DTI 0%' : 'No debt · 0% DTI';
+      }
+      const mUseApr = sec.match(/revolving use is\s+([\d.]+%)\s+at an\s+([\d.]+%)\s+rate/i);
+      if (mUseApr) {
+        return es ? `Tarjeta al ${mUseApr[2]} (${mUseApr[1]} de uso)` : `Card at ${mUseApr[2]} APR (${mUseApr[1]} use)`;
+      }
+      const mApr = sec.match(/revolving card balance at\s+([\d.]+%)\s+APR/i);
+      if (mApr) {
+        return es ? `Pagos manejables · tarjeta al ${mApr[1]}` : `Manageable payments · ${mApr[1]} APR card`;
+      }
+      const dti = ratios.debtToIncome && ratios.debtToIncome.debtOnlyDti != null
+        ? `${(Number(ratios.debtToIncome.debtOnlyDti) * 100).toFixed(1).replace(/\.0$/, '')}%`
+        : null;
+      const debts = ((facts.debtManagement && facts.debtManagement.listOfDebts) || []).slice(1).filter(r => Number(r[2]) > 0);
+      const topApr = debts.reduce((max, r) => Math.max(max, Number(r[3]) || 0), 0);
+      if (debts.length === 0) return es ? 'Sin deudas · DTI 0%' : 'No debt · 0% DTI';
+      if (dti && topApr >= 0.15) {
+        return es ? `DTI ${dti} · tarjeta al ${formatRatePct(topApr)}` : `${dti} DTI · ${formatRatePct(topApr)} APR card`;
+      }
+      if (dti) return es ? `DTI ${dti}` : `${dti} DTI`;
+      return '';
+    }
+
+    if (key === 'investments') {
+      const sec = explainerSection(exp, 'Investing');
+      const mVti = sec.match(/VTI[^\n]*?([\d.]+%)\s+of investable assets/i);
+      const mGlide = sec.match(/Growth assets are about\s+([\d.]+%)[\s\S]*?([\d.]+%)\s+glide target/i);
+      if (mVti && mGlide) {
+        return es
+          ? `VTI ${mVti[1]} · ${mGlide[1]} crecimiento vs. ${mGlide[2]} objetivo`
+          : `VTI ${mVti[1]} · ${mGlide[1]} growth vs. ${mGlide[2]} target`;
+      }
+      const mMix = sec.match(/invested mix is about\s+([\d.]+%)\s+growth/i);
+      if (mVti && mMix) {
+        return es
+          ? `VTI ${mVti[1]} · ${mMix[1]} en crecimiento`
+          : `VTI ${mVti[1]} · ${mMix[1]} growth mix`;
+      }
+      if (mVti && /Growth is a large share/i.test(sec)) {
+        return es
+          ? `VTI ${mVti[1]} · alta exposición a crecimiento`
+          : `VTI ${mVti[1]} · high growth exposure`;
+      }
+      const invAmt = ratios.investableAssetLevel && ratios.investableAssetLevel.investableAssets;
+      const eqTarget = facts.assetsAndInvestments && facts.assetsAndInvestments.retirementGlidePath && facts.assetsAndInvestments.retirementGlidePath.retirementGlideEquityForClient;
+      if (invAmt != null && eqTarget != null) {
+        const eqPct = `${Math.round(Number(eqTarget) * 100)}%`;
+        return es
+          ? `${formatUSD(invAmt)} invertidos · objetivo ${eqPct} acciones`
+          : `${formatUSD(invAmt)} invested · ${eqPct} equity target`;
+      }
+      return '';
+    }
+
+    if (key === 'protection') {
+      const sec = explainerSection(exp, 'Protection');
+      const mMort = sec.match(/([\d.]+%)\s+mortality ratio|mortality ratio is\s+([\d.]+%)/i);
+      const mortPct = mMort ? (mMort[1] || mMort[2]) : null;
+      const noUmbrella = /no umbrella|none now/i.test(sec);
+      const hasUmbrella = /umbrella policy is in place/i.test(sec);
+      const uninsuredHome = /home[\s\S]*?uninsured/i.test(sec);
+      if (mortPct && hasUmbrella && uninsuredHome) {
+        return es
+          ? `Vida ${mortPct} + paraguas · hogar/auto sin póliza`
+          : `Life ${mortPct} + umbrella · home/auto uninsured`;
+      }
+      if (mortPct && noUmbrella) {
+        return es
+          ? `Cobertura vida al ${mortPct} · sin paraguas`
+          : `Life cover at ${mortPct} · no umbrella`;
+      }
+      const li = ratios.lifeInsurance || {};
+      const cov = (Number(li.clientCoverage) || 0) + (Number(li.coClientCoverage) || 0);
+      const rec = (Number(li.recommendedClientMinCoverage) || 0) + (Number(li.recommendedCoClientMinCoverage) || 0);
+      const umb = ratios.umbrella || {};
+      const hasU = Number(umb.currentCoverage) > 0;
+      if (rec > 0) {
+        const pct = `${Math.round((cov / rec) * 100)}%`;
+        return es
+          ? `Cobertura vida al ${pct} · ${hasU ? 'con paraguas' : 'sin paraguas'}`
+          : `Life cover at ${pct} · ${hasU ? 'umbrella active' : 'no umbrella'}`;
+      }
+      return '';
+    }
+    return '';
+  }
+
+  function shortDebtLabel(rawName, rawType, lang) {
+    const es = lang !== 'EN';
+    const name = String(rawName || '').trim();
+    const type = String(rawType || '').toLowerCase();
+    if (/mortgage/i.test(type) || /mortgage/i.test(name)) return es ? 'Hipoteca' : 'Mortgage';
+    if (/student/i.test(type) || /student/i.test(name)) return es ? 'Estudios' : 'Student loan';
+    if (/vehicle/i.test(type) || /\b(tesla|bmw|toyota|car|auto)\b/i.test(name)) return es ? 'Vehículo' : 'Vehicle loan';
+    if (/credit card/i.test(type) || /\bcc\b/i.test(name)) {
+      if (/^chase\s+cc$/i.test(name)) return es ? 'Tarjeta Chase' : 'Chase card';
+      return name;
+    }
+    return name || (es ? 'Deuda' : 'Debt');
+  }
+
+  function backpackIconSvg(size) {
+    const s = size || 18;
+    return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M9 6V5a3 3 0 0 1 6 0v1"/>
+      <path d="M6 10a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v9a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2v-9Z"/>
+      <path d="M6 13H4.5A1.5 1.5 0 0 0 3 14.5v3A1.5 1.5 0 0 0 4.5 19H6"/>
+      <path d="M18 13h1.5a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5H18"/>
+      <path d="M9 10h6"/>
+      <rect x="9" y="13.5" width="6" height="4.5" rx="1"/>
+    </svg>`;
+  }
+
+  function renderPackPopover(state, data) {
+    const lang = langOf(state);
+    const es = lang !== 'EN';
+    const facts = (data && data.facts) || {};
+    const nw = facts.netWorthStatement || {};
+    const netTotal = (nw.netWorth && nw.netWorth.total) || 0;
+    const assetsObj = nw.assets || {};
+    const assetsTotal = assetsObj.total || 0;
+    const liabObj = nw.liabilities || {};
+    const liabTotal = liabObj.total || 0;
+
+    const byName = {};
+    let otherAssets = 0;
+    (assetsObj.items || []).forEach(item => {
+      const val = Number(item && item.total) || 0;
+      if (val <= 0) return;
+      if (item.name === 'Cash account' || item.name === 'Investment account' || item.name === 'Real estate') {
+        byName[item.name] = (byName[item.name] || 0) + val;
+      } else {
+        otherAssets += val;
+      }
+    });
+
+    const assetRows = [
+      { label: es ? 'Efectivo' : 'Cash', val: byName['Cash account'] || 0 },
+      { label: es ? 'Inversiones' : 'Investments', val: byName['Investment account'] || 0 },
+      { label: es ? 'Vivienda' : 'Real estate', val: byName['Real estate'] || 0 },
+      { label: es ? 'Vehículos y otros' : 'Vehicles & other', val: otherAssets }
+    ].filter(r => r.val > 0);
+
+    const rawDebts = ((facts.debtManagement && facts.debtManagement.listOfDebts) || []).slice(1);
+    const activeDebts = rawDebts
+      .map(r => ({
+        name: shortDebtLabel(r[0], r[1], lang),
+        balance: Number(r[2]) || 0,
+        rate: Number(r[3]) || 0
+      }))
+      .filter(d => d.balance > 0)
+      .sort((a, b) => b.balance - a.balance);
+
+    const debtRowsHtml = activeDebts.length
+      ? activeDebts.map(d => {
+          const rateCls = d.rate >= 0.15 ? 'pack-apr is-high-apr' : 'pack-apr';
+          return `<div class="pack-row">
+            <span class="pack-row-label">${esc(d.name)} <span class="pack-sep">·</span> <span class="${rateCls}">${esc(formatRatePct(d.rate))}</span></span>
+            <span class="pack-row-val">${esc(formatUSD(d.balance))}</span>
+          </div>`;
+        }).join('')
+      : `<div class="pack-row is-empty">
+          <span class="pack-row-label">${es ? 'Sin deudas pendientes' : 'No outstanding debt'}</span>
+          <span class="pack-row-val">$0</span>
+        </div>`;
+
+    const cf = facts.cashflowStatement || {};
+    const inflowsTotal = (cf.inflows && cf.inflows.total) || 0;
+    const savingsItem = ((cf.outflows && cf.outflows.items) || []).find(it => it && it.name === 'Savings');
+    const savingsTotal = (savingsItem && Number(savingsItem.total)) || 0;
+    const yrSuffix = es ? '/año' : '/yr';
+    const footerParts = [`${es ? 'Ingresos' : 'Income'} ${formatUSD(inflowsTotal)}${yrSuffix}`];
+    if (savingsTotal > 0) {
+      footerParts.push(`${es ? 'Ahorro' : 'Savings'} ${formatUSD(savingsTotal)}${yrSuffix}`);
+    }
+
+    return `<div class="pack-popover" role="dialog" aria-label="${es ? 'Tu mochila · Balance real' : 'Your pack · Real balance'}" data-overlay="pack">
+      <div class="pack-head">
+        <div class="pack-title-wrap">
+          ${backpackIconSvg(18)}
+          <span class="pack-title">${es ? 'Tu mochila' : 'Your pack'}</span>
+        </div>
+        <div class="pack-net">
+          <span class="pack-net-kicker">${es ? 'Patrimonio neto' : 'Net worth'}</span>
+          <span class="pack-net-val"><span class="pack-net-prefix">${es ? 'Neto' : 'Net'}</span> <strong>${esc(formatUSD(netTotal))}</strong></span>
+        </div>
+      </div>
+      <div class="pack-section">
+        <div class="pack-section-head">
+          <span>${es ? 'Lo que tienes' : 'What you own'}</span>
+          <strong>${esc(formatUSD(assetsTotal))}</strong>
+        </div>
+        <div class="pack-rows">
+          ${assetRows.map(r => `<div class="pack-row">
+            <span class="pack-row-label">${esc(r.label)}</span>
+            <span class="pack-row-val">${esc(formatUSD(r.val))}</span>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div class="pack-section">
+        <div class="pack-section-head">
+          <span>${es ? 'Lo que debes' : 'What you owe'}</span>
+          <strong>${esc(formatUSD(liabTotal))}</strong>
+        </div>
+        <div class="pack-rows">
+          ${debtRowsHtml}
+        </div>
+      </div>
+      <div class="pack-footer">${esc(footerParts.join(' · '))}</div>
+    </div>`;
+  }
+
+  function renderHealthModal(state, data) {
+    const lang = langOf(state);
+    const es = lang !== 'EN';
+    const household = (data && data.meta && data.meta.household) || state.caseId;
+    const score = (data && data.score) || {};
+    const published = score.published_score != null ? score.published_score : 0;
+
+    const byKey = {};
+    (score.pillars || []).forEach(p => {
+      byKey[canonicalPillarKey(p.pillar)] = Math.max(0, Math.min(100, Number(p.score) || 0));
+    });
+
+    const radarItems = PILLAR_META.map(m => ({
+      key: m.key,
+      label: m[lang],
+      score: byKey[m.key] != null ? byKey[m.key] : 0,
+      subline: pillarSubline(m.key, data, lang)
+    }));
+
+    const cx = 190;
+    const cy = 158;
+    const maxR = 98;
+    const pt = (idx, frac) => {
+      const angle = (-90 + idx * 72) * (Math.PI / 180);
+      return [cx + Math.cos(angle) * maxR * frac, cy + Math.sin(angle) * maxR * frac];
+    };
+    const ringPolys = [0.2, 0.4, 0.6, 0.8, 1].map(f => {
+      const pts = [0, 1, 2, 3, 4].map(i => pt(i, f).map(v => v.toFixed(1)).join(',')).join(' ');
+      return `<polygon points="${pts}" fill="none" stroke="#E2E8F0" stroke-width="1"/>`;
+    }).join('');
+    const axesLines = [0, 1, 2, 3, 4].map(i => {
+      const [x, y] = pt(i, 1);
+      return `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E2E8F0" stroke-width="1"/>`;
+    }).join('');
+
+    const dataPts = radarItems.map((it, i) => pt(i, it.score / 100));
+    const dataPoly = dataPts.map(p => p.map(v => v.toFixed(1)).join(',')).join(' ');
+    const dataDots = dataPts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="#4A5D75"/>`).join('');
+
+    const labelCoords = [
+      { dx: 0, dy: -14, anchor: 'middle' },
+      { dx: 12, dy: 4, anchor: 'start' },
+      { dx: 8, dy: 18, anchor: 'start' },
+      { dx: -8, dy: 18, anchor: 'end' },
+      { dx: -12, dy: 4, anchor: 'end' }
+    ];
+    const radarLabels = radarItems.map((it, i) => {
+      const [vx, vy] = pt(i, 1);
+      const cfg = labelCoords[i];
+      return `<text x="${(vx + cfg.dx).toFixed(1)}" y="${(vy + cfg.dy).toFixed(1)}" text-anchor="${cfg.anchor}" class="health-radar-label">${esc(it.label)}</text>`;
+    }).join('');
+
+    const sortedPillars = radarItems.slice().sort((a, b) => b.score - a.score);
+    const listHtml = sortedPillars.map(it => {
+      const dotColor = it.score >= 75 ? '#2E9E75' : it.score >= 45 ? '#D4A04A' : '#E07A68';
+      return `<li class="health-pillar-item">
+        <div class="health-pillar-main">
+          <span class="health-dot" style="background:${dotColor}" aria-hidden="true"></span>
+          <span class="health-pillar-name">${esc(it.label)}</span>
+          <span class="health-pillar-score">${esc(it.score)}</span>
+        </div>
+        ${it.subline ? `<p class="health-pillar-sub">${esc(it.subline)}</p>` : ''}
+      </li>`;
+    }).join('');
+
+    return `<div class="health-modal-backdrop" data-overlay="health" role="dialog" aria-modal="true" aria-label="${esc(household)} · ${es ? 'Salud financiera' : 'Financial health'}">
+      <div class="health-modal-card">
+        <div class="health-modal-head">
+          <h2 class="health-modal-title">${esc(household)} <span class="health-title-sep">·</span> ${es ? 'Salud financiera' : 'Financial health'}</h2>
+          <div class="health-modal-head-right">
+            <span class="health-score-badge"><strong>${esc(published)}</strong> <span>/ 100</span></span>
+            <button type="button" class="health-close-btn" data-action="close-overlay" aria-label="${es ? 'Cerrar' : 'Close'}">×</button>
+          </div>
+        </div>
+        <div class="health-modal-body">
+          <div class="health-radar-col">
+            <svg class="health-radar-svg" viewBox="0 0 380 310" role="img" aria-label="${es ? 'Pentágono de 5 pilares de salud financiera' : '5-pillar financial health radar'}">
+              ${ringPolys}
+              ${axesLines}
+              <polygon points="${dataPoly}" fill="rgba(74, 93, 117, 0.28)" stroke="#4A5D75" stroke-width="1.75" stroke-linejoin="round"/>
+              ${dataDots}
+              ${radarLabels}
+            </svg>
+          </div>
+          <ul class="health-pillars-list">
+            ${listHtml}
+          </ul>
+        </div>
+      </div>
+    </div>`;
+  }
 
   function renderHeader(state, data) {
     const lang = langOf(state);
-    const score = (data && data.score) || {};
+    const es = lang !== 'EN';
     const view = viewKey(state.view);
     const basecampActive = view === 'expedition' || view === 'overview';
     const dayActive = view === 'current';
     const briefActive = view === 'brief';
     const radioActive = view === 'radio';
+    const packOpen = state.openOverlay === 'pack';
+    const healthOpen = state.openOverlay === 'health';
     const options = ids.map(id => `<option value="${id}" ${id === state.caseId ? 'selected' : ''}>${esc(((dataFor(id) || {}).meta || {}).household || id)}</option>`).join('');
-
-    const microPillars = (score.pillars || []).slice(0, 5).map((p, idx) => {
-      const val = Math.max(0, Math.min(100, Number(p.score) || 0));
-      const tone = val >= 70 ? 'is-ok' : val >= 40 ? 'is-warn' : 'is-danger';
-      const code = pillarShortCode(p.pillar, idx, lang);
-      const tip = `${p.pillar}: ${p.points_shown_in_app} (${val}%) · Score ${score.published_score ?? 0}/100`;
-      return `<div class="micro-pillar" tabindex="0" role="group" aria-label="${esc(tip)}" title="${esc(tip)}">
-        <span class="micro-pillar-code">${esc(code)}</span>
-        <span class="micro-bar"><span class="micro-bar-fill ${tone}" style="width:${val}%"></span></span>
-        <div class="micro-pillar-popover">
-          <strong>${esc(p.pillar)}</strong><br>
-          <span>${esc(p.points_shown_in_app)} · ${val}%</span><br>
-          <span>${lang === 'EN' ? 'Plan score' : 'Score global'}: ${esc(score.published_score ?? 0)}/100</span>
-        </div>
-      </div>`;
-    }).join('');
 
     const currentLabel = dayLabel(lang, state.irlDay);
     const briefTitle = words[lang].brief;
     const radioTitle = words[lang].radio;
+    const packAria = es ? 'Tu mochila · Balance real' : 'Your pack · Real balance';
+    const healthLabel = es ? 'Salud' : 'Health';
 
     return `<header class="site-header header-floating">
       <a class="brand" href="#" data-action="nav" data-view="Basecamp">sherpas</a>
       <select class="case-select" aria-label="${t(state, 'select')}" data-case>${options}</select>
-      <div class="micro-pillars" aria-label="${t(state, 'plan')} · ${esc(score.published_score ?? 0)}/100">${microPillars}</div>
+      <div class="pack-anchor">
+        <button type="button" class="pack-btn ${packOpen ? 'is-active' : ''}" data-action="toggle-pack" aria-expanded="${packOpen ? 'true' : 'false'}" aria-haspopup="dialog" aria-label="${esc(packAria)}" title="${esc(packAria)}">
+          ${backpackIconSvg(18)}
+        </button>
+        ${packOpen ? renderPackPopover(state, data) : ''}
+      </div>
       <nav class="site-nav" aria-label="${t(state, 'nav')}">
+        <button type="button" class="health-pill-btn ${healthOpen ? 'is-active' : ''}" data-action="toggle-health" aria-expanded="${healthOpen ? 'true' : 'false'}" aria-haspopup="dialog">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>
+          <span>${esc(healthLabel)}</span>
+        </button>
         <button class="nav-tab ${basecampActive ? 'active' : ''}" data-action="nav" data-view="Basecamp">Basecamp</button>
         <button class="nav-tab ${dayActive ? 'active' : ''}" data-action="nav" data-view="${esc(currentLabel)}">${esc(currentLabel)}</button>
         <button class="nav-icon-btn ${briefActive ? 'active' : ''}" data-action="nav" data-view="${esc(briefTitle)}" title="${esc(briefTitle)}" aria-label="${esc(briefTitle)}">
@@ -2035,7 +2486,7 @@
         <button data-action="lang" data-lang="ES" class="${lang === 'ES' ? 'active' : ''}">ES</button>
         <button data-action="lang" data-lang="EN" class="${lang === 'EN' ? 'active' : ''}">EN</button>
       </div>
-    </header>`;
+    </header>${healthOpen ? renderHealthModal(state, data) : ''}`;
   }
 
   function renderRiskInspectionCard(state, data, persona, s, riskIdx) {
@@ -2337,8 +2788,12 @@
       }
     }
 
-    const wallpaper = `<div class="mountain-stage mountain-fullscreen ${state.blocked ? 'storm-shake' : ''}" data-biome="${stage.id}" data-dialog-ready="${dialogVisible ? 'true' : 'false'}">
-      ${svgMarkup(state.summit ? 0 : stage.offset, state.summit ? biomes[3].point : stage.point, state.history || [], state.blocked, couple, state.votes, fail, lang, { stage: state.summit ? 3 : stageIdx, initialViewBox: initBox, inspectedRisk: activeRiskIdx, people: s.people })}
+    const resolvedBiome = resolveActiveBiome(state);
+    const hasTransitionFrom = hasRaf() && Object.prototype.hasOwnProperty.call(state, '_biomeTransitionFrom');
+    const renderedBiome = hasTransitionFrom ? state._biomeTransitionFrom : resolvedBiome;
+
+    const wallpaper = `<div class="mountain-stage mountain-fullscreen ${state.blocked ? 'storm-shake' : ''}" data-biome="${renderedBiome || 'none'}" data-dialog-ready="${dialogVisible ? 'true' : 'false'}">
+      ${svgMarkup(state.summit ? 0 : stage.offset, state.summit ? biomes[3].point : stage.point, state.history || [], state.blocked, couple, state.votes, fail, lang, { stage: state.summit ? 3 : stageIdx, initialViewBox: initBox, inspectedRisk: activeRiskIdx, people: s.people, activeBiome: renderedBiome })}
     </div>`;
 
     const contrast = buildContrastSummary(state, data);
@@ -2935,10 +3390,14 @@
     const fromStage = Number(state.stage) || 0;
     const isSummitStep = fromStage >= 3;
     const toStage = isSummitStep ? 3 : fromStage + 1;
+    const nextBiome = biomes[toStage].id;
+    state.hasEnteredCamp = true;
+    state.activeBiome = nextBiome;
     state.inspectedRisk = null;
     state.roomWaiting = false;
     if (el && el.querySelector) hideDialogs(el, state);
     if (hasRaf() && svg) {
+      applyBiomeToDom(el, nextBiome);
       runCamera(svg, { type: 'advance', fromStage, toStage }, () => {
         if (isSummitStep) {
           setTimeout(() => {
@@ -3256,6 +3715,8 @@
       state.roomWaiting = false;
       state.stage = 0;
       state.focusedNode = 0;
+      state.hasEnteredCamp = false;
+      state.activeBiome = null;
       state.summit = false;
       state.blocked = false;
       state.history = [];
@@ -3264,24 +3725,24 @@
     }
 
     if (action === 'start-expedition') {
+      const targetStage = Math.max(0, Math.min(3, Number(state.stage) || 0));
       state.evaluationDone = true;
       ProfileEvalStore.save(state.caseId, state);
       state.phase = 'expedition';
+      state.hasEnteredCamp = false;
+      state.activeBiome = null;
       state.roomWaiting = false;
       state.roomAlignedBanner = false;
       state.view = viewName('expedition', langOf(state), state.irlDay);
-      state.cameraMode = 'camp';
-      state.focusedNode = state.stage || 0;
+      state.cameraMode = 'panoramic';
+      state.focusedNode = targetStage;
       state.inspectedRisk = null;
-      state.dialogVisible = !hasRaf();
-      state.initialViewBox = hasRaf() ? fullCamera.slice() : campCamera(state.focusedNode);
+      state.dialogVisible = false;
+      state.initialViewBox = fullCamera.slice();
       SherpasAI.request('reframe', strictCasePayload(state.caseId, langOf(state), state.stage, state), { mode: 'deterministic' });
       rerender();
+      state.initialViewBox = null;
       syncViewportClass();
-      if (hasRaf()) {
-        const svg = el.querySelector('.mountain-svg[data-camera]');
-        runCamera(svg, { type: 'enter', stage: state.focusedNode }, () => { state.initialViewBox = null; revealDialog(el, state); });
-      }
       return true;
     }
 
@@ -3385,19 +3846,48 @@
 
     if (action === 'focus-node' || action === 'focus-active') {
       const targetStage = action === 'focus-active' ? (Number(state.stage) || 0) : Number(trigger.dataset.node || 0);
+      const prevBiome = resolveActiveBiome(state);
       const svg = el.querySelector('.mountain-svg[data-camera]');
       const prevBox = svg ? parseViewBox(svg) : fullCamera.slice();
       state.view = viewName('expedition', langOf(state), state.irlDay);
       state.inspectedRisk = null;
       state.focusedNode = targetStage;
       state.cameraMode = 'camp';
+      if (!state.hasEnteredCamp && state.activeBiome == null && state.phase !== 'fears' && state.phase !== 'cross') {
+        state.hasEnteredCamp = true;
+        state.activeBiome = biomes[Math.max(0, Math.min(3, Number(state.stage) || 0))].id;
+      }
+      const nextBiome = resolveActiveBiome(state);
       state.dialogVisible = !hasRaf();
       state.initialViewBox = hasRaf() ? prevBox : campCamera(targetStage);
+      if (hasRaf() && prevBiome !== nextBiome) state._biomeTransitionFrom = prevBiome;
       rerender();
+      delete state._biomeTransitionFrom;
       syncViewportClass();
       if (hasRaf()) {
+        if (prevBiome !== nextBiome) scheduleBiomeCrossfade(el, nextBiome);
         const nextSvg = el.querySelector('.mountain-svg[data-camera]');
         runCamera(nextSvg, { type: 'focus', stage: targetStage }, () => { state.initialViewBox = null; revealDialog(el, state); });
+      }
+      return true;
+    }
+
+    if (action === 'toggle-pack') {
+      state.openOverlay = state.openOverlay === 'pack' ? null : 'pack';
+      rerender();
+      return true;
+    }
+
+    if (action === 'toggle-health') {
+      state.openOverlay = state.openOverlay === 'health' ? null : 'health';
+      rerender();
+      return true;
+    }
+
+    if (action === 'close-overlay') {
+      if (state.openOverlay) {
+        state.openOverlay = null;
+        rerender();
       }
       return true;
     }
@@ -3418,6 +3908,39 @@
     }
 
     return false;
+  }
+
+  function bindOverlayDismiss(el, getState, rerender) {
+    if (!root.document) return () => {};
+    const onKeyDown = ev => {
+      if (ev.key !== 'Escape') return;
+      const st = getState();
+      if (st && st.openOverlay) {
+        st.openOverlay = null;
+        rerender();
+      }
+    };
+    const onPointerDown = ev => {
+      const st = getState();
+      if (!st || !st.openOverlay) return;
+      const target = ev.target;
+      if (!target || typeof target.closest !== 'function') return;
+      if (st.openOverlay === 'pack') {
+        if (target.closest('.pack-anchor') || target.closest('.health-pill-btn') || target.closest('.language-toggle') || target.closest('.case-select')) return;
+        st.openOverlay = null;
+        rerender();
+      } else if (st.openOverlay === 'health') {
+        if (target.closest('.health-modal-card') || target.closest('.health-pill-btn') || target.closest('.pack-btn') || target.closest('.language-toggle')) return;
+        st.openOverlay = null;
+        rerender();
+      }
+    };
+    root.document.addEventListener('keydown', onKeyDown);
+    root.document.addEventListener('mousedown', onPointerDown);
+    return () => {
+      root.document.removeEventListener('keydown', onKeyDown);
+      root.document.removeEventListener('mousedown', onPointerDown);
+    };
   }
 
   function mount(target, options) {
@@ -3449,6 +3972,8 @@
     const onSummit = () => {
       state.summit = true;
       state.phase = 'summit';
+      state.hasEnteredCamp = true;
+      state.activeBiome = 'summit';
       state.view = viewName('current', langOf(state), state.irlDay);
       SherpasAI.request('brief', {
         case_id: state.caseId,
@@ -3470,6 +3995,7 @@
         const a = n.dataset.action;
         if (handleMountainAction(a, n, el, state, () => { el.innerHTML = render(state); syncViewportClass(); bind(); }, onSummit)) return;
         if (a === 'nav') {
+          state.openOverlay = null;
           state.view = n.dataset.view;
           const vk = viewKey(state.view);
           if (vk === 'brief') {
@@ -3480,7 +4006,7 @@
             }, { mode: 'deterministic' });
           }
           if (vk === 'expedition' || vk === 'overview') {
-            if (state.summit || vk === 'overview') {
+            if (state.summit || vk === 'overview' || !state.hasEnteredCamp) {
               state.cameraMode = 'panoramic';
               state.dialogVisible = false;
               state.initialViewBox = fullCamera.slice();
@@ -3494,7 +4020,7 @@
           persistLanguage(state.lang);
           state.view = viewName(viewKey(state.view), state.lang, state.irlDay);
         } else if (a === 'doubt') state.advisorDoubts.push(n.dataset.doubt || '');
-        else if (a === 'repeat') { const next = createInitialState(state.caseId); next.lang = state.lang; state = next; }
+        else if (a === 'repeat') { ProfileEvalStore.clear(state.caseId); const next = createInitialState(state.caseId); next.lang = state.lang; state = next; }
         update();
         state.initialViewBox = null;
       });
@@ -3540,13 +4066,14 @@
       };
     }
 
-    if (isMountainPhase(state) && hasRaf()) {
+    if (isMountainPhase(state) && state.hasEnteredCamp && hasRaf()) {
       state.dialogVisible = false;
       state.initialViewBox = fullCamera.slice();
     }
+    const unbindOverlay = bindOverlayDismiss(el, () => state, update);
     attachRoom();
     update();
-    if (isMountainPhase(state) && hasRaf()) {
+    if (isMountainPhase(state) && state.hasEnteredCamp && hasRaf()) {
       const svg = el.querySelector('.mountain-svg[data-camera]');
       runCamera(svg, { type: 'enter', stage: state.focusedNode || 0 }, () => { state.initialViewBox = null; revealDialog(el, state); });
     }
@@ -3558,13 +4085,13 @@
       setState(next) { state = next; attachRoom(); update(); return state; },
       dispatch(a, v) {
         if (a === 'mode') state.mode = v;
-        else if (a === 'nav') state.view = v;
+        else if (a === 'nav') { state.openOverlay = null; state.view = v; }
         else if (a === 'lang') { state.lang = v === 'EN' ? 'EN' : 'ES'; persistLanguage(state.lang); state.view = viewName(viewKey(state.view), state.lang, state.irlDay); }
-        else if (a === 'summit') { state.summit = true; state.phase = 'summit'; state.view = viewName('current', langOf(state), state.irlDay); }
+        else if (a === 'summit') { state.summit = true; state.phase = 'summit'; state.hasEnteredCamp = true; state.activeBiome = 'summit'; state.view = viewName('current', langOf(state), state.irlDay); }
         update();
         return state;
       },
-      unmount() { if (unsubRoom) { try { unsubRoom(); } catch (_) {} unsubRoom = null; } cancelMotion(); el.innerHTML = ''; if (root.document && root.document.body) root.document.body.classList.remove('is-mountain-viewport'); }
+      unmount() { if (unsubRoom) { try { unsubRoom(); } catch (_) {} unsubRoom = null; } unbindOverlay(); cancelMotion(); el.innerHTML = ''; if (root.document && root.document.body) root.document.body.classList.remove('is-mountain-viewport'); }
     };
   }
 
@@ -3574,8 +4101,14 @@
     createInitialState,
     render,
     renderHeader,
+    renderPackPopover,
+    renderHealthModal,
+    bindOverlayDismiss,
     mount,
     biomes,
+    BIOME_ASSETS,
+    resolveActiveBiome,
+    applyBiomeToDom,
     svgMarkup,
     yearlyMarkup,
     localizeData,

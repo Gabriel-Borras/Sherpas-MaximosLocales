@@ -92,6 +92,26 @@ body.is-mountain-viewport {
   height: 100vh;
   display: block;
 }
+.mountain-svg .mountain-art-base,
+.mountain-svg .mountain-biome-layer {
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  filter: none;
+  transition: opacity 900ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity;
+}
+.mountain-svg .mountain-art-base {
+  opacity: 1;
+}
+.mountain-svg .mountain-art-base.is-covered {
+  opacity: 0;
+}
+.mountain-svg .mountain-biome-layer {
+  opacity: 0;
+}
+.mountain-svg .mountain-biome-layer.is-active {
+  opacity: 1;
+}
 
 /* Top Floating Header with 5 Minimal Micro-bars, 2 Tabs & 2 Icons */
 .site-header.header-floating {
@@ -126,78 +146,364 @@ body.is-mountain-viewport {
   font-size: 13px;
 }
 
-/* 5 Minimal Micro-bars in Header */
-.micro-pillars {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 3px 8px;
-  border: 1px solid var(--border-hairline);
-  border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.66);
-  flex-shrink: 0;
-}
-.micro-pillar {
+/* Circular Backpack Button & Compact Popover ("Tu mochila") */
+.pack-anchor {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 2px 4px;
-  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.pack-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 9999px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: #1E293B;
   cursor: pointer;
-  outline: none;
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out, background 140ms ease-out, transform 140ms ease-out;
 }
-.micro-pillar:hover,
-.micro-pillar:focus-within {
-  background: rgba(69, 101, 214, 0.1);
+.pack-btn:hover:not(:disabled) {
+  border-color: #475569;
+  background: #F8FAFC;
 }
-.micro-pillar-code {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-secondary);
-  letter-spacing: -0.01em;
+.pack-btn.is-active {
+  border-color: #475569;
+  background: #FFFFFF;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.10);
 }
-.micro-bar {
-  width: 28px;
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(20, 20, 25, 0.12);
-  overflow: hidden;
-  display: inline-block;
-}
-.micro-bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: 999px;
-  background: var(--accent-primary);
-}
-.micro-bar-fill.is-ok { background: var(--semantic-ok); }
-.micro-bar-fill.is-warn { background: var(--semantic-warn); }
-.micro-bar-fill.is-danger { background: var(--semantic-danger); }
-
-.micro-pillar-popover {
-  display: none;
+.pack-popover {
   position: absolute;
-  top: calc(100% + 8px);
+  top: calc(100% + 12px);
   left: 50%;
+  transform: translateX(-68%);
+  z-index: 75;
+  width: 344px;
+  max-width: calc(100vw - 24px);
+  max-height: 440px;
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid #E5E7EB;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  color: #0F172A;
+  font-variant-numeric: tabular-nums;
+  animation: evalFadeIn 150ms ease-out both;
+}
+.pack-popover::before,
+.pack-popover::after {
+  content: "";
+  position: absolute;
+  left: 68%;
   transform: translateX(-50%);
-  z-index: 60;
-  min-width: 190px;
-  padding: 8px 10px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: rgba(251, 249, 245, 0.98);
-  backdrop-filter: blur(12px);
-  color: var(--ink-primary);
-  font-size: 12px;
-  line-height: 1.35;
-  white-space: nowrap;
+  width: 0;
+  height: 0;
+  border-style: solid;
   pointer-events: none;
 }
-.micro-pillar:hover .micro-pillar-popover,
-.micro-pillar:focus .micro-pillar-popover,
-.micro-pillar:focus-within .micro-pillar-popover {
+.pack-popover::before {
+  top: -8px;
+  border-width: 0 8px 8px 8px;
+  border-color: transparent transparent #E5E7EB transparent;
+}
+.pack-popover::after {
+  top: -7px;
+  border-width: 0 7px 7px 7px;
+  border-color: transparent transparent rgba(255, 255, 255, 0.98) transparent;
+}
+.pack-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px 12px;
+}
+.pack-title-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #0F172A;
+}
+.pack-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.pack-net {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+.pack-net-kicker {
+  font-size: 11px;
+  color: #64748B;
+}
+.pack-net-val {
+  font-size: 14px;
+  color: #0F172A;
+}
+.pack-net-prefix {
+  font-size: 12.5px;
+  color: #64748B;
+  font-weight: 400;
+}
+.pack-section {
+  border-top: 1px solid #F1F5F9;
+}
+.pack-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 16px;
+  background: #F8FAFC;
+  font-size: 12.5px;
+  color: #475569;
+}
+.pack-section-head strong {
+  color: #0F172A;
+  font-weight: 700;
+  font-size: 13px;
+}
+.pack-rows {
+  padding: 6px 16px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.pack-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.35;
+}
+.pack-row-label {
+  color: #1E293B;
+  min-width: 0;
+}
+.pack-row-val {
+  color: #0F172A;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.pack-row.is-empty .pack-row-label,
+.pack-row.is-empty .pack-row-val {
+  color: #64748B;
+  font-weight: 400;
+}
+.pack-sep {
+  color: #94A3B8;
+  margin: 0 2px;
+}
+.pack-apr {
+  color: #64748B;
+}
+.pack-apr.is-high-apr {
+  color: #C86455;
+  font-weight: 600;
+}
+.pack-footer {
+  padding: 9px 16px;
+  background: #F8FAFC;
+  border-top: 1px solid #F1F5F9;
+  border-radius: 0 0 16px 16px;
+  font-size: 12px;
+  color: #64748B;
+  text-align: center;
+}
+
+/* Health Pill Button ("Salud" / "Health") */
+.health-pill-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 13px;
+  border-radius: 9999px;
+  border: 1px solid #D1D5DB;
+  background: #FFFFFF;
+  color: #1E293B;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 140ms ease-out, background 140ms ease-out, transform 140ms ease-out;
+}
+.health-pill-btn:hover:not(:disabled) {
+  border-color: #475569;
+  background: #F8FAFC;
+}
+.health-pill-btn.is-active {
+  border-color: #1E293B;
+  background: #FFFFFF;
+  color: #0F172A;
+  font-weight: 600;
+}
+
+/* Centered Modal "Salud" (5-Pillar Topographic Pentagon) */
+.health-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: evalFadeIn 160ms ease-out both;
+}
+.health-modal-card {
+  width: min(740px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid #E5E7EB;
+  border-radius: 20px;
+  padding: 28px 32px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+  color: #0F172A;
+}
+.health-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.health-modal-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #0F172A;
+}
+.health-title-sep {
+  color: #94A3B8;
+  font-weight: 400;
+  margin: 0 2px;
+}
+.health-modal-head-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.health-score-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 5px 14px;
+  border-radius: 9999px;
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  color: #64748B;
+}
+.health-score-badge strong {
+  color: #0F172A;
+  font-weight: 700;
+}
+.health-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  background: transparent;
+  color: #64748B;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.health-close-btn:hover:not(:disabled) {
+  border-color: #E2E8F0;
+  background: #F8FAFC;
+  color: #0F172A;
+}
+.health-modal-body {
+  display: grid;
+  grid-template-columns: 1.08fr 1fr;
+  gap: 28px;
+  align-items: center;
+}
+.health-radar-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.health-radar-svg {
+  width: 100%;
+  max-width: 350px;
+  height: auto;
   display: block;
+}
+.health-radar-label {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 500;
+  fill: #334155;
+}
+.health-pillars-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.health-pillar-item {
+  padding: 11px 0;
+  border-bottom: 1px solid #F1F5F9;
+}
+.health-pillar-item:first-child {
+  padding-top: 2px;
+}
+.health-pillar-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 2px;
+}
+.health-pillar-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.health-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 9999px;
+  flex-shrink: 0;
+}
+.health-pillar-name {
+  font-size: 15px;
+  font-weight: 500;
+  color: #0F172A;
+}
+.health-pillar-score {
+  margin-left: auto;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0F172A;
+  font-variant-numeric: tabular-nums;
+}
+.health-pillar-sub {
+  margin: 3px 0 0 18px;
+  font-size: 12.5px;
+  line-height: 1.35;
+  color: #64748B;
 }
 
 /* Header Navigation: 2 Tabs (Basecamp | Día X) + 2 Icon Buttons (Brief | Radio) */
@@ -919,7 +1225,6 @@ details.exact-math dl {
 .mountain-svg .micro-camp.is-active .camp-beacon { stroke: var(--ink-deep); stroke-width: .9; opacity: .92; }
 .mountain-svg .micro-camp.is-reached .camp-tent { fill: var(--ink-deep); }
 .mountain-svg .micro-camp:hover .camp-beacon { stroke: var(--ink-deep); stroke-width: .9; opacity: 1; }
-.mountain-svg .sherpas-flag { fill: var(--ink-deep); }
 
 .yearly-chart { width: 100%; height: auto; display: block; margin: 6px 0; }
 .crack {
@@ -976,7 +1281,32 @@ details.exact-math dl {
     flex-wrap: wrap;
     gap: 6px;
   }
-  .micro-pillars { order: 3; width: 100%; justify-content: space-between; }
+  .pack-popover {
+    left: auto;
+    right: -12px;
+    transform: none;
+    width: min(330px, calc(100vw - 20px));
+  }
+  .pack-popover::before,
+  .pack-popover::after {
+    left: auto;
+    right: 22px;
+    transform: none;
+  }
+  .health-modal-card {
+    padding: 20px 18px;
+  }
+  .health-modal-head {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .health-modal-title {
+    font-size: 18px;
+  }
+  .health-modal-body {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
   .site-nav { margin-left: auto; gap: 4px; }
   .case-select { flex: 1; min-width: 120px; height: 32px; }
   .floating-dialog,
