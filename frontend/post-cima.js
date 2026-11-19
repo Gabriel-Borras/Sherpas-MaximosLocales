@@ -140,7 +140,7 @@
       shock: 0,
       simulatedShock: false,
       // Modo Día a Día: plan y estado vienen de /api/dia-a-dia (motor IRL del caso).
-      dd: { plan: null, status: null, statusDay: null, completed: {}, notification: null, loading: false, error: false, notified: {}, shownDay: null, panBox: null },
+      dd: { plan: null, status: null, statusDay: null, completed: {}, notification: null, loading: false, error: false, notified: {}, shownDay: null, panBox: null, zoomW: null },
       view: viewName('expedition', langOf(base), 0),
       summit: false
     });
@@ -214,6 +214,12 @@
     return `https://t.me/SherpasRadioBot?start=${`${casePart}_${voterPart}`.slice(0, 64)}`;
   }
 
+  const ddZoomControls = lang => `<div class="dd-zoom" role="group" aria-label="${lang === 'EN' ? 'Zoom' : 'Zoom de la montaña'}">
+    <button type="button" data-action="dd-zoom-in" aria-label="${lang === 'EN' ? 'Zoom in' : 'Ampliar'}" title="${lang === 'EN' ? 'Zoom in' : 'Ampliar'}">+</button>
+    <button type="button" data-action="dd-zoom-out" aria-label="${lang === 'EN' ? 'Zoom out' : 'Alejar'}" title="${lang === 'EN' ? 'Zoom out' : 'Alejar'}">−</button>
+    <button type="button" data-action="dd-zoom-reset" aria-label="${lang === 'EN' ? 'Center on climber' : 'Centrar en el escalador'}" title="${lang === 'EN' ? 'Center on climber' : 'Centrar en el escalador'}">⟲</button>
+  </div>`;
+
   function view(state) {
     state = state || initial(ids[0]);
     const lang = langOf(state);
@@ -255,7 +261,7 @@
     if (key === 'current' && diaADia) {
       const dd = state.dd;
       const day = Math.max(0, Math.min(diaADia.HORIZON, Number(state.irlDay) || 0));
-      const ddWallpaper = `<div class="mountain-stage mountain-fullscreen" data-biome="none">${diaADia.svg(dd.plan, dd.shownDay != null ? dd.shownDay : day, dd.completed, lang)}</div>`;
+      const ddWallpaper = `<div class="mountain-stage mountain-fullscreen" data-biome="none">${diaADia.svg(dd.plan, dd.shownDay != null ? dd.shownDay : day, dd.completed, lang, dd.zoomW)}${ddZoomControls(lang)}</div>`;
       const ddPanel = diaADia.card({
         lang, day, plan: dd.plan, completed: dd.completed, error: dd.error,
         status: dd.statusDay === day ? dd.status : null,
@@ -417,15 +423,16 @@
       const svgEl = el.querySelector('.dd-mountain');
       if (dd.shownDay != null && dd.shownDay !== day) {
         const from = dd.shownDay, fromBox = dd.panBox;
+        if (fromBox) dd.zoomW = fromBox[2];
         dd.shownDay = day;
-        dd.panBox = null;  // al cambiar de día, la cámara vuelve al escalador
-        diaADia.animate(svgEl, from, day, null, fromBox);
+        dd.panBox = null;  // al cambiar de día, la cámara vuelve al escalador (con el mismo zoom)
+        diaADia.animate(svgEl, from, day, null, fromBox, dd.zoomW);
       } else {
         if (dd.shownDay == null) dd.shownDay = day;
         // Conserva lo que el usuario haya recorrido arrastrando (p. ej. al marcar una casilla).
         if (dd.panBox && svgEl) svgEl.setAttribute('viewBox', dd.panBox.map(n => n.toFixed(1)).join(' '));
       }
-      diaADia.enablePan(svgEl, box => { dd.panBox = box; });
+      diaADia.enablePan(svgEl, (box, w) => { dd.panBox = box; if (box) dd.zoomW = box[2]; else if (w) dd.zoomW = w; });
       if (!dd.error && !dd.loading && dd.statusDay !== day) ddFetch(!dd.notified[day]);
     }
     function summit() {
@@ -495,6 +502,10 @@
           if (viewKey(state.view) === 'current') {
             state.view = viewName('current', langOf(state), state.irlDay);
           }
+        } else if (a === 'dd-zoom-in' || a === 'dd-zoom-out' || a === 'dd-zoom-reset') {
+          const svgEl = el.querySelector('.dd-mountain'), dd = state.dd;
+          if (a === 'dd-zoom-reset') { dd.panBox = null; dd.zoomW = null; }
+          else diaADia.zoomAt(svgEl, a === 'dd-zoom-in' ? 0.8 : 1.25, null, null, box => { dd.panBox = box; dd.zoomW = box[2]; });
         } else if (a === 'dd-prev' || a === 'dd-next') {
           state.irlDay = Math.max(0, Math.min(diaADia.HORIZON, ddDay() + (a === 'dd-next' ? 1 : -1)));
           state.view = viewName('current', langOf(state), state.irlDay);
