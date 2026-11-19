@@ -66,7 +66,7 @@ Endpoints: `POST /api/telegram/demo/day {"case_id","day"}` y `POST /api/telegram
 - **Formato:** HTML de Telegram, escapado, máx. 4096 caracteres: `🧭/⚠️/🚨 <b>título</b>` + `message_plain` + `Día N`. Shock: `📻 <b>headline</b>` + mensaje anti-pánico.
 - **Idempotencia:** n8n recuerda `notification_id|chat_id` y no reenvía duplicados (p. ej. al reintentar el outbox).
 - **Comandos del bot:** `/start <case>_<owner>` (alta), `/stop` (baja de todos los casos).
-- Contrato del webhook sin cambios respecto a `docs/ESTADO_PROYECTO_FINAL.md` §2.5; solo se añade la cabecera `X-Sherpas-Secret` cuando hay secreto.
+- Contrato del webhook sin cambios respecto a `docs/historico/ESTADO_PROYECTO_FINAL.md` §2.5; solo se añade la cabecera `X-Sherpas-Secret` cuando hay secreto.
 
 ## 5. Tests
 

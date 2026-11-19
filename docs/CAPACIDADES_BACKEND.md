@@ -1,6 +1,6 @@
 # Capacidades del Backend Unificado — Sherpa Basecamp x Run IRL
 
-> **Estado:** Arquitectura integrada en 8 módulos (`backend/`) + servidor HTTP unificado (`PR #15`)  
+> **Estado (19-nov, versión de entrega):** 11 módulos en `backend/` + servidor HTTP unificado + entrada para Vercel (`api/index.py`). Los PR citados son históricos; todo está en `main`.  
 > **Principio rector:** Cero números inventados ni inferencias fuera de fuente. Todas las cifras, hitos, sesgos y alertas proceden de los datos reales de los 4 hogares de Sherpas (`michael-carter`, `samantha-lewis`, `timothy-melanie-weah`, `daniel-emily-johnson`).
 
 ---
@@ -143,7 +143,7 @@ python -m backend.server --host 127.0.0.1 --port 8000
 *(También compatible con `python backend/server.py --host 127.0.0.1 --port 8000`.)*
 
 ### 4.3. Batería de pruebas
-En la rama integrada del servidor (`PR #15`) se verificó la suite completa de 6 módulos de tests (`test_sistema.py`, `test_mcp_client.py`, `test_timeline_engine.py`, `test_llm_proxy.py`, `test_irl_engine.py`, `test_server.py`):
+En `main` se verifica la suite completa de tests de Python (`tests/`) (`test_sistema.py`, `test_mcp_client.py`, `test_timeline_engine.py`, `test_llm_proxy.py`, `test_irl_engine.py`, `test_server.py`):
 ```bash
 python -m unittest discover -s tests -v
 ```
@@ -153,3 +153,18 @@ python -m unittest tests/test_llm_proxy.py -v
 python -m unittest tests/test_irl_engine.py -v
 python -m unittest tests/test_server.py -v
 ```
+
+---
+
+## 5. Módulos añadidos en la versión de entrega
+
+| Módulo | Qué hace |
+| :--- | :--- |
+| `backend/dia_a_dia.py` | Modo **Día a Día**: plan real del Run IRL de Día 0 a 30 (`build_plan`), estado de cada día (`day_status`: paso de hoy, pendiente o «toca esperar») y el aviso de Telegram de cada día (`notification_for_day`; recordatorio cada 2 días a quien le falta). El «por qué» es el coste de inercia real del paso. |
+| `backend/radio_demo.py` | Mensajes de demo de La Radio: paso del Día 0/3/14/30 y **caída de bolsa**, que busca el shock histórico más parecido que la cartera ya superó y cita su recuperación real (`performanceAnalysis`). |
+| `backend/telegram_relay.py` | Entrega automática hacia n8n: scheduler (`SHERPAS_SCHEDULER_INTERVAL`), cola de reintentos opcional (`SHERPAS_OUTBOX_DIR`) y reparto de avisos por reloj real o acelerado (`SHERPAS_DAY_SECONDS`). |
+| `api/index.py` | Entrada de **Vercel**: reutiliza `backend.server.make_handler`, el mismo manejador que el servidor local. |
+
+Endpoints nuevos: `GET /api/dia-a-dia/<case_id>`, `POST /api/dia-a-dia/<case_id>/day`, `GET /api/telegram/config`, `POST /api/telegram/demo/day`, `POST /api/telegram/demo/shock` (las dos últimas solo con `SHERPAS_ENABLE_TELEGRAM_TEST=1`). Detalle de la integración con n8n en [`TELEGRAM_N8N.md`](TELEGRAM_N8N.md).
+
+**Límites en serverless (Vercel):** sin memoria compartida entre peticiones, por lo que las salas de pareja en dos dispositivos, el scheduler y la cola de reintentos solo funcionan con el servidor local.
