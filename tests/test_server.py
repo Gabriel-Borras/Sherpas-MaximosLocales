@@ -780,6 +780,46 @@ class RoomRouteUnitTests(unittest.TestCase):
                 self.assertEqual(body["error"], "bad_request")
 
 
+class TelegramDeepLinkUnitTests(unittest.TestCase):
+    """Verify /api/radio exposes telegram_bot_username and telegram_deep_link."""
+
+    def test_radio_exposes_default_and_custom_telegram_deep_link(self) -> None:
+        state = ServerState()
+        with patch.dict(os.environ, {"TELEGRAM_BOT_USERNAME": ""}, clear=False):
+            status, payload, _ = _handle_radio("GET", urlsplit("/api/radio"), {}, state)
+            self.assertEqual(status, 200)
+            self.assertEqual(payload["telegram_bot_username"], "SherpasRadioBot")
+            self.assertEqual(
+                payload["telegram_deep_link"],
+                "https://t.me/SherpasRadioBot?start=demo_client",
+            )
+            status, case_payload, _ = _handle_radio(
+                "GET",
+                urlsplit("/api/radio/michael-carter?owner=Michael"),
+                {},
+                state,
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(
+                case_payload["telegram_deep_link"],
+                "https://t.me/SherpasRadioBot?start=michael-carter_Michael",
+            )
+
+        with patch.dict(os.environ, {"TELEGRAM_BOT_USERNAME": "@CustomSherpaBot"}, clear=False):
+            status, custom_payload, _ = _handle_radio(
+                "GET",
+                urlsplit("/api/radio/timothy-melanie-weah?owner=A"),
+                {},
+                state,
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(custom_payload["telegram_bot_username"], "CustomSherpaBot")
+            self.assertEqual(
+                custom_payload["telegram_deep_link"],
+                "https://t.me/CustomSherpaBot?start=timothy-melanie-weah_A",
+            )
+
+
 class RepositoryFrontendTests(unittest.TestCase):
     """Serve the checked-in frontend rather than the isolated test fixture."""
 

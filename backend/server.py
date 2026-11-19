@@ -62,6 +62,20 @@ def _n8n_webhook_url() -> str:
     return os.environ.get("N8N_WEBHOOK_URL", "").strip()
 
 
+def _telegram_bot_username() -> str:
+    """Return the configured Telegram bot username, defaulting to SherpasRadioBot."""
+    if "TELEGRAM_BOT_USERNAME" not in os.environ:
+        load_env_file()
+    return os.environ.get("TELEGRAM_BOT_USERNAME", "").strip().lstrip("@") or "SherpasRadioBot"
+
+
+def _telegram_deep_link(case_id: str, owner: str | None = None) -> str:
+    """Build the official Telegram deep link for La Radio del Sherpa."""
+    bot = _telegram_bot_username()
+    target = (owner or "client").strip() or "client"
+    return f"https://t.me/{bot}?start={case_id or 'demo'}_{target}"
+
+
 def _emit_n8n_webhook(payload: dict[str, Any]) -> None:
     """Best-effort, asynchronous n8n delivery that never delays an API response."""
     webhook_url = _n8n_webhook_url()
@@ -443,6 +457,7 @@ def _radio_payload(
     run_id: str | None,
     engine: IRLEngine,
     notifications: NotificationEngine,
+    owner: str | None = None,
 ) -> dict[str, Any]:
     return {
         "run_id": run_id,
@@ -450,6 +465,8 @@ def _radio_payload(
         "current_day": engine.current_day,
         "milestones": notifications.generate_milestone_notifications(engine),
         "macro_shocks": notifications.list_historical_shocks(),
+        "telegram_bot_username": _telegram_bot_username(),
+        "telegram_deep_link": _telegram_deep_link(engine.case_id, owner),
     }
 
 
@@ -537,7 +554,11 @@ def _handle_radio(
         notifications = NotificationEngine(
             "michael-carter", cases_dir=state.runs.cases_dir
         )
-        return 200, {"historical_shocks": notifications.list_historical_shocks()}, None
+        return 200, {
+            "historical_shocks": notifications.list_historical_shocks(),
+            "telegram_bot_username": _telegram_bot_username(),
+            "telegram_deep_link": _telegram_deep_link("demo", _query_value(parsed, "owner")),
+        }, None
     if len(parts) < 3 or parts[:2] != ["api", "radio"]:
         raise KeyError("Ruta Radio no encontrada")
 
@@ -545,7 +566,7 @@ def _handle_radio(
     suffix = parts[3:]
     run_id, engine, notifications = _get_radio_context(identifier, state)
     if method == "GET" and not suffix:
-        return 200, _radio_payload(run_id, engine, notifications), None
+        return 200, _radio_payload(run_id, engine, notifications, owner=_query_value(parsed, "owner")), None
     if method == "POST" and suffix == ["shock"]:
         event_name = body.get("event_name")
         if event_name is not None and not isinstance(event_name, str):
