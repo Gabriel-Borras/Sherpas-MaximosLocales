@@ -1373,3 +1373,39 @@ details.exact-math dl {
     width: auto;
   }
 }
+
+/* Panel de demo de La Radio del Sherpa (solo con SHERPAS_ENABLE_TELEGRAM_TEST=1) */
+.radio-demo {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 40;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 32px);
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid var(--border-strong, #D1D5DB);
+  border-radius: 999px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+}
+.radio-demo-title { font-weight: 600; padding: 0 4px; }
+.radio-demo button {
+  padding: 4px 10px;
+  font-size: 12px;
+  border: 1px solid #D1D5DB;
+  border-radius: 999px;
+  background: #FFFFFF;
+  cursor: pointer;
+}
+.radio-demo button:hover { border-color: #1E293B; }
+.radio-demo button:disabled { opacity: 0.5; cursor: wait; }
+.radio-demo .radio-demo-shock { border-color: #E07A68; }
+.radio-demo-status { min-width: 0; color: #64748B; padding: 0 4px; }
+.radio-demo-status[data-tone="ok"] { color: #2E9E75; }
+.radio-demo-status[data-tone="warn"] { color: #D4A04A; }
+.radio-demo-status[data-tone="error"] { color: #C83A2B; }

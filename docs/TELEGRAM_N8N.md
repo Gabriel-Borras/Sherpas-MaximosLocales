@@ -49,21 +49,16 @@ Telegram exige HTTPS público para el *Telegram Trigger*: si n8n corre en local,
 3. Estado del puente: `GET /api/telegram/config` (n8n configurado, scheduler, avisos en cola; nunca devuelve secretos ni la URL).
 4. Demo acelerada: `SHERPAS_DAY_SECONDS=60 SHERPAS_SCHEDULER_INTERVAL=10`; crea un run (`POST /api/irl {"case_id":"…"}`) y los hitos de Día 0/3/14/30 llegan en minutos.
 
-## 3 bis. Modo demo (configuración recomendada)
+## 3 bis. Demo con botones (lo más simple)
 
-```env
-N8N_WEBHOOK_URL=<Production URL del nodo Webhook Sherpas>
-N8N_WEBHOOK_SECRET=<el mismo valor que la credencial Header Auth>
-TELEGRAM_BOT_USERNAME=SherpasRadioBot
-SHERPAS_SCHEDULER_INTERVAL=5
-SHERPAS_DAY_SECONDS=20
-SHERPAS_NOTIFY_DAYS=0,3,14,30
-SHERPAS_MAX_DAY=30
-SHERPAS_DEMO_CASES=all
-SHERPAS_ENABLE_TELEGRAM_TEST=1
-```
+Con `SHERPAS_ENABLE_TELEGRAM_TEST=1` en el `.env`, la web muestra abajo a la izquierda un panel **📻 Radio** con los botones **Día 0 · Día 3 · Día 14 · Día 30 · 📉 Cae la bolsa**. Cada clic manda **un** mensaje a Telegram para el caso seleccionado en la web:
 
-Guion: (1) antes de salir, abre `https://t.me/SherpasRadioBot?start=michael-carter_client` y pulsa *Start*; (2) durante la demo lanza `POST /api/telegram/demo/restart` → llega el **Día 0** al instante, el **Día 3** a los 60 s, el **Día 14** a los ~5 min y el **Día 30** a los 10 min. Para parejas: `?start=timothy-melanie-weah_A` en un móvil y `_B` en otro.
+- **Día N:** el paso (o los pasos, en parejas) que toca ese día, sacado del Run IRL del caso.
+- **Cae la bolsa (8 %):** busca el shock histórico más parecido que la cartera ya superó y lo cuenta con datos reales, p. ej. *«En abril de 2025 tu cartera cayó un 8,1 %. Tu peor caída de los últimos 3 años fue del 10,0 % y, manteniendo tu estrategia, te recuperaste en 61 días.»*
+
+Antes de salir: abre `https://t.me/SherpasRadioBot?start=<case_id>_client` y pulsa *Start*. Para la demo no hace falta el scheduler (`SHERPAS_SCHEDULER_INTERVAL=0`).
+
+Endpoints: `POST /api/telegram/demo/day {"case_id","day"}` y `POST /api/telegram/demo/shock {"case_id","drop_pct"}`.
 
 ## 4. Reglas de enrutado y mensaje
 
