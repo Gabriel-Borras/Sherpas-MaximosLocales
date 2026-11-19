@@ -629,6 +629,85 @@ class BehavioralNarratorTests(unittest.TestCase):
         self.assertTrue(any("2030" in q["question"] and "$600,000" in q["question"] for q in w_brief["unmodeled_goal_questions"]))
         self.assertTrue(w_brief["couple_disagreements"]["is_couple"])
 
+    def test_dual_lens_english_and_blind_spot_contrast(self) -> None:
+        for case_id in SUPPORTED_CASES:
+            case = load_case(case_id)
+            allowed = extract_case_allowed_numbers(case)
+            dl_en = translate_dual_lens(
+                case_id,
+                topic="overview",
+                lens="both",
+                lang="EN",
+                context={
+                    "top_rank": "O3",
+                    "thermometer": 82,
+                    "subjective": "Market crash fear",
+                    "concerns": ["O3", "O1"],
+                },
+                use_llm=False,
+            )
+            self.assertEqual(dl_en["lang"], "EN")
+            self.assertIn("months", dl_en["plain"]["months_of_life_covered"])
+            bsc = dl_en["blind_spot_contrast"]
+            self.assertEqual(bsc["top_concern_id"], "O3")
+            self.assertEqual(bsc["thermometer_band"], "high")
+            self.assertIn("What worries you most", bsc["contrast_summary"])
+            ok, bad = verify_text_numbers_against_case(
+                json.dumps({"plain": dl_en["plain"], "math": dl_en["math"], "blind_spot_contrast": bsc}, ensure_ascii=False),
+                allowed,
+            )
+            self.assertTrue(ok, f"Unverified numbers in EN blind_spot_contrast for {case_id}: {bad}")
+
+        dl_es = translate_dual_lens(
+            "timothy-melanie-weah",
+            topic="debt",
+            lang="ES",
+            context={"top_rank": "O2", "thermometer": 75, "subjective": "miedo a la volatilidad"},
+        )
+        self.assertEqual(dl_es["lang"], "ES")
+        self.assertEqual(dl_es["blind_spot_contrast"]["thermometer_band"], "alto")
+        self.assertIn("Lo que más te preocupa", dl_es["blind_spot_contrast"]["contrast_summary"])
+        with self.assertRaises(ValueError):
+            translate_dual_lens("michael-carter", lang="FR")
+
+    def test_cordada_pact_anxiety_gap_and_english(self) -> None:
+        pact_en = synthesize_cordada_pact(
+            "timothy-melanie-weah",
+            member_a_votes={"top_fears": ["O1"], "risk_choice": "Growth", "thermometer": 80},
+            member_b_votes={"top_fears": ["O1"], "risk_choice": "Moderate", "thermometer": 35},
+            lang="EN",
+        )
+        self.assertEqual(pact_en["lang"], "EN")
+        self.assertTrue(pact_en["anxiety_gap"]["available"])
+        self.assertEqual(pact_en["anxiety_gap"]["gap"], 45)
+        self.assertEqual(pact_en["anxiety_gap"]["band"], "high")
+        self.assertEqual(pact_en["anxiety_gap"]["higher_anxiety_member"], "Timothy")
+        self.assertIn("Emotional anxiety gap of 45 points", pact_en["anxiety_gap"]["summary"])
+        self.assertIn("You agree 100%", pact_en["plain_summary"])
+
+        pact_no_therm = synthesize_cordada_pact("daniel-emily-johnson")
+        self.assertFalse(pact_no_therm["anxiety_gap"]["available"])
+        self.assertIsNone(pact_no_therm["anxiety_gap"]["gap"])
+
+    def test_advisor_brief_english_and_anxiety_gap(self) -> None:
+        brief_en = generate_advisor_brief(
+            "daniel-emily-johnson",
+            fear_ranking=["O2", "O1"],
+            subjective_concerns=["College tuition inflation"],
+            couple_votes={
+                "member_a": {"risk_choice": "Growth", "thermometer": 75},
+                "member_b": {"risk_choice": "Moderate", "thermometer": 35},
+            },
+            skipped_moves=["Max out 401(k)"],
+            unmodeled_goals=["Sabbatical year in 2029"],
+            lang="EN",
+        )
+        self.assertEqual(brief_en["lang"], "EN")
+        self.assertIn("## 1. Fear Ranking", brief_en["markdown_brief"])
+        self.assertIn("## 4. Concrete Advisor Questions", brief_en["markdown_brief"])
+        self.assertEqual(brief_en["couple_disagreements"]["anxiety_gap"]["gap"], 40)
+        self.assertEqual(brief_en["couple_disagreements"]["anxiety_gap"]["band"], "high")
+
 
 if __name__ == "__main__":
     unittest.main()

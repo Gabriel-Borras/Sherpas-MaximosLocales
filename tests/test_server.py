@@ -428,6 +428,7 @@ class NarrativeRouteUnitTests(unittest.TestCase):
 
         invalid_payloads = (
             ("/api/ai/reframe", {"case_id": "michael-carter", "lens": 7}),
+            ("/api/ai/reframe", {"case_id": "michael-carter", "lang": "FR"}),
             ("/api/ai/pact", {"case_id": "timothy-melanie-weah", "member_a_votes": []}),
             ("/api/ai/brief", {"case_id": "michael-carter", "fear_ranking": "O1"}),
         )
@@ -436,6 +437,56 @@ class NarrativeRouteUnitTests(unittest.TestCase):
                 status, body = self.post(path, payload)
                 self.assertEqual(status, 400)
                 self.assertEqual(body["error"], "bad_request")
+
+    def test_post_narrative_routes_support_lang_en_blind_spot_and_anxiety_gap(self) -> None:
+        status, reframe = self.post(
+            "/api/ai/reframe",
+            {
+                "case_id": "michael-carter",
+                "topic": "overview",
+                "lens": "both",
+                "lang": "en",
+                "context": {
+                    "top_rank": "O3",
+                    "thermometer": 80,
+                    "subjective": "market drop",
+                    "concerns": ["O3", "O1"],
+                },
+            },
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(reframe["lang"], "EN")
+        self.assertFalse(reframe["used_llm"])
+        self.assertTrue(reframe["llm_fallback_used"])
+        self.assertIn("blind_spot_contrast", reframe)
+        self.assertEqual(reframe["blind_spot_contrast"]["thermometer_band"], "high")
+        self.assertIn("What worries you most", reframe["blind_spot_contrast"]["contrast_summary"])
+
+        status, pact = self.post(
+            "/api/ai/pact",
+            {
+                "case_id": "timothy-melanie-weah",
+                "lang": "EN",
+                "member_a_votes": {"top_fears": ["O1"], "risk_choice": "Growth", "thermometer": 75},
+                "member_b_votes": {"top_fears": ["O1"], "risk_choice": "Moderate", "thermometer": 30},
+            },
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(pact["lang"], "EN")
+        self.assertEqual(pact["anxiety_gap"]["gap"], 45)
+        self.assertEqual(pact["anxiety_gap"]["band"], "high")
+
+        status, brief = self.post(
+            "/api/ai/brief",
+            {
+                "case_id": "samantha-lewis",
+                "lang": "EN",
+                "fear_ranking": ["O1", "O2"],
+            },
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(brief["lang"], "EN")
+        self.assertIn("## 1. Fear Ranking", brief["markdown_brief"])
 
 
 class RoomRouteUnitTests(unittest.TestCase):

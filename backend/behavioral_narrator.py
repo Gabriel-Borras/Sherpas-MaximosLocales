@@ -2078,8 +2078,195 @@ def _fmt_pct(value: float | str, is_decimal_ratio: bool = False) -> str:
     return f"{pct:.1f}%"
 
 
-def _build_topic_context(case: CaseData, topic: str, extra_context: dict[str, Any] | None = None) -> dict[str, Any]:
+def _normalize_lang(lang: str | None) -> str:
+    """Normalize and validate supported narrative languages ('ES' or 'EN')."""
+    if lang is None:
+        return "ES"
+    norm = str(lang).strip().upper()
+    if norm not in ("ES", "EN"):
+        raise ValueError("lang must be 'ES' or 'EN'.")
+    return norm
+
+
+def _extract_thermometer_value(raw: Any) -> float | None:
+    """Extract a numeric emotional thermometer reading from scalar or dict inputs."""
+    if raw is None or isinstance(raw, bool):
+        return None
+    if isinstance(raw, (int, float)):
+        return float(raw)
+    if isinstance(raw, str):
+        s = raw.strip()
+        if not s:
+            return None
+        try:
+            return float(s)
+        except ValueError:
+            return None
+    if isinstance(raw, dict):
+        for key in ("value", "level", "score", "thermometer"):
+            if key in raw:
+                val = _extract_thermometer_value(raw[key])
+                if val is not None:
+                    return val
+    return None
+
+
+def _thermometer_band(val: float | None, lang: str) -> str | None:
+    """Classify a thermometer reading into a qualitative band without inventing numbers."""
+    if val is None:
+        return None
+    if val <= 5.0:
+        band_en = "high" if val >= 4.0 else ("moderate" if val >= 2.5 else "low")
+    elif val <= 10.0:
+        band_en = "high" if val >= 7.0 else ("moderate" if val >= 4.0 else "low")
+    else:
+        band_en = "high" if val >= 70.0 else ("moderate" if val >= 40.0 else "low")
+    if lang == "ES":
+        return {"high": "alto", "moderate": "moderado", "low": "bajo"}[band_en]
+    return band_en
+
+
+def _build_blind_spot_contrast(
+    case: CaseData,
+    extra_context: dict[str, Any] | None,
+    lang: str,
+) -> dict[str, Any]:
+    """Contrast stated user worry (`context`) against the #1 literal numerical driver in the case JSON."""
+    ctx = extra_context if isinstance(extra_context, dict) else {}
+    concerns_by_id = {c.id.upper(): c for c in case.persona.objective_concerns}
+
+    raw_top = ctx.get("top_rank")
+    if isinstance(raw_top, list):
+        raw_top = raw_top[0] if raw_top else None
+    elif isinstance(raw_top, dict):
+        raw_top = raw_top.get("id") or raw_top.get("title")
+
+    raw_concerns = ctx.get("concerns")
+    first_concern = None
+    if isinstance(raw_concerns, list) and raw_concerns:
+        item = raw_concerns[0]
+        first_concern = item.get("id") or item.get("title") if isinstance(item, dict) else item
+    elif isinstance(raw_concerns, str) and raw_concerns.strip():
+        first_concern = raw_concerns.strip()
+
+    chosen_ref = raw_top if raw_top is not None else first_concern
+    top_concern_id: str | None = None
+    user_focus = ""
+    if chosen_ref is not None:
+        ref_str = str(chosen_ref).strip()
+        if ref_str.upper() in concerns_by_id:
+            c = concerns_by_id[ref_str.upper()]
+            top_concern_id = c.id
+            user_focus = f"{c.id}: {c.title}"
+        elif ref_str:
+            user_focus = ref_str
+
+    if not user_focus and case.persona.objective_concerns:
+        c0 = case.persona.objective_concerns[0]
+        top_concern_id = c0.id
+        user_focus = f"{c0.id}: {c0.title}"
+
+    subj_raw = ctx.get("subjective")
+    subj_text = ""
+    if isinstance(subj_raw, str):
+        subj_text = subj_raw.strip()
+    elif isinstance(subj_raw, list):
+        subj_text = "; ".join(str(s).strip() for s in subj_raw if str(s).strip())
+    elif isinstance(subj_raw, dict):
+        subj_text = str(subj_raw.get("text") or subj_raw.get("concern") or "").strip()
+
+    if subj_text:
+        user_focus = f"{user_focus} ({subj_text})" if user_focus else subj_text
+    if not user_focus:
+        user_focus = "Estabilidad general del hogar" if lang == "ES" else "Overall household stability"
+
+    therm_val = _extract_thermometer_value(ctx.get("thermometer"))
+    therm_band = _thermometer_band(therm_val, lang)
+
+    best_move = max(
+        case.top_moves,
+        key=lambda m: int(m.get("score_after", 0)) - int(m.get("score_before", 0)),
+        default={},
+    )
+    top_lever = (
+        f"{best_move['title']} ({best_move['score_before']} -> {best_move['score_after']})"
+        if best_move
+        else f"Score {case.published_score}/100"
+    )
+
+    high_debts = case.high_interest_debts(threshold=0.10)
+    neg_inv = case.first_negative_investable_year()
+    tax_drag = case.tax_drag_annual_cost()
+    json_sources = ["financial-health.json -> score.top_moves"]
+
+    if high_debts:
+        d = high_debts[0]
+        json_sources.append("financial-health.json -> profile.liabilities")
+        real_driver = (
+            f"{d['name']} ({_fmt_usd(d['balance'])} al {d['apr_pct']}%, {_fmt_usd(d['annual_interest'])}/año en intereses)"
+            if lang == "ES"
+            else f"{d['name']} ({_fmt_usd(d['balance'])} at {d['apr_pct']}%, {_fmt_usd(d['annual_interest'])}/yr interest burn)"
+        )
+    elif neg_inv:
+        json_sources.append(f"financial-health.json -> projections.yearly[{neg_inv['year']}].investable_assets")
+        real_driver = (
+            f"Déficit líquido en {neg_inv['year']} (edad {neg_inv['age_client']}): {_fmt_usd(neg_inv['investable_assets'])}"
+            if lang == "ES"
+            else f"Liquid depletion in {neg_inv['year']} (age {neg_inv['age_client']}): {_fmt_usd(neg_inv['investable_assets'])}"
+        )
+    elif tax_drag > 0:
+        json_sources.append("investment-analysis.json -> key_metrics.taxDragAnalysis.householdRollup")
+        real_driver = (
+            f"Fuga fiscal anual evitable de {_fmt_usd(tax_drag)}/año"
+            if lang == "ES"
+            else f"Avoidable annual tax drag of {_fmt_usd(tax_drag)}/yr"
+        )
+    else:
+        real_driver = top_lever
+
+    # Detect whether the user's stated top focus matches the #1 mathematical lever
+    driver_text_lower = f"{real_driver} {top_lever}".lower()
+    focus_lower = user_focus.lower()
+    aligned = any(
+        kw in focus_lower and kw in driver_text_lower
+        for kw in ("debt", "deuda", "card", "tarjeta", "liquid", "liquidez", "cash", "retir", "jubil", "tax", "fiscal", "insur", "seguro", "vida", "life")
+    )
+    is_blind_spot = not aligned
+
+    if lang == "ES":
+        therm_note = f" (termómetro {therm_band})" if therm_band else ""
+        contrast_summary = (
+            f"Lo que más te preocupa{therm_note}: {user_focus}. "
+            f"Lo que más mueve tus cifras reales: {real_driver}; palanca #1: {top_lever}."
+        )
+    else:
+        therm_note = f" ({therm_band} thermometer)" if therm_band else ""
+        contrast_summary = (
+            f"What worries you most{therm_note}: {user_focus}. "
+            f"What moves your real numbers most: {real_driver}; #1 lever: {top_lever}."
+        )
+
+    return {
+        "user_focus": user_focus,
+        "top_concern_id": top_concern_id,
+        "thermometer_band": therm_band,
+        "real_driver": real_driver,
+        "top_lever": top_lever,
+        "contrast_summary": contrast_summary,
+        "is_blind_spot": is_blind_spot,
+        "json_sources": json_sources,
+    }
+
+
+def _build_topic_context(
+    case: CaseData,
+    topic: str,
+    extra_context: dict[str, Any] | None = None,
+    lang: str = "ES",
+) -> dict[str, Any]:
     """Assemble strictly real Plain + Math content from JSONs & persona.md for the requested topic."""
+    lang_norm = _normalize_lang(lang)
+    is_en = lang_norm == "EN"
     cash_facts = case.fh_facts.get("cash", {})
     ret_facts = case.fh_facts.get("retirement", {})
     edu_facts = case.fh_facts.get("education") or {}
@@ -2107,62 +2294,102 @@ def _build_topic_context(case: CaseData, topic: str, extra_context: dict[str, An
     if topic_norm in ("liquidity", "cash_flow", "cash"):
         reserve_min = float(cash_facts.get("emergencyReserve", {}).get("min", 0.0))
         reserve_max = float(cash_facts.get("emergencyReserve", {}).get("max", 0.0))
-        plain_headline = f"Tienes {months_before} meses de gastos esenciales cubiertos ({months_after} meses tras metas cercanas)"
-        if float(months_after) == 0:
-            plain_summary = (
-                f"Hoy tu colchón cubre {months_before} meses, pero tras apartar tus metas de 2027 "
-                f"bajas a 0 meses de margen líquido. Ordenar primero la reserva protege la tranquilidad diaria."
-            )
-        elif net_cash_flow < 0:
-            plain_summary = (
-                f"Cuentas con {months_before} meses de colchón ({_fmt_usd(accessible_cash)}), pero cada año "
-                f"salen {_fmt_usd(abs(net_cash_flow))} más de los que entran tras ahorrar {_fmt_usd(annual_savings)}/año."
-            )
+        if is_en:
+            plain_headline = f"You have {months_before} months of essential expenses covered ({months_after} months after near-term goals)"
+            if float(months_after) == 0:
+                plain_summary = (
+                    f"Today your buffer covers {months_before} months, but after setting aside your 2027 goals "
+                    f"you drop to 0 months of liquid margin. Ordering the reserve first protects daily peace of mind."
+                )
+            elif net_cash_flow < 0:
+                plain_summary = (
+                    f"You have {months_before} months of buffer ({_fmt_usd(accessible_cash)}), yet each year "
+                    f"{_fmt_usd(abs(net_cash_flow))} more goes out than comes in after saving {_fmt_usd(annual_savings)}/yr."
+                )
+            else:
+                plain_summary = (
+                    f"You have {months_before} months of expenses covered ({_fmt_usd(accessible_cash)}) "
+                    f"and a positive annual margin of {_fmt_usd(net_cash_flow)}/yr to balance debt and protection."
+                )
+            bias_unlock = "Separate emergency cash from cash committed to near-term goals to avoid false liquidity."
+            action_today = f"Review Step 1 of your waterfall ({case.savings_waterfall[1][1] if len(case.savings_waterfall) > 1 else 'reserve'})."
         else:
-            plain_summary = (
-                f"Cuentas con {months_before} meses de gastos cubiertos ({_fmt_usd(accessible_cash)}) "
-                f"y un margen anual positivo de {_fmt_usd(net_cash_flow)}/año para equilibrar deudas y protección."
-            )
+            plain_headline = f"Tienes {months_before} meses de gastos esenciales cubiertos ({months_after} meses tras metas cercanas)"
+            if float(months_after) == 0:
+                plain_summary = (
+                    f"Hoy tu colchón cubre {months_before} meses, pero tras apartar tus metas de 2027 "
+                    f"bajas a 0 meses de margen líquido. Ordenar primero la reserva protege la tranquilidad diaria."
+                )
+            elif net_cash_flow < 0:
+                plain_summary = (
+                    f"Cuentas con {months_before} meses de colchón ({_fmt_usd(accessible_cash)}), pero cada año "
+                    f"salen {_fmt_usd(abs(net_cash_flow))} más de los que entran tras ahorrar {_fmt_usd(annual_savings)}/año."
+                )
+            else:
+                plain_summary = (
+                    f"Cuentas con {months_before} meses de gastos cubiertos ({_fmt_usd(accessible_cash)}) "
+                    f"y un margen anual positivo de {_fmt_usd(net_cash_flow)}/año para equilibrar deudas y protección."
+                )
+            bias_unlock = "Separa el dinero de emergencia del dinero comprometido en metas próximas para evitar falsa liquidez."
+            action_today = f"Revisa el Step 1 de tu cascada ({case.savings_waterfall[1][1] if len(case.savings_waterfall) > 1 else 'reserva'})."
         metrics = [
             {"label": "Accessible cash", "value": _fmt_usd(accessible_cash), "unit": "USD", "json_source": "financial-health.json -> key_metrics.facts.cash.accessibleCash"},
             {"label": "Months covered (before / after near-term goals)", "value": f"{months_before} / {months_after}", "unit": "months", "json_source": "financial-health.json -> key_metrics.facts.cash.monthsCovered"},
             {"label": "Recommended emergency reserve", "value": f"{_fmt_usd(reserve_min)}–{_fmt_usd(reserve_max)}", "unit": "USD", "json_source": "financial-health.json -> key_metrics.facts.cash.emergencyReserve"},
             {"label": "Net cash flow this year", "value": _fmt_usd(net_cash_flow), "unit": "USD/yr", "json_source": "financial-health.json -> key_metrics.facts.retirement.netCashFlowThisYear"},
         ]
-        bias_unlock = "Separa el dinero de emergencia del dinero comprometido en metas próximas para evitar falsa liquidez."
-        action_today = f"Revisa el Step 1 de tu cascada ({case.savings_waterfall[1][1] if len(case.savings_waterfall) > 1 else 'reserva'})."
 
     elif topic_norm in ("debt", "deuda"):
         if high_debts:
             d = high_debts[0]
             cash_earned = case.cash_yield_earned()
             net_burn = d["annual_interest"] - cash_earned if cash_earned > 0 else d["annual_interest"]
-            plain_headline = f"Tu tarjeta {d['name']} quema {_fmt_usd(d['annual_interest'])} al año sin aportar valor a tu familia"
-            plain_summary = (
-                f"Mantener {_fmt_usd(d['balance'])} en la tarjeta al {d['apr_pct']}% APR cuesta {_fmt_usd(d['annual_interest'])}/año "
-                f"({_fmt_usd(d['monthly_payment'])}/mes). Liquidarla libera flujo mensual y calma financiera inmediata."
-            )
-            if case.case_id == "timothy-melanie-weah":
-                plain_summary += (
-                    f" Mientras tanto, {_fmt_usd(accessible_cash)} en efectivo solo rinden ~{_fmt_usd(cash_earned)}/año: "
-                    f"pierdes ~{_fmt_usd(net_burn)} netos al año por tener ambos cajones separados."
+            if is_en:
+                plain_headline = f"Your {d['name']} card burns {_fmt_usd(d['annual_interest'])}/yr without adding value to your family"
+                plain_summary = (
+                    f"Carrying {_fmt_usd(d['balance'])} on the card at {d['apr_pct']}% APR costs {_fmt_usd(d['annual_interest'])}/yr "
+                    f"({_fmt_usd(d['monthly_payment'])}/mo). Paying it off frees monthly cash flow and immediate peace of mind."
                 )
+                if case.case_id == "timothy-melanie-weah":
+                    plain_summary += (
+                        f" Meanwhile, {_fmt_usd(accessible_cash)} in cash earns only ~{_fmt_usd(cash_earned)}/yr: "
+                        f"you lose ~{_fmt_usd(net_burn)} net per year by keeping both buckets separate."
+                    )
+                bias_unlock = "Break Mental Accounting by combining cash savings and high-APR debt into one net balance."
+                action_today = f"Target {d['name']} ({_fmt_usd(d['balance'])}) per step 8 of savingsWaterfall."
+            else:
+                plain_headline = f"Tu tarjeta {d['name']} quema {_fmt_usd(d['annual_interest'])} al año sin aportar valor a tu familia"
+                plain_summary = (
+                    f"Mantener {_fmt_usd(d['balance'])} en la tarjeta al {d['apr_pct']}% APR cuesta {_fmt_usd(d['annual_interest'])}/año "
+                    f"({_fmt_usd(d['monthly_payment'])}/mes). Liquidarla libera flujo mensual y calma financiera inmediata."
+                )
+                if case.case_id == "timothy-melanie-weah":
+                    plain_summary += (
+                        f" Mientras tanto, {_fmt_usd(accessible_cash)} en efectivo solo rinden ~{_fmt_usd(cash_earned)}/año: "
+                        f"pierdes ~{_fmt_usd(net_burn)} netos al año por tener ambos cajones separados."
+                    )
+                bias_unlock = "Rompe la Contabilidad Mental juntando ahorro e interés caro en un único balance neto."
+                action_today = f"Atacar {d['name']} ({_fmt_usd(d['balance'])}) según el escalón 8 de savingsWaterfall."
             metrics = [
                 {"label": f"{d['name']} balance", "value": _fmt_usd(d["balance"]), "unit": "USD", "json_source": "financial-health.json -> profile.liabilities"},
                 {"label": f"{d['name']} APR", "value": f"{d['apr_pct']}%", "unit": "percent", "json_source": "financial-health.json -> profile.liabilities"},
                 {"label": "Annual interest cost", "value": _fmt_usd(d["annual_interest"]), "unit": "USD/yr", "json_source": "financial-health.json -> profile.liabilities (balance * interest_rate)"},
                 {"label": "Accessible cash", "value": _fmt_usd(accessible_cash), "unit": "USD", "json_source": "financial-health.json -> key_metrics.facts.cash.accessibleCash"},
             ]
-            bias_unlock = "Rompe la Contabilidad Mental juntando ahorro e interés caro en un único balance neto."
-            action_today = f"Atacar {d['name']} ({_fmt_usd(d['balance'])}) según el escalón 8 de savingsWaterfall."
         else:
-            plain_headline = "Sin deudas de consumo: 0 USD quemados en intereses"
-            plain_summary = "Tu hogar no arrastra deuda cara ni préstamos activos, lo que libera capacidad para asegurar el retiro."
+            if is_en:
+                plain_headline = "No consumer debt: $0 burned in interest"
+                plain_summary = "Your household carries no high-interest consumer debt, freeing capacity to secure retirement."
+                bias_unlock = "Use your debt-free position to avoid the Halo Effect and focus on retirement."
+                action_today = "Redirect part of annual savings into tax-advantaged accounts."
+            else:
+                plain_headline = "Sin deudas de consumo: 0 USD quemados en intereses"
+                plain_summary = "Tu hogar no arrastra deuda cara ni préstamos activos, lo que libera capacidad para asegurar el retiro."
+                bias_unlock = "Aprovecha la ausencia de deuda para no caer en el Efecto Halo y atender la jubilación."
+                action_today = "Redirigir parte del ahorro anual a cuentas con ventaja fiscal."
             metrics = [
                 {"label": "Debt pillar points", "value": case.pillars[1]["points_shown_in_app"] if len(case.pillars) > 1 else "20/20", "unit": "points", "json_source": "financial-health.json -> score.pillars"},
             ]
-            bias_unlock = "Aprovecha la ausencia de deuda para no caer en el Efecto Halo y atender la jubilación."
-            action_today = "Redirigir parte del ahorro anual a cuentas con ventaja fiscal."
 
     elif topic_norm in ("retirement", "jubilacion"):
         spend_need = float(ret_facts.get("spendingNeed", {}).get("value", 0.0))
@@ -2170,25 +2397,48 @@ def _build_topic_context(case: CaseData, topic: str, extra_context: dict[str, An
         draw_pct = str(ret_facts.get("withdrawalRateAverage", {}).get("value", "0%"))
         ret_gap = float(case.savings_and_contributions.get("goalCoverage", {}).get("retirementGap", 0.0))
         left_end = float(ret_facts.get("savingsLeftAtPlanEnd", {}).get("value", 0.0))
-        if neg_inv:
-            plain_headline = (
-                f"Alerta de liquidez futura: en {neg_inv['year']} (edad {neg_inv['age_client']}) "
-                f"el dinero líquido cae a {_fmt_usd(neg_inv['investable_assets'])}"
-            )
-            plain_summary = (
-                f"Aunque el patrimonio total incluya vivienda ({_fmt_usd(neg_inv['net_worth'])} en {neg_inv['year']}), "
-                f"los ingresos garantizados cubren {share} del gasto y el dinero líquido para facturas se agota en {neg_inv['year']}."
-            )
+        if is_en:
+            if neg_inv:
+                plain_headline = (
+                    f"Future liquidity alert: in {neg_inv['year']} (age {neg_inv['age_client']}) "
+                    f"investable cash drops to {_fmt_usd(neg_inv['investable_assets'])}"
+                )
+                plain_summary = (
+                    f"Even though total net worth includes real estate ({_fmt_usd(neg_inv['net_worth'])} in {neg_inv['year']}), "
+                    f"guaranteed income covers {share} of spending and liquid cash for bills runs out in {neg_inv['year']}."
+                )
+            else:
+                plain_headline = (
+                    f"Guaranteed coverage of {share} with {_fmt_usd(left_end)} projected at plan end"
+                    if ret_gap == 0
+                    else f"Retirement gap of {_fmt_usd(ret_gap)}: your current contributions still leave room to improve"
+                )
+                plain_summary = (
+                    f"Your guaranteed income covers {share} of the {_fmt_usd(spend_need)}/yr needed in retirement. "
+                    f"Saving {savings_rate_pct:.1f}% ({_fmt_usd(annual_savings)}/yr) lets you optimize tax buckets."
+                )
+            bias_unlock = "Connect your present self with your retirement age by separating illiquid home equity from spendable liquidity."
         else:
-            plain_headline = (
-                f"Cobertura garantizada del {share} con {_fmt_usd(left_end)} previstos al final del plan"
-                if ret_gap == 0
-                else f"Brecha de retiro de {_fmt_usd(ret_gap)}: tus aportaciones actuales aún dejan margen de mejora"
-            )
-            plain_summary = (
-                f"Tus ingresos garantizados cubren el {share} de los {_fmt_usd(spend_need)}/año necesarios en retiro. "
-                f"Ahorrando {savings_rate_pct:.1f}% ({_fmt_usd(annual_savings)}/año) puedes ordenar las piezas fiscales."
-            )
+            if neg_inv:
+                plain_headline = (
+                    f"Alerta de liquidez futura: en {neg_inv['year']} (edad {neg_inv['age_client']}) "
+                    f"el dinero líquido cae a {_fmt_usd(neg_inv['investable_assets'])}"
+                )
+                plain_summary = (
+                    f"Aunque el patrimonio total incluya vivienda ({_fmt_usd(neg_inv['net_worth'])} en {neg_inv['year']}), "
+                    f"los ingresos garantizados cubren {share} del gasto y el dinero líquido para facturas se agota en {neg_inv['year']}."
+                )
+            else:
+                plain_headline = (
+                    f"Cobertura garantizada del {share} con {_fmt_usd(left_end)} previstos al final del plan"
+                    if ret_gap == 0
+                    else f"Brecha de retiro de {_fmt_usd(ret_gap)}: tus aportaciones actuales aún dejan margen de mejora"
+                )
+                plain_summary = (
+                    f"Tus ingresos garantizados cubren el {share} de los {_fmt_usd(spend_need)}/año necesarios en retiro. "
+                    f"Ahorrando {savings_rate_pct:.1f}% ({_fmt_usd(annual_savings)}/año) puedes ordenar las piezas fiscales."
+                )
+            bias_unlock = "Conecta tu yo de hoy con tu edad de retiro separando ladrillo ilíquido de liquidez disponible."
         metrics = [
             {"label": "Yearly retirement spending need", "value": _fmt_usd(spend_need), "unit": "USD/yr", "json_source": "financial-health.json -> key_metrics.facts.retirement.spendingNeed"},
             {"label": "Guaranteed income share", "value": share, "unit": "percent", "json_source": "financial-health.json -> key_metrics.facts.retirement.incomeShareOfNeed"},
@@ -2213,25 +2463,34 @@ def _build_topic_context(case: CaseData, topic: str, extra_context: dict[str, An
                     "json_source": "financial-health.json -> key_metrics.facts.retirement.savingsLeftAtPlanEnd",
                 }
             )
-        bias_unlock = "Conecta tu yo de hoy con tu edad de retiro separando ladrillo ilíquido de liquidez disponible."
-        action_today = best_move.get("action", "Aprovechar margen fiscal en 401(k)/HSA.")
+        action_today = best_move.get("action", "Capture tax-advantaged room in 401(k)/HSA." if is_en else "Aprovechar margen fiscal en 401(k)/HSA.")
 
     elif topic_norm in ("protection", "proteccion", "insurance"):
         wf_ins = case.waterfall_row("insurance") or {}
         prot_pillar = next((p for p in case.pillars if "insurance" in p.get("pillar", "").lower()), {})
         delta_abs = abs(float(wf_ins.get("delta") or 0.0))
-        plain_headline = (
-            f"Escudo familiar: pilar de protección en {prot_pillar.get('points_shown_in_app', '0/20')}"
-        )
-        if delta_abs > 0:
-            plain_summary = (
-                f"Si faltara un ingreso hoy, la familia tiene una brecha total de {_fmt_usd(delta_abs)} en protección. "
-                f"No es hablar de escenarios negativos: es blindar el hogar y los estudios de los hijos."
-            )
+        if is_en:
+            plain_headline = f"Family shield: protection pillar at {prot_pillar.get('points_shown_in_app', '0/20')}"
+            if delta_abs > 0:
+                plain_summary = (
+                    f"If an income were lost today, the family faces a total protection gap of {_fmt_usd(delta_abs)}. "
+                    f"This isn't about worst-case fear: it's about shielding your household and children's education."
+                )
+            else:
+                plain_summary = "Life and umbrella coverage are solid, though home and auto policies still need confirmation."
+            bias_unlock = "Replace optimism bias with concrete peace of mind for those who depend on you."
+            action_today = case.top_moves[0]["action"] if case.top_moves else "Confirm active insurance policies."
         else:
-            plain_summary = (
-                "La cobertura de vida y paraguas está sólida, pero falta confirmar pólizas de vivienda y vehículo."
-            )
+            plain_headline = f"Escudo familiar: pilar de protección en {prot_pillar.get('points_shown_in_app', '0/20')}"
+            if delta_abs > 0:
+                plain_summary = (
+                    f"Si faltara un ingreso hoy, la familia tiene una brecha total de {_fmt_usd(delta_abs)} en protección. "
+                    f"No es hablar de escenarios negativos: es blindar el hogar y los estudios de los hijos."
+                )
+            else:
+                plain_summary = "La cobertura de vida y paraguas está sólida, pero falta confirmar pólizas de vivienda y vehículo."
+            bias_unlock = "Reemplaza el sesgo de optimismo por tranquilidad concreta para quienes dependen de ti."
+            action_today = case.top_moves[0]["action"] if case.top_moves else "Confirmar pólizas vigentes."
         metrics = [
             {"label": "Protection pillar", "value": str(prot_pillar.get("points_shown_in_app", "")), "unit": "points", "json_source": "financial-health.json -> score.pillars"},
             {"label": "Insurance waterfall current vs target", "value": f"{_fmt_usd(wf_ins.get('current', 0))} / {_fmt_usd(wf_ins.get('optimal_target', 0))}", "unit": "USD", "json_source": "investment-analysis.json -> key_metrics.savingsAndContributions.savingsWaterfall[2]"},
@@ -2245,23 +2504,30 @@ def _build_topic_context(case: CaseData, topic: str, extra_context: dict[str, An
                     "json_source": "financial-health.json -> score.top_moves[0]",
                 }
             )
-        bias_unlock = "Reemplaza el sesgo de optimismo por tranquilidad concreta para quienes dependen de ti."
-        action_today = case.top_moves[0]["action"] if case.top_moves else "Confirmar pólizas vigentes."
 
     elif topic_norm in ("investments", "tax_drag", "inversiones"):
-        plain_headline = f"Tus inversiones soportan caídas históricas (máx. -{max_dd_pct:.1f}% recuperada en {rec_days} días) pero pagan {_fmt_usd(tax_drag)}/año en impuestos evitables"
-        plain_summary = (
-            f"En los últimos 3 años tu cartera resistió una caída máxima de -{max_dd_pct:.1f}% y volvió a recuperar en {rec_days} días. "
-            f"Ajustar dónde colocas fondos ineficientes ahorra {_fmt_usd(tax_drag)}/año en impuestos sin asumir más riesgo."
-        )
+        if is_en:
+            plain_headline = f"Your investments weathered historical drops (max -{max_dd_pct:.1f}% recovered in {rec_days} days) but pay {_fmt_usd(tax_drag)}/yr in avoidable taxes"
+            plain_summary = (
+                f"Over the past 3 years your portfolio withstood a -{max_dd_pct:.1f}% max drawdown and recovered in {rec_days} days. "
+                f"Fixing asset location saves {_fmt_usd(tax_drag)}/yr in taxes without taking extra risk."
+            )
+            bias_unlock = "Looking at real recovery in days neutralizes panic-selling fear and stops tax leakage."
+            action_today = "Review high ordinary-dividend holdings (such as JNK/SCHD) in taxable accounts."
+        else:
+            plain_headline = f"Tus inversiones soportan caídas históricas (máx. -{max_dd_pct:.1f}% recuperada en {rec_days} días) pero pagan {_fmt_usd(tax_drag)}/año en impuestos evitables"
+            plain_summary = (
+                f"En los últimos 3 años tu cartera resistió una caída máxima de -{max_dd_pct:.1f}% y volvió a recuperar en {rec_days} días. "
+                f"Ajustar dónde colocas fondos ineficientes ahorra {_fmt_usd(tax_drag)}/año en impuestos sin asumir más riesgo."
+            )
+            bias_unlock = "Mirar la recuperación real en días neutraliza el miedo de vender en caídas y evita fugas fiscales."
+            action_today = "Revisar activos con alto dividendo ordinario (como JNK/SCHD) en cuentas sujetas a impuestos."
         metrics = [
             {"label": "Annual in-scope tax drag", "value": _fmt_usd(tax_drag), "unit": "USD/yr", "json_source": "investment-analysis.json -> key_metrics.taxDragAnalysis.householdRollup"},
             {"label": "3y max drawdown", "value": f"-{max_dd_pct:.2f}%", "unit": "percent", "json_source": "investment-analysis.json -> key_metrics.performanceAnalysis.household.maxDrawdown3y"},
             {"label": "Max drawdown recovery", "value": f"{rec_days}", "unit": "days", "json_source": "investment-analysis.json -> key_metrics.performanceAnalysis.household.maxDrawdownRecoveryDays"},
             {"label": "Historical macro events tracked", "value": f"{len(case.analysis_events)}", "unit": "events", "json_source": "investment-analysis.json -> analysis.events"},
         ]
-        bias_unlock = "Mirar la recuperación real en días neutraliza el miedo de vender en caídas y evita fugas fiscales."
-        action_today = "Revisar activos con alto dividendo ordinario (como JNK/SCHD) en cuentas sujetas a impuestos."
 
     elif topic_norm in ("home_purchase", "housing", "vivienda"):
         home_goals = [g for g in case.profile.get("goals", []) if g.get("type") == "REAL_ESTATE_PURCHASE"]
@@ -2278,52 +2544,100 @@ def _build_topic_context(case: CaseData, topic: str, extra_context: dict[str, An
             ins_amt = next((v for k, v in costs.items() if "insurance" in k.lower()), 0.0)
             y_prev = case.projection_for_year(yr - 1) or {}
             y_buy = case.projection_for_year(yr) or {}
-            plain_headline = f"Comprar casa de {_fmt_usd(amt)} en {yr} cambia tu liquidez de golpe"
-            plain_summary = (
-                f"Más allá de la cuota mensual de {_fmt_usd(loan.get('monthly_payment', 0))}/mes, "
-                f"la entrada ({_fmt_usd(down_amt)}), cierre ({_fmt_usd(closing_amt)}), impuestos ({_fmt_usd(tax_amt)}/año) "
-                f"y seguro ({_fmt_usd(ins_amt)}/año) reducen los activos invertibles de "
-                f"{_fmt_usd(y_prev.get('investable_assets', 0))} ({yr - 1}) a {_fmt_usd(y_buy.get('investable_assets', 0))} ({yr})."
-            )
+            if is_en:
+                plain_headline = f"Buying a {_fmt_usd(amt)} home in {yr} shifts your liquidity all at once"
+                plain_summary = (
+                    f"Beyond the {_fmt_usd(loan.get('monthly_payment', 0))}/mo mortgage payment, "
+                    f"the down payment ({_fmt_usd(down_amt)}), closing ({_fmt_usd(closing_amt)}), property tax ({_fmt_usd(tax_amt)}/yr) "
+                    f"and insurance ({_fmt_usd(ins_amt)}/yr) drop investable assets from "
+                    f"{_fmt_usd(y_prev.get('investable_assets', 0))} ({yr - 1}) to {_fmt_usd(y_buy.get('investable_assets', 0))} ({yr})."
+                )
+                bias_unlock = "Surface every hidden ownership cost and bring a date-delay question to the Advisor Brief."
+                action_today = "Ask the advisor to model the home purchase at an alternative date (no precomputed counterfactual exists)."
+            else:
+                plain_headline = f"Comprar casa de {_fmt_usd(amt)} en {yr} cambia tu liquidez de golpe"
+                plain_summary = (
+                    f"Más allá de la cuota mensual de {_fmt_usd(loan.get('monthly_payment', 0))}/mes, "
+                    f"la entrada ({_fmt_usd(down_amt)}), cierre ({_fmt_usd(closing_amt)}), impuestos ({_fmt_usd(tax_amt)}/año) "
+                    f"y seguro ({_fmt_usd(ins_amt)}/año) reducen los activos invertibles de "
+                    f"{_fmt_usd(y_prev.get('investable_assets', 0))} ({yr - 1}) a {_fmt_usd(y_buy.get('investable_assets', 0))} ({yr})."
+                )
+                bias_unlock = "Visibiliza todos los costes ocultos de propiedad y lleva al Advisor Brief un retraso de fecha."
+                action_today = "Solicitar al asesor simular la compra de vivienda en una fecha alternativa (no hay contrafactual precalculado)."
             metrics = [
                 {"label": f"Home purchase ({yr})", "value": _fmt_usd(amt), "unit": "USD", "json_source": "financial-health.json -> profile.goals[REAL_ESTATE_PURCHASE].amount"},
                 {"label": "Price at purchase / down payment", "value": f"{_fmt_usd(planned.get('value_at_purchase', amt))} / {_fmt_usd(down_amt)}", "unit": "USD", "json_source": "financial-health.json -> profile.goals[REAL_ESTATE_PURCHASE].yearly_costs"},
-                {"label": "Hidden annual costs (property tax + insurance) & closing", "value": f"{_fmt_usd(tax_amt)}/yr + {_fmt_usd(ins_amt)}/yr; cierre {_fmt_usd(closing_amt)}", "unit": "USD", "json_source": "financial-health.json -> profile.goals[REAL_ESTATE_PURCHASE].yearly_costs"},
+                {"label": "Hidden annual costs (property tax + insurance) & closing", "value": f"{_fmt_usd(tax_amt)}/yr + {_fmt_usd(ins_amt)}/yr; {'closing' if is_en else 'cierre'} {_fmt_usd(closing_amt)}", "unit": "USD", "json_source": "financial-health.json -> profile.goals[REAL_ESTATE_PURCHASE].yearly_costs"},
                 {"label": f"Investable assets ({yr - 1} -> {yr})", "value": f"{_fmt_usd(y_prev.get('investable_assets', 0))} -> {_fmt_usd(y_buy.get('investable_assets', 0))}", "unit": "USD", "json_source": "financial-health.json -> projections.yearly"},
             ]
-            bias_unlock = "Visibiliza todos los costes ocultos de propiedad y lleva al Advisor Brief un retraso de fecha."
-            action_today = "Solicitar al asesor simular la compra de vivienda en una fecha alternativa (no hay contrafactual precalculado)."
         else:
-            plain_headline = "Sin nueva compra de vivienda planeada; foco en patrimonio líquido y protección"
-            plain_summary = "El hogar ya cuenta con vivienda en propiedad y su prioridad es proteger liquidez y retiro."
+            if is_en:
+                plain_headline = "No new home purchase planned; focus on liquid net worth and protection"
+                plain_summary = "Your household already owns a home and the priority is protecting liquidity and retirement."
+                bias_unlock = "Do not confuse gross home value with spendable liquid cash."
+                action_today = "Prioritize eliminating high-interest card debt and family protection."
+            else:
+                plain_headline = "Sin nueva compra de vivienda planeada; foco en patrimonio líquido y protección"
+                plain_summary = "El hogar ya cuenta con vivienda en propiedad y su prioridad es proteger liquidez y retiro."
+                bias_unlock = "No confundir el valor bruto de la vivienda con dinero líquido disponible."
+                action_today = "Priorizar eliminación de tarjeta cara y protección familiar."
             metrics = [
                 {"label": "Accessible cash", "value": _fmt_usd(accessible_cash), "unit": "USD", "json_source": "financial-health.json -> key_metrics.facts.cash.accessibleCash"},
             ]
-            bias_unlock = "No confundir el valor bruto de la vivienda con dinero líquido disponible."
-            action_today = "Priorizar eliminación de tarjeta cara y protección familiar."
 
     else:
         # Overview (default)
         target_score = combined_best.get("score_after") or best_move.get("score_after") or case.published_score
-        if neg_inv:
-            plain_headline = (
-                f"{case.household_name}: hoy tienes {months_before} meses cubiertos ({months_after} tras metas), "
-                f"pero el dinero líquido cae a {_fmt_usd(neg_inv['investable_assets'])} en {neg_inv['year']}"
-            )
-        elif high_debts:
-            d = high_debts[0]
-            plain_headline = (
-                f"{case.household_name}: {months_before} meses cubiertos, pero la tarjeta de {_fmt_usd(d['balance'])} "
-                f"al {d['apr_pct']}% quema {_fmt_usd(d['annual_interest'])}/año"
-            )
-        else:
-            plain_headline = f"{case.household_name}: {months_before} meses de colchón con plan mejorable ({case.published_score} -> {target_score})"
+        if is_en:
+            if neg_inv:
+                plain_headline = (
+                    f"{case.household_name}: today you have {months_before} months covered ({months_after} after goals), "
+                    f"but liquid cash drops to {_fmt_usd(neg_inv['investable_assets'])} in {neg_inv['year']}"
+                )
+            elif high_debts:
+                d = high_debts[0]
+                plain_headline = (
+                    f"{case.household_name}: {months_before} months covered, yet the {_fmt_usd(d['balance'])} card "
+                    f"at {d['apr_pct']}% burns {_fmt_usd(d['annual_interest'])}/yr"
+                )
+            else:
+                plain_headline = f"{case.household_name}: {months_before} months of buffer with an improvable plan ({case.published_score} -> {target_score})"
 
-        plain_summary = (
-            f"Ahorras {_fmt_usd(annual_savings)}/año ({savings_rate_pct:.1f}% de ingresos) y cuentas con {months_before} meses de reserva "
-            f"({months_after} meses tras metas cercanas). Reordenando prioridades pasas de score {case.published_score} a {target_score} "
-            f"ganando tranquilidad familiar sin perder tu ritmo de vida."
-        )
+            plain_summary = (
+                f"You save {_fmt_usd(annual_savings)}/yr ({savings_rate_pct:.1f}% of income) and hold {months_before} months of reserve "
+                f"({months_after} months after near-term goals). Reordering priorities lifts your score from {case.published_score} to {target_score} "
+                f"with more family peace of mind and without losing your lifestyle."
+            )
+            bias_unlock = (
+                f"Motivational anchor {case.persona.motivational_anchor or 'PROTECTION'}: translate distant percentages into months of life covered "
+                "and one actionable step today."
+            )
+            action_today = best_move.get("action", "Execute the first waterfall step today.")
+        else:
+            if neg_inv:
+                plain_headline = (
+                    f"{case.household_name}: hoy tienes {months_before} meses cubiertos ({months_after} tras metas), "
+                    f"pero el dinero líquido cae a {_fmt_usd(neg_inv['investable_assets'])} en {neg_inv['year']}"
+                )
+            elif high_debts:
+                d = high_debts[0]
+                plain_headline = (
+                    f"{case.household_name}: {months_before} meses cubiertos, pero la tarjeta de {_fmt_usd(d['balance'])} "
+                    f"al {d['apr_pct']}% quema {_fmt_usd(d['annual_interest'])}/año"
+                )
+            else:
+                plain_headline = f"{case.household_name}: {months_before} meses de colchón con plan mejorable ({case.published_score} -> {target_score})"
+
+            plain_summary = (
+                f"Ahorras {_fmt_usd(annual_savings)}/año ({savings_rate_pct:.1f}% de ingresos) y cuentas con {months_before} meses de reserva "
+                f"({months_after} meses tras metas cercanas). Reordenando prioridades pasas de score {case.published_score} a {target_score} "
+                f"ganando tranquilidad familiar sin perder tu ritmo de vida."
+            )
+            bias_unlock = (
+                f"Ancla motivacional {case.persona.motivational_anchor or 'PROTECTION'}: traduce porcentajes lejanos en meses de vida cubierta "
+                "y un primer paso ejecutable hoy."
+            )
+            action_today = best_move.get("action", "Ejecutar el primer paso del waterfall hoy.")
         metrics = [
             {"label": "Published score -> target score", "value": f"{case.published_score} -> {target_score}", "unit": "score", "json_source": "financial-health.json -> score.published_score / score.top_moves / score.combined_moves"},
             {"label": "Accessible cash & months covered", "value": f"{_fmt_usd(accessible_cash)} ({months_before} / {months_after} mo)", "unit": "USD / months", "json_source": "financial-health.json -> key_metrics.facts.cash"},
@@ -2349,11 +2663,6 @@ def _build_topic_context(case: CaseData, topic: str, extra_context: dict[str, An
                     "json_source": "financial-health.json -> key_metrics.facts.education.fundingGap",
                 }
             )
-        bias_unlock = (
-            f"Ancla motivacional {case.persona.motivational_anchor or 'PROTECTION'}: traduce porcentajes lejanos en meses de vida cubierta "
-            "y un primer paso ejecutable hoy."
-        )
-        action_today = best_move.get("action", "Ejecutar el primer paso del waterfall hoy.")
 
     for m in metrics:
         if m["json_source"] not in sources:
@@ -2362,23 +2671,38 @@ def _build_topic_context(case: CaseData, topic: str, extra_context: dict[str, An
     math_headline = f"{case.household_name} | Score {case.published_score}/100 ({case.score_band})"
     math_bullets = [f"{m['label']}: {m['value']} [{m['json_source']}]" for m in metrics]
     math_summary = " | ".join(math_bullets)
-    family_peace = (
-        "Protege la estabilidad del hogar traduciendo cifras complejas en meses reales de colchón y pasos ordenados."
-    )
-    if case.children:
-        child_names = ", ".join(str(ch.get("first_name", "")) for ch in case.children)
+    if is_en:
         family_peace = (
-            f"Protege directamente la estabilidad diaria y el futuro de {child_names} asegurando techo, liquidez y cobertura."
+            "Protects household stability by translating complex figures into real months of buffer and ordered steps."
         )
+        if case.children:
+            child_names = ", ".join(str(ch.get("first_name", "")) for ch in case.children)
+            family_peace = (
+                f"Directly protects daily stability and the future of {child_names} by securing housing, liquidity, and coverage."
+            )
+        months_covered_str = f"{months_before} months today ({months_after} months after near-term goals)"
+    else:
+        family_peace = (
+            "Protege la estabilidad del hogar traduciendo cifras complejas en meses reales de colchón y pasos ordenados."
+        )
+        if case.children:
+            child_names = ", ".join(str(ch.get("first_name", "")) for ch in case.children)
+            family_peace = (
+                f"Protege directamente la estabilidad diaria y el futuro de {child_names} asegurando techo, liquidez y cobertura."
+            )
+        months_covered_str = f"{months_before} meses hoy ({months_after} meses tras metas cercanas)"
+
+    blind_spot_contrast = _build_blind_spot_contrast(case, extra_context, lang_norm)
 
     return {
         "case_id": case.case_id,
         "household_name": case.household_name,
         "topic": topic_norm,
+        "lang": lang_norm,
         "plain": {
             "headline": plain_headline,
             "summary": plain_summary,
-            "months_of_life_covered": f"{months_before} meses hoy ({months_after} meses tras metas cercanas)",
+            "months_of_life_covered": months_covered_str,
             "family_peace_of_mind": family_peace,
             "bias_unlock": bias_unlock,
             "action_today": action_today,
@@ -2391,6 +2715,7 @@ def _build_topic_context(case: CaseData, topic: str, extra_context: dict[str, An
             "json_sources": sources,
             "bullets": math_bullets,
         },
+        "blind_spot_contrast": blind_spot_contrast,
         "extra_context": extra_context or {},
     }
 
@@ -2978,20 +3303,32 @@ def _enrich_with_llm(
     grounded_facts: dict[str, Any],
     base_result: dict[str, Any],
     model: str | None = None,
+    lang: str = "ES",
 ) -> tuple[dict[str, Any], bool, bool, str | None]:
     """Optionally enrich a deterministic payload via LLMProxyClient while strictly blocking invented numbers."""
+    lang_norm = _normalize_lang(lang)
     allowed = extract_case_allowed_numbers(case, extra_numbers=grounded_facts)
-    prompt = (
-        f"Tarea: {task_label} para el hogar {case.household_name} ({case.case_id}).\n"
-        "REGLA ESTRICTA: Usa ÚNICAMENTE los números que aparecen en los hechos verificados JSON adjuntos. "
-        "No inventes ni estimes ninguna cifra nueva. Devuelve JSON con las claves 'plain_summary' y 'math_summary'.\n"
-        f"Hechos verificados:\n{json.dumps(grounded_facts, ensure_ascii=False)}"
-    )
+    if lang_norm == "EN":
+        prompt = (
+            f"Task: {task_label} for household {case.household_name} ({case.case_id}).\n"
+            "STRICT RULE: Use ONLY the numbers that appear in the attached verified JSON facts. "
+            "Do not invent or estimate any new figure. Respond in English and return JSON with keys 'plain_summary' and 'math_summary'.\n"
+            f"Verified facts:\n{json.dumps(grounded_facts, ensure_ascii=False)}"
+        )
+        system_msg = "You are a Sherpas behavioral financial narrator. Zero invented numbers; cite only the provided real facts in English."
+    else:
+        prompt = (
+            f"Tarea: {task_label} para el hogar {case.household_name} ({case.case_id}).\n"
+            "REGLA ESTRICTA: Usa ÚNICAMENTE los números que aparecen en los hechos verificados JSON adjuntos. "
+            "No inventes ni estimes ninguna cifra nueva. Responde en español y devuelve JSON con las claves 'plain_summary' y 'math_summary'.\n"
+            f"Hechos verificados:\n{json.dumps(grounded_facts, ensure_ascii=False)}"
+        )
+        system_msg = "Eres un narrador financiero conductual de Sherpas. Cero números inventados; solo cita datos reales proporcionados."
     resp = llm_client.chat_completion(
         messages=[
             {
                 "role": "system",
-                "content": "Eres un narrador financiero conductual de Sherpas. Cero números inventados; solo cita datos reales proporcionados.",
+                "content": system_msg,
             },
             {"role": "user", "content": prompt},
         ],
@@ -3060,12 +3397,14 @@ class BehavioralNarrator:
         llm_client: LLMProxyClient | None = None,
         model: str | None = None,
         context: dict[str, Any] | None = None,
+        lang: str = "ES",
     ) -> dict[str, Any]:
         """Translate a case topic into Dual-Lens `plain` (everyday impact) and `math` (exact USD/JSON sources)."""
         if lens not in ("both", "plain", "math"):
             raise ValueError("lens must be 'both', 'plain', or 'math'.")
+        lang_norm = _normalize_lang(lang)
         case = self.load_case(case_id)
-        base = _build_topic_context(case, topic=topic, extra_context=context)
+        base = _build_topic_context(case, topic=topic, extra_context=context, lang=lang_norm)
         used_llm = False
         llm_fallback_used = False
         fallback_reason: str | None = None
@@ -3075,20 +3414,24 @@ class BehavioralNarrator:
             grounded = {
                 "case_id": case_id,
                 "topic": base["topic"],
+                "lang": lang_norm,
                 "plain": base["plain"],
                 "math": base["math"],
+                "blind_spot_contrast": base["blind_spot_contrast"],
             }
             base, used_llm, llm_fallback_used, fallback_reason = _enrich_with_llm(
-                client, case, f"Dual-Lens {topic}", grounded, base, model=model
+                client, case, f"Dual-Lens {topic}", grounded, base, model=model, lang=lang_norm
             )
 
         result: dict[str, Any] = {
             "case_id": base["case_id"],
             "household_name": base["household_name"],
             "topic": base["topic"],
+            "lang": lang_norm,
             "requested_lens": lens,
             "plain": base["plain"],
             "math": base["math"],
+            "blind_spot_contrast": base["blind_spot_contrast"],
             "used_llm": used_llm,
             "llm_fallback_used": llm_fallback_used,
             "fallback_reason": fallback_reason,
@@ -3158,18 +3501,27 @@ class BehavioralNarrator:
         use_llm: bool = False,
         llm_client: LLMProxyClient | None = None,
         model: str | None = None,
+        lang: str = "ES",
     ) -> dict[str, Any]:
         """Synthesize the 60s blind Cordada Asimetrica pact before entering the mountain (BIBLIA_FINAL_V1)."""
+        lang_norm = _normalize_lang(lang)
+        is_en = lang_norm == "EN"
         case = self.load_case(case_id)
         if not case.is_couple:
             return {
                 "case_id": case.case_id,
                 "household_name": case.household_name,
+                "lang": lang_norm,
                 "is_couple": False,
                 "shared_100_percent": [],
                 "friction_points": [],
+                "anxiety_gap": None,
                 "midpoint_pact": None,
-                "plain_summary": f"{case.household_name} es un hogar individual; pasa directo al Quest de Miedos sin votación en pareja.",
+                "plain_summary": (
+                    f"{case.household_name} is a single-adult household; proceed directly to the Fear Quest without a couple vote."
+                    if is_en
+                    else f"{case.household_name} es un hogar individual; pasa directo al Quest de Miedos sin votación en pareja."
+                ),
                 "math_summary": f"is_couple=False; published_score={case.published_score}.",
                 "used_llm": False,
                 "llm_fallback_used": False,
@@ -3182,6 +3534,59 @@ class BehavioralNarrator:
         va = dict(member_a_votes or {})
         vb = dict(member_b_votes or {})
 
+        therm_a = _extract_thermometer_value(va.get("thermometer"))
+        therm_b = _extract_thermometer_value(vb.get("thermometer"))
+        if therm_a is not None and therm_b is not None:
+            raw_gap = round(abs(therm_a - therm_b), 2)
+            gap_num: int | float = int(raw_gap) if raw_gap == int(raw_gap) else raw_gap
+            scale_max = max(therm_a, therm_b)
+            if (scale_max <= 10.0 and raw_gap >= 3.0) or (scale_max > 10.0 and raw_gap >= 30.0):
+                gap_band = "high"
+            elif (scale_max <= 10.0 and raw_gap >= 1.5) or (scale_max > 10.0 and raw_gap >= 15.0):
+                gap_band = "moderate"
+            else:
+                gap_band = "low"
+            higher_member = name_a if therm_a > therm_b else (name_b if therm_b > therm_a else None)
+            a_disp = int(therm_a) if therm_a == int(therm_a) else therm_a
+            b_disp = int(therm_b) if therm_b == int(therm_b) else therm_b
+            if higher_member:
+                gap_summary = (
+                    f"Emotional anxiety gap of {gap_num} points: {name_a} ({a_disp}) vs {name_b} ({b_disp}). "
+                    f"{higher_member} feels higher urgency; validate their peace of mind first."
+                    if is_en
+                    else f"Brecha emocional de {gap_num} puntos: {name_a} ({a_disp}) vs {name_b} ({b_disp}). "
+                    f"{higher_member} percibe mayor urgencia; conviene validar primero su tranquilidad."
+                )
+            else:
+                gap_summary = (
+                    f"Aligned emotional thermometer ({a_disp} vs {b_disp}, gap {gap_num})."
+                    if is_en
+                    else f"Termómetro emocional alineado ({a_disp} vs {b_disp}, brecha {gap_num})."
+                )
+            anxiety_gap: dict[str, Any] = {
+                "available": True,
+                "member_a_thermometer": a_disp,
+                "member_b_thermometer": b_disp,
+                "gap": gap_num,
+                "band": gap_band,
+                "higher_anxiety_member": higher_member,
+                "summary": gap_summary,
+            }
+        else:
+            anxiety_gap = {
+                "available": False,
+                "member_a_thermometer": therm_a,
+                "member_b_thermometer": therm_b,
+                "gap": None,
+                "band": "unknown",
+                "higher_anxiety_member": None,
+                "summary": (
+                    "Emotional thermometer not provided for both partners."
+                    if is_en
+                    else "Termómetro emocional no proporcionado para ambos miembros."
+                ),
+            }
+
         fears_a = list(va.get("top_fears") or va.get("fears") or [o.id for o in case.persona.objective_concerns[:2]])
         fears_b = list(vb.get("top_fears") or vb.get("fears") or [o.id for o in case.persona.objective_concerns[:2]])
         shared_fear_ids = [f for f in fears_a if f in fears_b]
@@ -3189,15 +3594,26 @@ class BehavioralNarrator:
 
         best_combined = max(case.combined_moves, key=lambda m: int(m.get("score_after", 0)), default={})
         target_score = int(best_combined.get("score_after") or case.published_score)
-        shared_100 = [
-            f"Ancla motivacional compartida ({case.persona.motivational_anchor or 'PROTECTION'}): proteger a la familia y el futuro de los hijos."
-        ]
-        for fid in shared_fear_ids:
-            if fid in concern_map:
-                shared_100.append(f"Coincidencia en {fid}: {concern_map[fid].title}")
-        if best_combined:
-            moves_txt = " + ".join(best_combined.get("moves", []))
-            shared_100.append(f"Camino conjunto validado por Sherpas ({moves_txt}): score {case.published_score} -> {target_score}.")
+        if is_en:
+            shared_100 = [
+                f"Shared motivational anchor ({case.persona.motivational_anchor or 'PROTECTION'}): protecting the family and children's future."
+            ]
+            for fid in shared_fear_ids:
+                if fid in concern_map:
+                    shared_100.append(f"Alignment on {fid}: {concern_map[fid].title}")
+            if best_combined:
+                moves_txt = " + ".join(best_combined.get("moves", []))
+                shared_100.append(f"Sherpas-validated joint path ({moves_txt}): score {case.published_score} -> {target_score}.")
+        else:
+            shared_100 = [
+                f"Ancla motivacional compartida ({case.persona.motivational_anchor or 'PROTECTION'}): proteger a la familia y el futuro de los hijos."
+            ]
+            for fid in shared_fear_ids:
+                if fid in concern_map:
+                    shared_100.append(f"Coincidencia en {fid}: {concern_map[fid].title}")
+            if best_combined:
+                moves_txt = " + ".join(best_combined.get("moves", []))
+                shared_100.append(f"Camino conjunto validado por Sherpas ({moves_txt}): score {case.published_score} -> {target_score}.")
 
         # Isolate 1-2 friction points
         friction_points: list[dict[str, Any]] = []
@@ -3207,9 +3623,16 @@ class BehavioralNarrator:
             friction_points.append(
                 {
                     "id": "friction_risk_profile",
-                    "title": f"Perfil de riesgo distinto: {name_a} ({r1}) vs {name_b} ({r2})",
+                    "title": (
+                        f"Different risk profile: {name_a} ({r1}) vs {name_b} ({r2})"
+                        if is_en
+                        else f"Perfil de riesgo distinto: {name_a} ({r1}) vs {name_b} ({r2})"
+                    ),
                     "detail": (
-                        f"{name_a} busca perfil {r1} mientras {name_b} prioriza {r2}; "
+                        f"{name_a} seeks {r1} while {name_b} prioritizes {r2}; "
+                        f"D4 alignment is recorded as {case.persona.risk_alignment or 'MISALIGNED'}."
+                        if is_en
+                        else f"{name_a} busca perfil {r1} mientras {name_b} prioriza {r2}; "
                         f"la alineación D4 figura como {case.persona.risk_alignment or 'MISALIGNED'}."
                     ),
                 }
@@ -3221,51 +3644,89 @@ class BehavioralNarrator:
             upro_val = next((float(p.get("value") or 0) for p in case.positions if str(p.get("ticker", "")).upper() == "UPRO"), 12740.0)
             excess = float(case.ia_facts.get("cash", {}).get("cashAboveTotalNeeded", {}).get("value", 60222.5))
             d = high_debts[0]
-            friction_points.append(
-                {
-                    "id": "friction_cash_vs_leverage",
-                    "title": f"Efectivo ocioso vs UPRO apalancado y tarjeta al {d['apr_pct']}%",
-                    "detail": (
-                        f"{name_b} retiene $150,800 en efectivo (~0.09%) mientras {name_a} mantiene {_fmt_usd(upro_val)} en UPRO (3x) "
-                        f"y la tarjeta Chase CC ({_fmt_usd(d['balance'])}) quema {_fmt_usd(d['annual_interest'])}/año."
-                    ),
+            if is_en:
+                friction_points.append(
+                    {
+                        "id": "friction_cash_vs_leverage",
+                        "title": f"Idle cash vs 3x leveraged UPRO and {d['apr_pct']}% card",
+                        "detail": (
+                            f"{name_b} holds $150,800 in cash (~0.09%) while {name_a} holds {_fmt_usd(upro_val)} in UPRO (3x) "
+                            f"and the Chase CC card ({_fmt_usd(d['balance'])}) burns {_fmt_usd(d['annual_interest'])}/yr."
+                        ),
+                    }
+                )
+                midpoint_pact = {
+                    "headline": "Realistic Cordada Pact: safe liquidity + high-APR debt payoff + joint protection",
+                    "cash_flow_basis": f"Free excess cash after reserve and vacation: {_fmt_usd(excess)} (cashAboveTotalNeeded).",
+                    "owner_a_action": f"{name_a}: cap 3x exposure (UPRO {_fmt_usd(upro_val)}) and raise 401(k) (+$10,500 room).",
+                    "owner_b_action": f"{name_b}: pay off {_fmt_usd(d['balance'])} card at {d['apr_pct']}% using part of excess cash.",
+                    "joint_2_of_2": f"Joint check (2/2): close life coverage gap ($1,100,000) and add umbrella ($1,000,000) to lift score {case.published_score} -> {target_score}.",
                 }
-            )
-            midpoint_pact = {
-                "headline": "Pacto realista de Cordada: liquidez segura + limpieza de deuda cara + protección conjunta",
-                "cash_flow_basis": f"Exceso de efectivo libre tras reserva y vacaciones: {_fmt_usd(excess)} (cashAboveTotalNeeded).",
-                "owner_a_action": f"{name_a}: acotar exposición 3x (UPRO {_fmt_usd(upro_val)}) y subir 401(k) (+$10,500 de margen).",
-                "owner_b_action": f"{name_b}: liquidar tarjeta de {_fmt_usd(d['balance'])} al {d['apr_pct']}% usando parte del efectivo excedente.",
-                "joint_2_of_2": f"Check conjunto (2/2): cerrar brecha de vida ($1,100,000) y añadir umbrella ($1,000,000) para subir score {case.published_score} -> {target_score}.",
-            }
+            else:
+                friction_points.append(
+                    {
+                        "id": "friction_cash_vs_leverage",
+                        "title": f"Efectivo ocioso vs UPRO apalancado y tarjeta al {d['apr_pct']}%",
+                        "detail": (
+                            f"{name_b} retiene $150,800 en efectivo (~0.09%) mientras {name_a} mantiene {_fmt_usd(upro_val)} en UPRO (3x) "
+                            f"y la tarjeta Chase CC ({_fmt_usd(d['balance'])}) quema {_fmt_usd(d['annual_interest'])}/año."
+                        ),
+                    }
+                )
+                midpoint_pact = {
+                    "headline": "Pacto realista de Cordada: liquidez segura + limpieza de deuda cara + protección conjunta",
+                    "cash_flow_basis": f"Exceso de efectivo libre tras reserva y vacaciones: {_fmt_usd(excess)} (cashAboveTotalNeeded).",
+                    "owner_a_action": f"{name_a}: acotar exposición 3x (UPRO {_fmt_usd(upro_val)}) y subir 401(k) (+$10,500 de margen).",
+                    "owner_b_action": f"{name_b}: liquidar tarjeta de {_fmt_usd(d['balance'])} al {d['apr_pct']}% usando parte del efectivo excedente.",
+                    "joint_2_of_2": f"Check conjunto (2/2): cerrar brecha de vida ($1,100,000) y añadir umbrella ($1,000,000) para subir score {case.published_score} -> {target_score}.",
+                }
         elif case.case_id == "daniel-emily-johnson":
             fcf = float(case.fh_facts.get("retirement", {}).get("netCashFlowThisYear", {}).get("value", 15032.01))
             d = high_debts[0]
-            friction_points.append(
-                {
-                    "id": "friction_silos_debt_529",
-                    "title": f"Silos de roles ({case.persona.decision_style}): tarjeta {d['apr_pct']}% y 529 vs 401(k) en $0",
-                    "detail": (
-                        f"{name_b} gestiona $26,000/año de ahorro ($8,000 al 529 y $12,000 a brokerage), mientras {name_a} "
-                        f"carga {_fmt_usd(d['balance'])} al {d['apr_pct']}% ({_fmt_usd(d['annual_interest'])}/año) y ambos 401(k) reciben $0."
-                    ),
+            if is_en:
+                friction_points.append(
+                    {
+                        "id": "friction_silos_debt_529",
+                        "title": f"Role silos ({case.persona.decision_style}): {d['apr_pct']}% card and 529 vs $0 in 401(k)",
+                        "detail": (
+                            f"{name_b} manages $26,000/yr in savings ($8,000 to 529 and $12,000 to brokerage), while {name_a} "
+                            f"carries {_fmt_usd(d['balance'])} at {d['apr_pct']}% ({_fmt_usd(d['annual_interest'])}/yr) and both 401(k)s receive $0."
+                        ),
+                    }
+                )
+                midpoint_pact = {
+                    "headline": "Realistic Cordada Pact: shield children first and redirect cash flow without blame",
+                    "cash_flow_basis": f"Current free cash flow: {_fmt_usd(fcf)}/yr + $26,000/yr existing savings.",
+                    "owner_a_action": f"{name_a}: freeze new charges and lead accelerated payoff of the {d['apr_pct']}% card.",
+                    "owner_b_action": f"{name_b}: temporarily redirect part of the $12,000 brokerage savings toward emergency buffer (1.4 months -> 3 months) and 401(k).",
+                    "joint_2_of_2": f"Joint check (2/2): activate life coverage (+$1,166,000) + umbrella ($1,000,000) and lift score {case.published_score} -> {target_score}.",
                 }
-            )
-            midpoint_pact = {
-                "headline": "Pacto realista de Cordada: blindar hijos primero y redirigir flujo sin culpa",
-                "cash_flow_basis": f"Flujo de caja libre actual: {_fmt_usd(fcf)}/año + $26,000/año de ahorro existente.",
-                "owner_a_action": f"{name_a}: congelar nuevos cargos y liderar amortización acelerada de tarjeta al {d['apr_pct']}%.",
-                "owner_b_action": f"{name_b}: redirigir temporalmente parte de los $12,000 de brokerage hacia colchón (1.4 meses -> 3 meses) y 401(k).",
-                "joint_2_of_2": f"Check conjunto (2/2): activar cobertura de vida (+$1,166,000) + umbrella ($1,000,000) y subir score {case.published_score} -> {target_score}.",
-            }
+            else:
+                friction_points.append(
+                    {
+                        "id": "friction_silos_debt_529",
+                        "title": f"Silos de roles ({case.persona.decision_style}): tarjeta {d['apr_pct']}% y 529 vs 401(k) en $0",
+                        "detail": (
+                            f"{name_b} gestiona $26,000/año de ahorro ($8,000 al 529 y $12,000 a brokerage), mientras {name_a} "
+                            f"carga {_fmt_usd(d['balance'])} al {d['apr_pct']}% ({_fmt_usd(d['annual_interest'])}/año) y ambos 401(k) reciben $0."
+                        ),
+                    }
+                )
+                midpoint_pact = {
+                    "headline": "Pacto realista de Cordada: blindar hijos primero y redirigir flujo sin culpa",
+                    "cash_flow_basis": f"Flujo de caja libre actual: {_fmt_usd(fcf)}/año + $26,000/año de ahorro existente.",
+                    "owner_a_action": f"{name_a}: congelar nuevos cargos y liderar amortización acelerada de tarjeta al {d['apr_pct']}%.",
+                    "owner_b_action": f"{name_b}: redirigir temporalmente parte de los $12,000 de brokerage hacia colchón (1.4 meses -> 3 meses) y 401(k).",
+                    "joint_2_of_2": f"Check conjunto (2/2): activar cobertura de vida (+$1,166,000) + umbrella ($1,000,000) y subir score {case.published_score} -> {target_score}.",
+                }
         else:  # pragma: no cover - defensive fallback for any future couple case
             fcf = float(case.fh_facts.get("retirement", {}).get("netCashFlowThisYear", {}).get("value", 0.0))
             midpoint_pact = {
-                "headline": "Pacto realista de Cordada",
-                "cash_flow_basis": f"Flujo de caja neto anual: {_fmt_usd(fcf)}/año.",
-                "owner_a_action": f"{name_a}: priorizar pasos asignados en waterfall.",
-                "owner_b_action": f"{name_b}: coordinar liquidez y protección.",
-                "joint_2_of_2": f"Check conjunto (2/2) hacia score {target_score}.",
+                "headline": "Realistic Cordada Pact" if is_en else "Pacto realista de Cordada",
+                "cash_flow_basis": f"Net annual cash flow: {_fmt_usd(fcf)}/yr." if is_en else f"Flujo de caja neto anual: {_fmt_usd(fcf)}/año.",
+                "owner_a_action": f"{name_a}: prioritize assigned waterfall steps." if is_en else f"{name_a}: priorizar pasos asignados en waterfall.",
+                "owner_b_action": f"{name_b}: coordinate liquidity and protection." if is_en else f"{name_b}: coordinar liquidez y protección.",
+                "joint_2_of_2": f"Joint check (2/2) toward score {target_score}." if is_en else f"Check conjunto (2/2) hacia score {target_score}.",
             }
 
         # Check explicit node vote disagreements if supplied
@@ -3276,27 +3737,38 @@ class BehavioralNarrator:
                 friction_points.append(
                     {
                         "id": f"vote_diff_{node_key}",
-                        "title": f"Voto divergente en '{node_key}'",
-                        "detail": f"{name_a} votó '{votes_a_map[node_key]}' y {name_b} votó '{votes_b_map[node_key]}'.",
+                        "title": f"Divergent vote on '{node_key}'" if is_en else f"Voto divergente en '{node_key}'",
+                        "detail": (
+                            f"{name_a} voted '{votes_a_map[node_key]}' and {name_b} voted '{votes_b_map[node_key]}'."
+                            if is_en
+                            else f"{name_a} votó '{votes_a_map[node_key]}' y {name_b} votó '{votes_b_map[node_key]}'."
+                        ),
                     }
                 )
 
         # Keep isolated friction points concise (max 2 unless explicit vote diffs added)
         friction_points = friction_points[: max(2, len(friction_points))]
 
+        plain_summary = (
+            f"You agree 100% on protecting your family ({case.persona.motivational_anchor or 'PROTECTION'}). "
+            f"Only {len(friction_points)} friction points isolated to align before climbing: {midpoint_pact['headline']}."
+            if is_en
+            else f"Coincidís al 100% en proteger a vuestra familia ({case.persona.motivational_anchor or 'PROTECTION'}). "
+            f"Aislados solo {len(friction_points)} puntos de roce para acordar antes de escalar: {midpoint_pact['headline']}."
+        )
+
         result: dict[str, Any] = {
             "case_id": case.case_id,
             "household_name": case.household_name,
+            "lang": lang_norm,
             "is_couple": True,
-            "member_a": {"name": name_a, "risk_profile": r1, "top_fears": fears_a},
-            "member_b": {"name": name_b, "risk_profile": r2, "top_fears": fears_b},
+            "member_a": {"name": name_a, "risk_profile": r1, "top_fears": fears_a, "thermometer": therm_a},
+            "member_b": {"name": name_b, "risk_profile": r2, "top_fears": fears_b, "thermometer": therm_b},
             "shared_100_percent": shared_100,
             "friction_points": friction_points,
+            "anxiety_gap": anxiety_gap,
             "midpoint_pact": midpoint_pact,
-            "plain_summary": (
-                f"Coincidís al 100% en proteger a vuestra familia ({case.persona.motivational_anchor or 'PROTECTION'}). "
-                f"Aislados solo {len(friction_points)} puntos de roce para acordar antes de escalar: {midpoint_pact['headline']}."
-            ),
+            "plain_summary": plain_summary,
             "math_summary": (
                 f"{name_a} ({r1}) vs {name_b} ({r2}) | score {case.published_score} -> {target_score} | "
                 f"{midpoint_pact['cash_flow_basis']}"
@@ -3310,7 +3782,7 @@ class BehavioralNarrator:
         if use_llm:
             client = self._get_client(llm_client)
             enriched, used_llm, fb_used, fb_reason = _enrich_with_llm(
-                client, case, "Síntesis Pacto Cordada Asimétrica", result, result, model=model
+                client, case, "Synthesize Cordada Asimetrica Pact" if is_en else "Síntesis Pacto Cordada Asimétrica", result, result, model=model, lang=lang_norm
             )
             enriched["used_llm"] = used_llm
             enriched["llm_fallback_used"] = fb_used
@@ -3331,10 +3803,13 @@ class BehavioralNarrator:
         use_llm: bool = False,
         llm_client: LLMProxyClient | None = None,
         model: str | None = None,
+        lang: str = "ES",
     ) -> dict[str, Any]:
         """Compile Advisor Brief: O1..O8 ranking + subjective concerns, T1..T5 tensions,
         A/B couple disagreements, and unmodeled goals turned into concrete advisor questions.
         """
+        lang_norm = _normalize_lang(lang)
+        is_en = lang_norm == "EN"
         case = self.load_case(case_id)
 
         # 1. Fear ranking (`O1..O9` + Subjective concerns)
@@ -3378,11 +3853,12 @@ class BehavioralNarrator:
             cv = couple_votes or {}
             va = cv.get("member_a") or cv.get("partner_a") or cv.get("a") or {}
             vb = cv.get("member_b") or cv.get("partner_b") or cv.get("b") or {}
-            pact = self.synthesize_cordada_pact(case_id, member_a_votes=va, member_b_votes=vb, use_llm=False)
+            pact = self.synthesize_cordada_pact(case_id, member_a_votes=va, member_b_votes=vb, use_llm=False, lang=lang_norm)
             couple_section: dict[str, Any] = {
                 "is_couple": True,
                 "disagreements": pact["friction_points"],
                 "shared_alignment": pact["shared_100_percent"],
+                "anxiety_gap": pact.get("anxiety_gap"),
                 "midpoint_pact": pact["midpoint_pact"],
             }
             # Also handle explicit node vote list if provided: [{"node": "...", "vote_a": "...", "vote_b": "..."}]
@@ -3391,9 +3867,16 @@ class BehavioralNarrator:
                     couple_section["disagreements"].append(
                         {
                             "id": f"node_{item.get('node', 'decision')}",
-                            "title": f"Desacuerdo en nodo {item.get('node', '')}",
+                            "title": (
+                                f"Node disagreement on {item.get('node', '')}"
+                                if is_en
+                                else f"Desacuerdo en nodo {item.get('node', '')}"
+                            ),
                             "detail": (
-                                f"{pact['member_a']['name']} eligió '{item.get('vote_a')}' vs "
+                                f"{pact['member_a']['name']} chose '{item.get('vote_a')}' vs "
+                                f"{pact['member_b']['name']} chose '{item.get('vote_b')}'."
+                                if is_en
+                                else f"{pact['member_a']['name']} eligió '{item.get('vote_a')}' vs "
                                 f"{pact['member_b']['name']} eligió '{item.get('vote_b')}'."
                             ),
                         }
@@ -3403,8 +3886,13 @@ class BehavioralNarrator:
                 "is_couple": False,
                 "disagreements": [],
                 "shared_alignment": [],
+                "anxiety_gap": None,
                 "midpoint_pact": None,
-                "note": "Hogar individual: sin desacuerdos A/B de pareja.",
+                "note": (
+                    "Single-adult household: no couple A/B disagreements."
+                    if is_en
+                    else "Hogar individual: sin desacuerdos A/B de pareja."
+                ),
             }
 
         # 4. Unmodeled goals (no precalculated counterfactual in Sherpas -> concrete advisor questions)
@@ -3421,17 +3909,30 @@ class BehavioralNarrator:
                 y_prev = case.projection_for_year(yr - 1) or {}
                 y_buy = case.projection_for_year(yr) or {}
                 neg_inv = case.first_negative_investable_year()
-                cliff_note = (
-                    f" y evitar el déficit líquido en {neg_inv['year']} ({_fmt_usd(neg_inv['investable_assets'])})"
-                    if neg_inv
-                    else ""
-                )
-                question = (
-                    f"Sherpas no tiene calculado un escenario alternativo para la compra de vivienda de {_fmt_usd(amt)} en {yr} "
-                    f"(precio proyectado {_fmt_usd(planned.get('value_at_purchase', amt))}, entrada {_fmt_usd(down)}, cierre {_fmt_usd(closing)}). "
-                    f"Si retrasamos la compra 2-3 años o reducimos presupuesto, ¿cómo cambia la caída de activos invertibles "
-                    f"de {_fmt_usd(y_prev.get('investable_assets', 0))} a {_fmt_usd(y_buy.get('investable_assets', 0))}{cliff_note}?"
-                )
+                if is_en:
+                    cliff_note = (
+                        f" and avoid the liquid deficit in {neg_inv['year']} ({_fmt_usd(neg_inv['investable_assets'])})"
+                        if neg_inv
+                        else ""
+                    )
+                    question = (
+                        f"Sherpas has no precomputed counterfactual for the {_fmt_usd(amt)} home purchase in {yr} "
+                        f"(projected price {_fmt_usd(planned.get('value_at_purchase', amt))}, down payment {_fmt_usd(down)}, closing {_fmt_usd(closing)}). "
+                        f"If we delay the purchase 2-3 years or lower the budget, how does the drop in investable assets "
+                        f"from {_fmt_usd(y_prev.get('investable_assets', 0))} to {_fmt_usd(y_buy.get('investable_assets', 0))} change{cliff_note}?"
+                    )
+                else:
+                    cliff_note = (
+                        f" y evitar el déficit líquido en {neg_inv['year']} ({_fmt_usd(neg_inv['investable_assets'])})"
+                        if neg_inv
+                        else ""
+                    )
+                    question = (
+                        f"Sherpas no tiene calculado un escenario alternativo para la compra de vivienda de {_fmt_usd(amt)} en {yr} "
+                        f"(precio proyectado {_fmt_usd(planned.get('value_at_purchase', amt))}, entrada {_fmt_usd(down)}, cierre {_fmt_usd(closing)}). "
+                        f"Si retrasamos la compra 2-3 años o reducimos presupuesto, ¿cómo cambia la caída de activos invertibles "
+                        f"de {_fmt_usd(y_prev.get('investable_assets', 0))} a {_fmt_usd(y_buy.get('investable_assets', 0))}{cliff_note}?"
+                    )
                 unmodeled_questions.append(
                     {
                         "goal_name": g.get("name", "Purchase a home"),
@@ -3446,17 +3947,22 @@ class BehavioralNarrator:
                 yr = int(g.get("start_year", 2028))
                 amt = float(g.get("amount", 0.0))
                 planned = g.get("planned_purchase", {})
+                question = (
+                    f"For the {_fmt_usd(amt)} vehicle purchase in {yr} "
+                    f"({_fmt_usd(planned.get('value_at_purchase', amt))} at purchase date), "
+                    "should we pay cash from excess liquidity or finance it after paying off the 18% card?"
+                    if is_en
+                    else f"Para la compra del vehículo de {_fmt_usd(amt)} en {yr} "
+                    f"({_fmt_usd(planned.get('value_at_purchase', amt))} a fecha de compra), "
+                    "¿conviene pagarlo al contado con el exceso de liquidez o financiarlo tras liquidar la tarjeta al 18%?"
+                )
                 unmodeled_questions.append(
                     {
                         "goal_name": g.get("name", "Purchase a vehicle"),
                         "goal_type": gtype,
                         "target_year": yr,
                         "amount": amt,
-                        "question": (
-                            f"Para la compra del vehículo de {_fmt_usd(amt)} en {yr} "
-                            f"({_fmt_usd(planned.get('value_at_purchase', amt))} a fecha de compra), "
-                            "¿conviene pagarlo al contado con el exceso de liquidez o financiarlo tras liquidar la tarjeta al 18%?"
-                        ),
+                        "question": question,
                         "json_source": "financial-health.json -> profile.goals[VEHICLE_PURCHASE]",
                     }
                 )
@@ -3470,7 +3976,10 @@ class BehavioralNarrator:
                     "target_year": 2026,
                     "amount": 24500,
                     "question": (
-                        "¿Dispone su empleador de un 401(k) ($24,500 de margen) y podemos recopilar el cost basis faltante "
+                        "Does your employer offer a 401(k) ($24,500 room) and can we gather the missing cost basis "
+                        "for the taxable account ($300,000, $3,032.20/yr tax drag) to relocate VTI/JNK/SCHD without unnecessary tax impact?"
+                        if is_en
+                        else "¿Dispone su empleador de un 401(k) ($24,500 de margen) y podemos recopilar el cost basis faltante "
                         "de la cuenta taxable ($300,000, $3,032.20/año de tax drag) para reubicar VTI/JNK/SCHD sin impacto fiscal innecesario?"
                     ),
                     "json_source": "persona.md -> D2/O7/O8 & investment-analysis.json -> taxDragAnalysis.costBasisBlockingNotes",
@@ -3486,7 +3995,10 @@ class BehavioralNarrator:
                     "target_year": 2026,
                     "amount": ret_gap,
                     "question": (
-                        f"El flujo libre anual es {_fmt_usd(fcf)} frente a {_fmt_usd(ret_gap)} de brecha de retiro: "
+                        f"Annual free cash flow is {_fmt_usd(fcf)} against a {_fmt_usd(ret_gap)} retirement gap: "
+                        "can we confirm the estimated 401(k) matches ($6,400 Daniel and $4,800 Emily) and sequence the 24.9% card + insurance?"
+                        if is_en
+                        else f"El flujo libre anual es {_fmt_usd(fcf)} frente a {_fmt_usd(ret_gap)} de brecha de retiro: "
                         "¿confirmamos los matches estimados del 401(k) ($6,400 Daniel y $4,800 Emily) y cómo escalonar tarjeta al 24.9% + seguros?"
                     ),
                     "json_source": "persona.md -> O1/T1 & investment-analysis.json -> savingsWaterfall[4..5]",
@@ -3500,7 +4012,10 @@ class BehavioralNarrator:
                     "target_year": 2026,
                     "amount": 12740,
                     "question": (
-                        "La reconciliación de flujo marca gastos posiblemente subestimados (savingsCapacityReliable: false). "
+                        "Cashflow reconciliation flags potentially understated expenses (savingsCapacityReliable: false). "
+                        "Can we confirm actual monthly spending before allocating the $60,222.50 excess cash and trimming UPRO ($12,740)?"
+                        if is_en
+                        else "La reconciliación de flujo marca gastos posiblemente subestimados (savingsCapacityReliable: false). "
                         "¿Confirmamos el gasto real mensual antes de asignar los $60,222.50 de efectivo libre y reducir UPRO ($12,740)?"
                     ),
                     "json_source": "investment-analysis.json -> savingsAndContributions.cashflowReconciliation & positions",
@@ -3514,7 +4029,11 @@ class BehavioralNarrator:
                     "goal_type": "USER_FLAGGED",
                     "target_year": None,
                     "amount": None,
-                    "question": f"El hogar pidió evaluar un contrafactual con el asesor para: {extra_goal}.",
+                    "question": (
+                        f"The household asked to evaluate a counterfactual with the advisor for: {extra_goal}."
+                        if is_en
+                        else f"El hogar pidió evaluar un contrafactual con el asesor para: {extra_goal}."
+                    ),
                     "json_source": "user_simulation_flag",
                 }
             )
@@ -3524,44 +4043,86 @@ class BehavioralNarrator:
             top_f = ranked_fears[0]
             advisor_questions.insert(
                 0,
-                f"Miedo #1 priorizado por la familia ({top_f['id']} · {top_f['severity']}): {top_f['title']} — definir plan inmediato.",
+                (
+                    f"#1 fear prioritized by the family ({top_f['id']} · {top_f['severity']}): {top_f['title']} — define immediate action plan."
+                    if is_en
+                    else f"Miedo #1 priorizado por la familia ({top_f['id']} · {top_f['severity']}): {top_f['title']} — definir plan inmediato."
+                ),
             )
         for s in captured_subj:
-            advisor_questions.append(f"Preocupación subjetiva expresada por el hogar (ausente en persona.md): {s}")
+            advisor_questions.append(
+                f"Subjective concern voiced by the household (absent from persona.md): {s}"
+                if is_en
+                else f"Preocupación subjetiva expresada por el hogar (ausente en persona.md): {s}"
+            )
         for skipped in skipped_moves or []:
-            advisor_questions.append(f"Decisión omitida en la simulación que requiere revisión conjunta: {skipped}")
+            advisor_questions.append(
+                f"Skipped simulation decision requiring joint review: {skipped}"
+                if is_en
+                else f"Decisión omitida en la simulación que requiere revisión conjunta: {skipped}"
+            )
 
-        lines = [
-            f"# Advisor Brief — {case.household_name} ({case.case_id})",
-            f"- **Score publicado:** {case.published_score}/100 ({case.score_band})",
-            f"- **Ancla motivacional:** {case.persona.motivational_anchor or 'N/A'} | **Estilo:** {case.persona.decision_style or 'N/A'}",
-            "",
-            "## 1. Ranking de Miedos (O1..O8/O9) + Miedos Subjetivos",
-            *[f"{f['rank']}. [{f['id']} · {f['severity']}] {f['title']}" for f in ranked_fears[:5]],
-            f"- **Subjective concerns (persona.md):** {subjective_section['persona_md_status']}",
-            *(
-                [f"- **Capturados en Quest:** {'; '.join(captured_subj)}"]
-                if captured_subj
-                else []
-            ),
-            "",
-            "## 2. Tensiones Reales (T1..T5)",
-            *[f"- **{t['id']} ({t['severity']}):** {t['summary']}" for t in tensions_list],
-            "",
-            "## 3. Desacuerdos de Pareja (Votación A/B)",
-            *(
-                [f"- {d['title']}: {d['detail']}" for d in couple_section["disagreements"]]
-                if couple_section["disagreements"]
-                else [f"- {couple_section.get('note', 'Sin desacuerdos.')}"]
-            ),
-            "",
-            "## 4. Preguntas Concretas al Asesor (Metas sin Contrafactual Precalculado)",
-            *[f"- {q}" for q in advisor_questions],
-        ]
+        if is_en:
+            lines = [
+                f"# Advisor Brief — {case.household_name} ({case.case_id})",
+                f"- **Published score:** {case.published_score}/100 ({case.score_band})",
+                f"- **Motivational anchor:** {case.persona.motivational_anchor or 'N/A'} | **Style:** {case.persona.decision_style or 'N/A'}",
+                "",
+                "## 1. Fear Ranking (O1..O8/O9) + Subjective Concerns",
+                *[f"{f['rank']}. [{f['id']} · {f['severity']}] {f['title']}" for f in ranked_fears[:5]],
+                f"- **Subjective concerns (persona.md):** {subjective_section['persona_md_status']}",
+                *(
+                    [f"- **Captured in Quest:** {'; '.join(captured_subj)}"]
+                    if captured_subj
+                    else []
+                ),
+                "",
+                "## 2. Real Tensions (T1..T5)",
+                *[f"- **{t['id']} ({t['severity']}):** {t['summary']}" for t in tensions_list],
+                "",
+                "## 3. Couple Disagreements (A/B Vote)",
+                *(
+                    [f"- {d['title']}: {d['detail']}" for d in couple_section["disagreements"]]
+                    if couple_section["disagreements"]
+                    else [f"- {couple_section.get('note', 'No disagreements.')}"]
+                ),
+                "",
+                "## 4. Concrete Advisor Questions (Unmodeled Counterfactual Goals)",
+                *[f"- {q}" for q in advisor_questions],
+            ]
+        else:
+            lines = [
+                f"# Advisor Brief — {case.household_name} ({case.case_id})",
+                f"- **Score publicado:** {case.published_score}/100 ({case.score_band})",
+                f"- **Ancla motivacional:** {case.persona.motivational_anchor or 'N/A'} | **Estilo:** {case.persona.decision_style or 'N/A'}",
+                "",
+                "## 1. Ranking de Miedos (O1..O8/O9) + Miedos Subjetivos",
+                *[f"{f['rank']}. [{f['id']} · {f['severity']}] {f['title']}" for f in ranked_fears[:5]],
+                f"- **Subjective concerns (persona.md):** {subjective_section['persona_md_status']}",
+                *(
+                    [f"- **Capturados en Quest:** {'; '.join(captured_subj)}"]
+                    if captured_subj
+                    else []
+                ),
+                "",
+                "## 2. Tensiones Reales (T1..T5)",
+                *[f"- **{t['id']} ({t['severity']}):** {t['summary']}" for t in tensions_list],
+                "",
+                "## 3. Desacuerdos de Pareja (Votación A/B)",
+                *(
+                    [f"- {d['title']}: {d['detail']}" for d in couple_section["disagreements"]]
+                    if couple_section["disagreements"]
+                    else [f"- {couple_section.get('note', 'Sin desacuerdos.')}"]
+                ),
+                "",
+                "## 4. Preguntas Concretas al Asesor (Metas sin Contrafactual Precalculado)",
+                *[f"- {q}" for q in advisor_questions],
+            ]
 
         brief: dict[str, Any] = {
             "case_id": case.case_id,
             "household_name": case.household_name,
+            "lang": lang_norm,
             "published_score": case.published_score,
             "score_band": case.score_band,
             "fear_ranking": ranked_fears,
@@ -3582,13 +4143,14 @@ class BehavioralNarrator:
             client = self._get_client(llm_client)
             grounded = {
                 "case_id": case.case_id,
+                "lang": lang_norm,
                 "published_score": case.published_score,
                 "top_fears": ranked_fears[:3],
                 "tensions": tensions_list,
                 "unmodeled_goal_questions": unmodeled_questions,
             }
             enriched, used_llm, fb_used, fb_reason = _enrich_with_llm(
-                client, case, "Generar resumen ejecutivo Advisor Brief", grounded, brief, model=model
+                client, case, "Generate Executive Advisor Brief" if is_en else "Generar resumen ejecutivo Advisor Brief", grounded, brief, model=model, lang=lang_norm
             )
             enriched["used_llm"] = used_llm
             enriched["llm_fallback_used"] = fb_used
@@ -3607,6 +4169,7 @@ def translate_dual_lens(
     model: str | None = None,
     cases_dir: str | Path | None = None,
     context: dict[str, Any] | None = None,
+    lang: str = "ES",
 ) -> dict[str, Any]:
     """Module-level wrapper for `BehavioralNarrator.translate_dual_lens`."""
     return BehavioralNarrator(cases_dir=cases_dir, llm_client=llm_client).translate_dual_lens(
@@ -3617,6 +4180,7 @@ def translate_dual_lens(
         llm_client=llm_client,
         model=model,
         context=context,
+        lang=lang,
     )
 
 
@@ -3660,6 +4224,7 @@ def synthesize_cordada_pact(
     llm_client: LLMProxyClient | None = None,
     model: str | None = None,
     cases_dir: str | Path | None = None,
+    lang: str = "ES",
 ) -> dict[str, Any]:
     """Module-level wrapper for `BehavioralNarrator.synthesize_cordada_pact`."""
     return BehavioralNarrator(cases_dir=cases_dir, llm_client=llm_client).synthesize_cordada_pact(
@@ -3669,6 +4234,7 @@ def synthesize_cordada_pact(
         use_llm=use_llm,
         llm_client=llm_client,
         model=model,
+        lang=lang,
     )
 
 
@@ -3686,6 +4252,7 @@ def generate_advisor_brief(
     llm_client: LLMProxyClient | None = None,
     model: str | None = None,
     cases_dir: str | Path | None = None,
+    lang: str = "ES",
 ) -> dict[str, Any]:
     """Module-level wrapper for `BehavioralNarrator.generate_advisor_brief`."""
     return BehavioralNarrator(cases_dir=cases_dir, llm_client=llm_client).generate_advisor_brief(
@@ -3698,4 +4265,5 @@ def generate_advisor_brief(
         use_llm=use_llm,
         llm_client=llm_client,
         model=model,
+        lang=lang,
     )

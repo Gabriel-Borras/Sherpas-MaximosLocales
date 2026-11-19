@@ -593,6 +593,10 @@ def _handle_ai(
         raise KeyError("Ruta narrativa no encontrada")
     case_id = _required_case_id(body, state)
     model = _optional_string(body, "model")
+    raw_lang = _optional_string(body, "lang", default="ES")
+    lang = (raw_lang or "ES").upper()
+    if lang not in {"ES", "EN"}:
+        raise BadRequestError("lang debe ser uno de: EN, ES")
 
     if route == "/api/ai/reframe":
         topic = _optional_string(
@@ -631,6 +635,7 @@ def _handle_ai(
             topic=topic or "overview",
             lens=lens or "both",
             context=context,
+            lang=lang,
             use_llm=True,
             llm_client=state.llm_client,
             model=model,
@@ -641,6 +646,7 @@ def _handle_ai(
             case_id=case_id,
             member_a_votes=_optional_mapping(body, "member_a_votes"),
             member_b_votes=_optional_mapping(body, "member_b_votes"),
+            lang=lang,
             use_llm=True,
             llm_client=state.llm_client,
             model=model,
@@ -675,6 +681,7 @@ def _handle_ai(
             couple_votes=_optional_mapping(body, "couple_votes"),
             skipped_moves=_optional_string_list(body, "skipped_moves"),
             unmodeled_goals=_optional_string_list(body, "unmodeled_goals"),
+            lang=lang,
             use_llm=True,
             llm_client=state.llm_client,
             model=model,
