@@ -14,6 +14,7 @@ import mimetypes
 import os
 import sys
 import threading
+import time
 import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -33,6 +34,7 @@ from backend.irl_engine import IRLEngine, create_irl_run
 from backend.llm_proxy import LLMProxyClient
 from backend.mcp_client import CaseNotFoundError, get_case, list_cases, load_env_file
 from backend.notifications import NotificationEngine
+from backend import telegram_relay
 from backend.timeline_engine import TimelineEngine
 
 
@@ -76,26 +78,49 @@ def _telegram_deep_link(case_id: str, owner: str | None = None) -> str:
     return f"https://t.me/{bot}?start={case_id or 'demo'}_{target}"
 
 
-def _emit_n8n_webhook(payload: dict[str, Any]) -> None:
-    """Best-effort, asynchronous n8n delivery that never delays an API response."""
+def _n8n_secret() -> str:
+    """Return the optional shared secret sent to n8n as ``X-Sherpas-Secret``."""
+    if "N8N_WEBHOOK_SECRET" not in os.environ:
+        load_env_file()
+    return os.environ.get("N8N_WEBHOOK_SECRET", "").strip()
+
+
+def _post_n8n(payload: dict[str, Any]) -> bool:
+    """POST one payload to n8n; return ``True`` only when n8n accepted it."""
     webhook_url = _n8n_webhook_url()
     if not webhook_url:
+        return False
+    headers = {"Content-Type": "application/json"}
+    secret = _n8n_secret()
+    if secret:
+        headers["X-Sherpas-Secret"] = secret
+    try:
+        request = urllib.request.Request(
+            webhook_url,
+            data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+            method="POST",
+            headers=headers,
+        )
+        with urllib.request.urlopen(request, timeout=2):
+            pass
+        return True
+    except Exception:
+        # Transport, HTTP and JSON errors must never affect the API response.
+        return False
+
+
+def _emit_n8n_webhook(payload: dict[str, Any]) -> None:
+    """Best-effort, asynchronous n8n delivery that never delays an API response.
+
+    A failed delivery is parked in the opt-in outbox (``SHERPAS_OUTBOX_DIR``)
+    and replayed by the scheduler, so no Telegram message is silently lost.
+    """
+    if not _n8n_webhook_url():
         return
 
     def post_webhook() -> None:
-        try:
-            request = urllib.request.Request(
-                webhook_url,
-                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
-                method="POST",
-                headers={"Content-Type": "application/json"},
-            )
-            with urllib.request.urlopen(request, timeout=2):
-                pass
-        except Exception:
-            # The webhook is an optional side effect: transport, HTTP and JSON
-            # errors must never affect the deterministic API response.
-            return
+        if not _post_n8n(payload):
+            telegram_relay.record_failure(payload)
 
     try:
         threading.Thread(target=post_webhook, daemon=True).start()
@@ -125,6 +150,7 @@ class IRLRunStore:
         self.cases_dir = cases_dir
         self._runs: dict[str, IRLEngine] = {}
         self._notifications: dict[str, NotificationEngine] = {}
+        self._created: dict[str, float] = {}
         self._next_run_number = 1
         self.lock = threading.RLock()
 
@@ -140,6 +166,7 @@ class IRLRunStore:
             self._next_run_number += 1
             self._runs[run_id] = engine
             self._notifications[run_id] = notification_engine
+            self._created[run_id] = time.time()
             return run_id, engine
 
     def get(self, run_id: str) -> tuple[IRLEngine, NotificationEngine]:
@@ -172,6 +199,13 @@ class ServerState:
             engine=TimelineEngine(case_provider=case_provider, cases_dir=cases_dir)
         )
         self.runs = IRLRunStore(cases_dir=cases_dir)
+        self.scheduler = telegram_relay.NotificationScheduler(
+            self,
+            lambda notification, run_id: _emit_n8n_webhook(
+                _milestone_webhook_payload(notification, run_id)
+            ),
+            drain=lambda: telegram_relay.drain_outbox(_post_n8n),
+        )
         # A missing TEAM_KEY is handled synchronously by LLMProxyClient without
         # any network access.  With a key, keep failed/unreachable proxy calls
         # bounded so the narrator can immediately return its deterministic,
@@ -781,6 +815,59 @@ def _json_bytes(data: Any) -> bytes:
     return json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
 
 
+def _handle_telegram(
+    method: str,
+    parsed,
+    body: dict[str, Any],
+    state: ServerState,
+) -> tuple[int, Any]:
+    """Operational endpoints for the Telegram/n8n bridge (no user data)."""
+    parts = [part for part in parsed.path.split("/") if part]
+    if method == "GET" and parts == ["api", "telegram", "config"]:
+        return 200, {
+            "telegram_bot_username": _telegram_bot_username(),
+            "telegram_deep_link_template": _telegram_deep_link("<case_id>", "<owner>"),
+            "n8n_configured": bool(_n8n_webhook_url()),
+            "secret_configured": bool(_n8n_secret()),
+            "scheduler_running": state.scheduler.running,
+            "scheduler_ticks": state.scheduler.ticks,
+            "scheduler_emitted": state.scheduler.emitted,
+            "day_seconds": state.scheduler.day_seconds,
+            "outbox_enabled": telegram_relay.outbox_path() is not None,
+            "outbox_pending": telegram_relay.pending_count(),
+        }
+    if method == "POST" and parts == ["api", "telegram", "test"]:
+        if os.environ.get("SHERPAS_ENABLE_TELEGRAM_TEST", "").strip() != "1":
+            raise KeyError("Ruta Telegram no encontrada")
+        if not _n8n_webhook_url():
+            raise BadRequestError("N8N_WEBHOOK_URL no esta configurado")
+        case_id = body.get("case_id") or "demo"
+        owner = body.get("owner") or "client"
+        if not isinstance(case_id, str) or not isinstance(owner, str):
+            raise BadRequestError("case_id y owner deben ser texto")
+        message = body.get("message")
+        if message is not None and not isinstance(message, str):
+            raise BadRequestError("message debe ser texto")
+        _emit_n8n_webhook(
+            {
+                "notification_id": f"notif_test_{uuid.uuid4().hex[:8]}",
+                "kind": "test",
+                "type": "test",
+                "day": 0,
+                "severity": "info",
+                "case_id": case_id,
+                "target_owner": owner,
+                "title": "Prueba de La Radio del Sherpa",
+                "message_plain": message or "Mensaje de prueba: la conexion backend -> n8n -> Telegram funciona.",
+                "message_math": message or "Mensaje de prueba.",
+                "deep_link": "",
+                "run_id": "test",
+            }
+        )
+        return 202, {"status": "queued", "case_id": case_id, "owner": owner}
+    raise KeyError("Ruta Telegram no encontrada")
+
+
 def create_server(
     host: str = "127.0.0.1",
     port: int = 8000,
@@ -918,6 +1005,10 @@ def create_server(
                     )
                     self._send(status, data, content_type)
                     return
+                if parsed.path.startswith("/api/telegram/"):
+                    status, data = _handle_telegram(self.command, parsed, body, state)
+                    self._send(status, data)
+                    return
                 if parsed.path.startswith("/api/ai/"):
                     status, data = _handle_ai(self.command, parsed, body, state)
                     self._send(status, data)
@@ -941,6 +1032,9 @@ def create_server(
     httpd = ThreadingHTTPServer((host, port), Handler)
     httpd.state = state  # type: ignore[attr-defined]
     httpd.frontend_dir = static_root  # type: ignore[attr-defined]
+    interval = telegram_relay.scheduler_interval()
+    if interval > 0 and _n8n_webhook_url():
+        state.scheduler.start(interval)
     return httpd
 
 
