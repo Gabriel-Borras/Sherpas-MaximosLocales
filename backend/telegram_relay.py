@@ -187,6 +187,12 @@ class NotificationScheduler:
     def stop(self) -> None:
         self._stop.set()
 
+    def configure_from_env(self) -> None:
+        """Re-read the env (call after ``.env`` is loaded at server start)."""
+        self.day_seconds = _positive_float("SHERPAS_DAY_SECONDS", DEFAULT_DAY_SECONDS)
+        self.max_day = int(_positive_float("SHERPAS_MAX_DAY", DEFAULT_MAX_DAY))
+        self.notify_days = parse_notify_days()
+
     def reset(self) -> None:
         """Forget what was already sent (used when the demo runs are recreated)."""
         self._sent.clear()

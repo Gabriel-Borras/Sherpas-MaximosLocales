@@ -1061,6 +1061,9 @@ def create_server(
     httpd = ThreadingHTTPServer((host, port), Handler)
     httpd.state = state  # type: ignore[attr-defined]
     httpd.frontend_dir = static_root  # type: ignore[attr-defined]
+    # .env is otherwise loaded lazily; the scheduler needs it before starting.
+    load_env_file()
+    state.scheduler.configure_from_env()
     interval = telegram_relay.scheduler_interval()
     if interval > 0 and _n8n_webhook_url():
         if os.environ.get("SHERPAS_DEMO_CASES", "").strip():

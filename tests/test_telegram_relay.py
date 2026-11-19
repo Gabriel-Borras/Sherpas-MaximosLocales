@@ -305,6 +305,13 @@ class DemoModeTests(unittest.TestCase):
         self.assertEqual(len(state.runs._runs), 2)
         self.assertEqual(len(sent), 2 * first)
 
+    def test_configure_from_env_reads_demo_settings(self) -> None:
+        scheduler = telegram_relay.NotificationScheduler(_state(), lambda n, r: None, day_seconds=86400, max_day=90, notify_days=[])
+        env = {"SHERPAS_DAY_SECONDS": "20", "SHERPAS_MAX_DAY": "30", "SHERPAS_NOTIFY_DAYS": "0,3,14,30"}
+        with patch.dict(os.environ, env, clear=True):
+            scheduler.configure_from_env()
+        self.assertEqual((scheduler.day_seconds, scheduler.max_day, scheduler.notify_days), (20.0, 30, [0, 3, 14, 30]))
+
     def test_demo_restart_is_disabled_by_default(self) -> None:
         with patch.dict(os.environ, {}, clear=True), self.assertRaises(KeyError):
             _handle_telegram("POST", urlsplit("/api/telegram/demo/restart"), {}, _state())
