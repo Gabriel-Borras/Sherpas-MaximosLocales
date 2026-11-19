@@ -90,7 +90,7 @@
       current: 'Actual', target: 'Objetivo óptimo', delta: 'Diferencia', overdue: 'Inercia acumulada',
       inertia: 'Coste documentado de inercia', exact: 'Ver cálculo exacto',
       nextDay3: 'Día 3', nextDay14: 'Día 14', nextDay30: 'Día 30', nextMilestone: 'Próximo hito',
-      radio: 'La Radio del Sherpa', download: 'Descargar calendario .ics', historical: 'Shock histórico',
+      radio: 'La Radio del Sherpa', download: 'Descargar calendario .ics', telegram: 'Conectar a Telegram', historical: 'Shock histórico',
       simulate: 'Simular caída bursátil hoy', through: 'Los activos atravesaron',
       historic: 'shocks de 2023 a 2026. La caída histórica es comparable; el plan ayuda a mantener la calma.',
       calm: 'Alerta de calma', fell: 'La cartera del hogar cayó', recovered: 'y se recuperó',
@@ -112,7 +112,7 @@
       current: 'Current', target: 'Optimal target', delta: 'Delta', overdue: 'Accumulated inertia',
       inertia: 'Documented cost of inertia', exact: 'See exact math',
       nextDay3: 'Day 3', nextDay14: 'Day 14', nextDay30: 'Day 30', nextMilestone: 'Next milestone',
-      radio: 'Sherpa Radio', download: 'Download .ics calendar', historical: 'Historical shock',
+      radio: 'Sherpa Radio', download: 'Download .ics calendar', telegram: 'Connect to Telegram', historical: 'Historical shock',
       simulate: 'Simulate market drop today', through: 'Assets moved through',
       historic: 'shocks from 2023 to 2026. The historical decline is comparable; the plan helps preserve calm.',
       calm: 'Calm alert', fell: 'The household portfolio fell', recovered: 'and recovered',
@@ -285,6 +285,9 @@
         return v.toFixed(1) + '%';
       };
 
+      const telegramVoter = (state.voters && state.voters[0]) ? state.voters[0] : 'client';
+      const telegramUrl = `https://t.me/SherpasRadioBot?start=${state.caseId || 'demo'}_${telegramVoter}`;
+
       panel = `<aside class="floating-panel panel-wide post-view">
         <p class="eyebrow">${u(state, 'radio')}</p>
         <h1>${u(state, 'radio')}</h1>
@@ -292,6 +295,7 @@
           <div class="radio-controls">
             <div class="button-row">
               <button data-action="ics">${u(state, 'download')}</button>
+              <a class="btn-telegram" href="${esc(telegramUrl)}" target="_blank" rel="noopener noreferrer" data-action="telegram" style="display:inline-flex;align-items:center;padding:0.55rem 0.95rem;border-radius:999px;border:1px solid currentColor;text-decoration:none;font:inherit;font-weight:600;color:inherit">${u(state, 'telegram')}</a>
               <button class="primary" data-action="simulate-shock">${u(state, 'simulate')}</button>
             </div>
             <label>${u(state, 'historical')}
