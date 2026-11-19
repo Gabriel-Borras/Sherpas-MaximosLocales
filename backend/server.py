@@ -34,7 +34,7 @@ from backend.irl_engine import IRLEngine, create_irl_run
 from backend.llm_proxy import LLMProxyClient
 from backend.mcp_client import CaseNotFoundError, get_case, list_cases, load_env_file
 from backend.notifications import NotificationEngine
-from backend import telegram_relay
+from backend import radio_demo, telegram_relay
 from backend.timeline_engine import TimelineEngine
 
 
@@ -821,6 +821,13 @@ def _json_bytes(data: Any) -> bytes:
     return json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
 
 
+def _demo_enabled() -> bool:
+    """Demo buttons and test routes are only exposed with SHERPAS_ENABLE_TELEGRAM_TEST=1."""
+    if "SHERPAS_ENABLE_TELEGRAM_TEST" not in os.environ:
+        load_env_file()
+    return os.environ.get("SHERPAS_ENABLE_TELEGRAM_TEST", "").strip() == "1"
+
+
 def _start_demo_runs(state: ServerState) -> list[dict[str, str]]:
     """(Re)create one Run IRL per ``SHERPAS_DEMO_CASES`` so the radio has something to say."""
     available = [str(item.get("id") or item.get("case_id")) for item in list_cases(cases_dir=state.cases_dir)]
@@ -856,7 +863,34 @@ def _handle_telegram(
             "demo_runs": sorted(state.runs._runs),
             "outbox_enabled": telegram_relay.outbox_path() is not None,
             "outbox_pending": telegram_relay.pending_count(),
+            "demo_buttons": _demo_enabled(),
         }
+    if method == "POST" and parts[:3] == ["api", "telegram", "demo"] and len(parts) == 4 and parts[3] in ("day", "shock"):
+        if not _demo_enabled():
+            raise KeyError("Ruta Telegram no encontrada")
+        if not _n8n_webhook_url():
+            raise BadRequestError("N8N_WEBHOOK_URL no esta configurado")
+        case_id = body.get("case_id")
+        if not isinstance(case_id, str) or not case_id:
+            raise BadRequestError("case_id es obligatorio")
+        if parts[3] == "day":
+            try:
+                day = int(body.get("day"))
+            except (TypeError, ValueError) as error:
+                raise BadRequestError("day debe ser 0, 3, 14 o 30") from error
+            payload = radio_demo.day_payload(case_id, day, cases_dir=state.cases_dir)
+            preview = payload["message_plain"]
+        else:
+            try:
+                drop = float(body.get("drop_pct", 8))
+            except (TypeError, ValueError) as error:
+                raise BadRequestError("drop_pct debe ser numerico") from error
+            payload = radio_demo.shock_payload(case_id, drop, cases_dir=state.cases_dir)
+            preview = payload["anti_panic_message_plain"]
+        sent = _post_n8n(payload)
+        if not sent:
+            telegram_relay.record_failure(payload)
+        return 200, {"sent": sent, "case_id": case_id, "preview": preview}
     if method == "POST" and parts == ["api", "telegram", "demo", "restart"]:
         if os.environ.get("SHERPAS_ENABLE_TELEGRAM_TEST", "").strip() != "1":
             raise KeyError("Ruta Telegram no encontrada")
