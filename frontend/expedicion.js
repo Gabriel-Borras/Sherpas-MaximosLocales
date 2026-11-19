@@ -69,8 +69,9 @@
       pathCompareTitle: 'Comparativa de caminos',
       safeRoute: 'Camino seguro',
       riskRoute: 'Desvío de riesgo',
-      agreeAdvance: 'Acordar camino seguro y avanzar',
+      agreeAdvance: 'Reunir cordada y avanzar',
       seeRedBranch: 'Ver desvío rojo',
+      redoEval: 'Rehacer evaluación',
       blocked: 'Desvío detectado en la ruta', stopped: 'Análisis del camino erróneo', impact: 'Consecuencia proyectada',
       context: 'Contexto adicional', tensions: 'Por qué ocurre (tensiones y hechos)', rewind: 'Rebobinar al campamento',
       phase: 'Basecamp · Ruta de ascenso', route: 'Una ruta, cuatro campamentos', choose: 'Elige el paso en este campamento',
@@ -149,8 +150,9 @@
       pathCompareTitle: 'Path comparison',
       safeRoute: 'Safe path',
       riskRoute: 'Risk deviation',
-      agreeAdvance: 'Agree on safe path & advance',
+      agreeAdvance: 'Reunite rope team & advance',
       seeRedBranch: 'Inspect red deviation',
+      redoEval: 'Redo evaluation',
       blocked: 'Route deviation detected', stopped: 'Failed path analysis', impact: 'Projected consequence',
       context: 'Additional context', tensions: 'Why it happens (tensions and facts)', rewind: 'Rewind to camp',
       phase: 'Basecamp · Ascent route', route: 'One route, four camps', choose: 'Choose the step at this camp',
@@ -196,6 +198,11 @@
   };
 
   const campShorts = { ES: ['Base', 'C1', 'C2', 'Cima'], EN: ['Base', 'C1', 'C2', 'Summit'] };
+  const campAlts = ['2,800m', '4,600m', '6,900m', '8,848m'];
+  const shortWords = (txt, maxWords) => {
+    const w = String(txt || '').replace(/\s+/g, ' ').trim().split(' ');
+    return w.length <= maxWords ? w.join(' ') : `${w.slice(0, maxWords).join(' ').replace(/[,:;.]$/, '')}…`;
+  };
   const t = (s, k) => words[langOf(s)][k] || k;
   const dayLabel = (lang, irlDay) => `${lang === 'EN' ? 'Day' : 'Día'} ${Number.isFinite(Number(irlDay)) ? Number(irlDay) : 0}`;
   const viewName = (key, lang, irlDay) => {
@@ -1303,56 +1310,75 @@
     return `<details class="exact-math"><summary>${t(state, 'exact')}</summary><ul><li><strong>Score:</strong> ${esc(score.published_score ?? '—')}/100 (${esc(score.band || '—')}).</li><li><strong>${t(state, 'levers')}:</strong> ${moveText}.</li><li><strong>${t(state, 'yearly')}:</strong> ${rows.length} ${es ? 'años' : 'years'} (${esc(first.year || '—')} ${esc(exactMoney(first.investable_assets))} → ${esc(last.year || '—')} ${esc(exactMoney(last.investable_assets))}; ${es ? 'patrimonio neto final' : 'final net worth'} ${esc(exactMoney(last.net_worth))}).</li><li><strong>${es ? 'Punto crítico yearly' : 'Yearly critical point'}:</strong> ${esc(rec.label)}</li></ul>${yearlyMarkup(data, langOf(state))}<p class="preview">${t(state, 'sources')}: score.pillars, score.top_moves, score.combined_moves, projections.yearly, persona.tensions.</p></details>`;
   }
 
+  function neutralAlternativeCopy(topic, lang) {
+    const es = lang !== 'EN';
+    const byTopic = es ? {
+      protection: 'Mantener tus pólizas actuales y reservar ese dinero',
+      debt: 'Seguir pagando la cuota habitual y conservar el efectivo',
+      liquidity: 'Mantener tu ritmo actual y revisar la reserva más adelante',
+      home_purchase: 'Priorizar liquidez a mano y aplazar cambios en el plan',
+      retirement: 'Conservar tu ritmo actual de gastos y ajustar el próximo año',
+      cash_flow: 'Mantener tu presupuesto actual sin recortar este año',
+      investments: 'Conservar tu cartera actual sin mover posiciones'
+    } : {
+      protection: 'Keep your current policies and hold onto the cash',
+      debt: 'Keep paying the usual monthly bill and hold your cash',
+      liquidity: 'Keep your current pace and revisit cash reserves later',
+      home_purchase: 'Prioritize cash on hand and adjust the plan later',
+      retirement: 'Keep your current spending pace and adjust next year',
+      cash_flow: 'Keep your current budget without trimming this year',
+      investments: 'Keep your current portfolio mix without making changes'
+    };
+    return byTopic[topic] || (es ? 'Seguir con tu plan actual y revisarlo más adelante' : 'Stick with your current plan and review it later');
+  }
+
   function stepGoodOption(state, data, s, stageIdx) {
     const lang = langOf(state);
     const es = lang === 'ES';
     const moves = orderedTopMoves(state, data);
-    const tensions = ((data && data.persona && data.persona.tensions) || []);
     const top1 = primaryConcern(state, data);
+    const scoreNow = (data.score && data.score.published_score) ?? 0;
     if (stageIdx < moves.length && moves[stageIdx]) {
       const m = moves[stageIdx];
-      const relatedTension = tensions.find(tn => tn.topic === m.topic) || tensions[stageIdx] || tensions[0];
-      const badOption = relatedTension
-        ? (es
-            ? `Dejar sin resolver: ${relatedTension.title || relatedTension.body.slice(0, 110)}`
-            : `Leave unresolved: ${relatedTension.title || relatedTension.body.slice(0, 110)}`)
-        : (es
-            ? `Posponer «${m.title}» y mantener el score estancado en ${m.score_before ?? (data.score && data.score.published_score)}`
-            : `Postpone "${m.title}" and leave the score at ${m.score_before ?? (data.score && data.score.published_score)}`);
+      const topic = m.topic || detectTopic((m.title || '') + ' ' + (m.action || ''));
+      const badOption = neutralAlternativeCopy(topic, lang);
+      const shortFact = compactMoveActionLine(m, scoreNow, lang).split(' · ')[0];
+      const before = m.score_before != null ? m.score_before : scoreNow;
+      const after = m.score_after != null ? m.score_after : scoreNow;
       return {
         label: m.action || m.title || s.pact,
         title: m.title || m.action || s.pact,
+        shortFact,
         badLabel: badOption,
-        focusNote: stageIdx === 0 && top1 ? `${top1.title}` : '',
-        scoreBefore: m.score_before,
-        scoreAfter: m.score_after,
-        trend: `${t(state, 'trend')}: ${m.action || m.title} (${es ? 'puntaje' : 'score'} ${m.score_before} → ${m.score_after}).`
+        focusNote: stageIdx === 0 && top1 ? `${top1.shortTitle || top1.title}` : '',
+        scoreBefore: before,
+        scoreAfter: after,
+        trend: `${t(state, 'trend')}: ${m.action || m.title} (${before} → ${after}).`
       };
     }
     const combined = (data.score && data.score.combined_moves) || [];
     if (combined.length) {
       const best = combined.reduce((a, b) => ((b.moves || []).length >= (a.moves || []).length ? b : a), combined[0]);
-      const baseScore = data.score && data.score.published_score;
       const comboLabel = (best.moves || []).join(' + ') || best.title || s.pact;
-      const before = best.score_before != null ? best.score_before : baseScore;
+      const before = best.score_before != null ? best.score_before : scoreNow;
+      const after = best.score_after != null ? best.score_after : scoreNow;
       const badOption = es
-        ? `Aplicar medidas aisladas sin coordinar el paquete completo (${before} vs. ${best.score_after})`
-        : `Apply isolated moves without coordinating the full package (${before} vs. ${best.score_after})`;
+        ? 'Aplicar solo cambios pequeños y dejar el resto para más adelante'
+        : 'Make only small tweaks and leave the rest for later';
       return {
-        label: `${comboLabel}${best.score_after != null ? ` (${before} → ${best.score_after})` : ''}`,
-        title: comboLabel,
+        label: `${comboLabel}${best.score_after != null ? ` (${before} → ${after})` : ''}`,
+        title: shortWords(comboLabel, 6),
+        shortFact: es ? 'Paquete combinado de medidas' : 'Combined priority package',
         badLabel: badOption,
         focusNote: '',
         scoreBefore: before,
-        scoreAfter: best.score_after,
-        trend: `${t(state, 'trend')}: ${comboLabel} (${es ? 'puntaje' : 'score'} ${before} → ${best.score_after}).`
+        scoreAfter: after,
+        trend: `${t(state, 'trend')}: ${comboLabel} (${before} → ${after}).`
       };
     }
-    const pub = (data.score && data.score.published_score) || 0;
-    const fallbackBad = tensions[0]
-      ? (es ? `Mantener abierta la tensión principal: ${tensions[0].title || tensions[0].body.slice(0, 105)}` : `Keep the main tension open: ${tensions[0].title || tensions[0].body.slice(0, 105)}`)
-      : t(state, 'ignore');
-    return { label: s.pact, title: s.pact, badLabel: fallbackBad, focusNote: '', scoreBefore: pub, scoreAfter: pub, trend: `${t(state, 'trend')}: ${s.pact}` };
+    const pub = scoreNow;
+    const fallbackBad = neutralAlternativeCopy('overview', lang);
+    return { label: s.pact, title: shortWords(s.pact, 6), shortFact: '', badLabel: fallbackBad, focusNote: '', scoreBefore: pub, scoreAfter: pub, trend: `${t(state, 'trend')}: ${s.pact}` };
   }
 
   function preview(state, data, route) {
@@ -1681,24 +1707,79 @@
   }
   const CoupleRoomSync = createCoupleRoomSync();
 
+  // Per-profile evaluation persistence (localStorage + in-memory fallback)
+  const memoryProfileEvals = {};
+  const ProfileEvalStore = {
+    key: id => `sherpas_profile_eval_${id}`,
+    load(caseId) {
+      if (!caseId) return null;
+      try {
+        if (root.localStorage) {
+          const raw = root.localStorage.getItem(this.key(caseId));
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (parsed && parsed.evaluationDone) {
+              memoryProfileEvals[caseId] = parsed;
+              return parsed;
+            }
+          }
+        }
+      } catch (_) {}
+      const mem = memoryProfileEvals[caseId];
+      return mem && mem.evaluationDone ? mem : null;
+    },
+    save(caseId, state) {
+      if (!caseId || !state) return null;
+      const record = {
+        evaluationDone: true,
+        fearOrder: Array.isArray(state.fearOrder) ? state.fearOrder.slice(0, 3) : [],
+        votes: state.votes && typeof state.votes === 'object' ? JSON.parse(JSON.stringify(state.votes)) : {},
+        priority: state.priorityFocus || '',
+        updatedAt: Date.now()
+      };
+      memoryProfileEvals[caseId] = record;
+      try {
+        if (root.localStorage) root.localStorage.setItem(this.key(caseId), JSON.stringify(record));
+      } catch (_) {}
+      return record;
+    },
+    clear(caseId) {
+      if (!caseId) return;
+      delete memoryProfileEvals[caseId];
+      try {
+        if (root.localStorage) root.localStorage.removeItem(this.key(caseId));
+      } catch (_) {}
+    }
+  };
+
   function createInitialState(id) {
     const lang = loadLang();
     const urlParams = readRoomParams();
     const resolvedId = ids.includes(id) ? id : (urlParams.caseId || ids[0]);
     const roomId = urlParams.roomId || makeRoomId();
     const memberRole = urlParams.memberRole || 'A';
+    const savedEval = ProfileEvalStore.load(resolvedId);
+    const joiningUnfinishedPartnerRoom = !!(
+      urlParams.fromUrl &&
+      urlParams.roomId &&
+      urlParams.memberRole === 'B' &&
+      !CoupleRoomSync.readLocal(urlParams.roomId, resolvedId).evaluation_ready
+    );
+    const skipEval = !!(savedEval && savedEval.evaluationDone && !joiningUnfinishedPartnerRoom);
     return {
       caseId: resolvedId,
       view: viewName('expedition', lang, 0),
-      phase: 'fears',
+      phase: skipEval ? 'expedition' : 'fears',
+      evaluationDone: skipEval,
       mode: 'Plain',
       lang,
       irlDay: 0,
-      fearOrder: [],
+      fearOrder: skipEval ? (savedEval.fearOrder || []).slice(0, 3) : [],
+      priorityFocus: skipEval ? (savedEval.priority || '') : '',
       showAllConcerns: false,
       thermometer: 3,
       subjectiveConcern: '',
-      votes: {},
+      votes: skipEval && savedEval.votes ? JSON.parse(JSON.stringify(savedEval.votes)) : {},
       voteTurn: memberRole,
       roomId,
       memberRole,
@@ -1706,6 +1787,7 @@
       roomWaiting: false,
       roomCopied: false,
       roomDecisions: {},
+      animatedCoupleKeys: {},
       roomAlignedBanner: false,
       timerStartedAt: null,
       aiReframe: null,
@@ -1796,7 +1878,7 @@
         ? `<path d="M ${coord.x} ${coord.y - 9} L ${coord.x} ${coord.y + 9}" stroke="#9E2A2B" stroke-width="1.35" stroke-linecap="round"/>`
         : `<circle cx="${coord.rx}" cy="${coord.ry}" r="2.1" fill="#9E2A2B" opacity=".88"/>`;
       return `<g class="risk-group" data-risk-stage="${originIdx}" data-risk-index="${idx}">
-        <path class="risk-path" data-active-risk="${isLatest ? 'true' : 'false'}" data-risk-break="${coord.x},${coord.y}" data-exhaustion="${record && record.hasExhaustion ? 'true' : 'false'}" data-year="${record && record.year ? record.year : ''}" data-age="${record && record.age != null ? record.age : ''}" data-investable-assets="${record && record.investable_assets != null ? record.investable_assets : ''}" d="${coord.d}" fill="none" stroke="#9E2A2B" stroke-linecap="round" stroke-linejoin="round" stroke-width="${isInspected ? '2.5' : '2'}" opacity="${isInspected ? '0.96' : '0.86'}"/>
+        <path class="risk-path" pathLength="1000" data-active-risk="${isLatest ? 'true' : 'false'}" data-risk-break="${coord.x},${coord.y}" data-exhaustion="${record && record.hasExhaustion ? 'true' : 'false'}" data-year="${record && record.year ? record.year : ''}" data-age="${record && record.age != null ? record.age : ''}" data-investable-assets="${record && record.investable_assets != null ? record.investable_assets : ''}" d="${coord.d}" fill="none" stroke="#9E2A2B" stroke-linecap="round" stroke-linejoin="round" stroke-width="${isInspected ? '2.2' : '1.8'}" opacity="${isInspected ? '0.96' : '0.86'}"/>
         ${stopWall}
         <g class="risk-node ${isInspected ? 'is-active' : ''}" data-action="inspect-risk" data-risk-index="${idx}" data-risk-stage="${originIdx}" transform="translate(${coord.x} ${coord.y})" role="button" tabindex="0" aria-label="${esc(nodeLabel)}">
           <circle class="risk-hit" cx="0" cy="0" r="16" fill="transparent"/>
@@ -1807,8 +1889,8 @@
       </g>`;
     }).join('');
 
-    const partners = couple && activeOffset < TRAIL_LENGTH
-      ? `<path id="partnerRopeA" class="partner-rope" d="${TRAIL_PATH}" transform="translate(-1.4 -1)" stroke="#141414" stroke-width="1.2" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity=".62"/><path id="partnerRopeB" class="partner-rope" d="${TRAIL_PATH}" transform="translate(1.4 1)" stroke="#525252" stroke-width="1.2" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity=".52"/>`
+    const partners = couple
+      ? `<path id="partnerRopeA" class="partner-rope" d="${TRAIL_PATH}" transform="translate(-1.4 -1)" stroke="var(--partner-a)" stroke-width="1.35" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity="${activeOffset < TRAIL_LENGTH ? '.72' : '0'}"/><path id="partnerRopeB" class="partner-rope" d="${TRAIL_PATH}" transform="translate(1.4 1)" stroke="var(--partner-b)" stroke-width="1.35" stroke-dasharray="${TRAIL_LENGTH}" stroke-dashoffset="${activeOffset}" opacity="${activeOffset < TRAIL_LENGTH ? '.72' : '0'}"/>`
       : '';
 
     const campNodes = [
@@ -1843,12 +1925,21 @@
       </g>`
     ].join('');
 
+    const peopleInit = (opts && Array.isArray(opts.people) && opts.people.length >= 2)
+      ? [String(opts.people[0] || 'A').charAt(0).toUpperCase(), String(opts.people[1] || 'B').charAt(0).toUpperCase()]
+      : ['A', 'B'];
     const climber = couple
-      ? `<g id="climberMarker" class="climber-rig" transform="translate(${x} ${y})" data-cx="${x}" data-cy="${y}">
-          <circle cx="-2.4" cy="0" r="4.6" fill="#141414" opacity=".14"/>
-          <circle cx="2.4" cy="0" r="4.6" fill="#141414" opacity=".12"/>
-          <circle cx="-2.4" cy="0" r="2.6" fill="#141414" stroke="#ffffff" stroke-width="1.15"/>
-          <circle cx="2.4" cy="0" r="2.6" fill="#525252" stroke="#ffffff" stroke-width="1.15"/>
+      ? `<g id="climberMarker" class="climber-rig" data-cx="${x}" data-cy="${y}">
+          <g id="climberMarkerA" class="climber-member" transform="translate(${x - 4} ${y})">
+            <circle cx="0" cy="0" r="6" fill="var(--partner-a)" opacity=".18"/>
+            <circle cx="0" cy="0" r="4" fill="var(--partner-a)" stroke="#ffffff" stroke-width="1.15"/>
+            <text x="0" y="1.3" text-anchor="middle" fill="#ffffff" font-size="3.6" font-weight="700" font-family="system-ui">${esc(peopleInit[0])}</text>
+          </g>
+          <g id="climberMarkerB" class="climber-member" transform="translate(${x + 4} ${y})">
+            <circle cx="0" cy="0" r="6" fill="var(--partner-b)" opacity=".18"/>
+            <circle cx="0" cy="0" r="4" fill="var(--partner-b)" stroke="#ffffff" stroke-width="1.15"/>
+            <text x="0" y="1.3" text-anchor="middle" fill="#ffffff" font-size="3.6" font-weight="700" font-family="system-ui">${esc(peopleInit[1])}</text>
+          </g>
         </g>`
       : `<g id="climberMarker" class="climber-rig" transform="translate(${x} ${y})" data-cx="${x}" data-cy="${y}">
           <circle cx="0" cy="0" r="5.5" fill="#141414" opacity=".16"/>
@@ -1949,38 +2040,39 @@
 
   function renderRiskInspectionCard(state, data, persona, s, riskIdx) {
     const lang = langOf(state);
+    const es = lang === 'ES';
     const entries = buildHistoryEntries(state.history, state.blocked, state.stage);
     const entry = entries[Math.max(0, Math.min(entries.length - 1, Number(riskIdx) || 0))] || { stage: state.stage };
     const originStage = Math.max(0, Math.min(3, Number(entry.stage) || 0));
-    const campInfo = biome(originStage, lang);
+    const shortLabels = campShorts[lang];
+    const campTitle = `${shortLabels[originStage]} · ${campAlts[originStage]}`;
     const goodMove = stepGoodOption(state, data, s, originStage);
-    const badChoiceText = (entry.decisionChosen && entry.decisionChosen[lang]) || goodMove.badLabel || t(state, 'ignore');
-    const causedText = blockedCopy(state.caseId, state.mode, persona, state);
-    const gapText = goodMove.scoreBefore != null && goodMove.scoreAfter != null
-      ? ` (${lang === 'ES' ? 'brecha de score' : 'score gap'}: ${goodMove.scoreBefore} → ${goodMove.scoreAfter})`
-      : '';
+    const rec = riskRecord(state.caseId, lang);
+    const heading = rec.hasExhaustion
+      ? `${rec.year}${rec.age != null ? (es ? ` · edad ${rec.age}` : ` · age ${rec.age}`) : ''}`
+      : `${es ? 'Brecha en' : 'Gap at'} ${campTitle}`;
+    const oneLineImpact = rec.hasExhaustion
+      ? `${es ? 'Activos invertibles' : 'Investable assets'} ${exactMoney(rec.investable_assets)} · ${es ? 'omitiste' : 'skipped'} ${shortWords(goodMove.title, 5)}`
+      : `${es ? 'Sin agotamiento anual · omitiste' : 'No yearly depletion · skipped'} ${shortWords(goodMove.title, 5)} (${goodMove.scoreBefore} → ${goodMove.scoreAfter})`;
     const tensionsHtml = (persona.tensions || []).map(x => `<p>${detail(x.id, x, lang)}</p>`).join('') || `<p>${esc(persona.D3 || '')}</p>`;
+    const compactMath = mathSummary(data, state)
+      .replace('<details class="exact-math">', '<details class="exact-math compact-math">')
+      .replace(`<summary>${t(state, 'exact')}</summary>`, `<summary>${es ? 'Cálculo' : 'Math'}</summary>`)
+      .replace('<ul>', `<div class="exact-context-notes"><p><strong>${campTitle}:</strong> ${esc(goodMove.label)}</p>${tensionsHtml}</div><ul>`);
 
-    return `<aside class="floating-dialog" data-dialog="blocked">
+    return `<aside class="floating-dialog compact-card" data-dialog="blocked">
       <div class="floating-dialog-head">
-        <div>
-          <p class="eyebrow">${t(state, 'inspectRiskTitle')}</p>
-          <h2>${t(state, 'stopped')}</h2>
-        </div>
+        <span class="camp-line-title is-risk">${esc(heading)}</span>
         <button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button>
       </div>
-      <div class="crack">
-        <div class="crack-grid">
-          <div><strong>${t(state, 'whereTaken')}:</strong> ${esc(campInfo.label)}</div>
-          <div><strong>${t(state, 'whatDecision')}:</strong> ${esc(badChoiceText)} · <em>${t(state, 'recommendedWas')}: ${esc(goodMove.label)}</em></div>
-          <div><strong>${t(state, 'whatCaused')}:</strong> <span class="blocked-impact">${esc(causedText)}${esc(gapText)}</span></div>
-          <div><strong>${t(state, 'whyHappened')}:</strong> ${tensionsHtml}</div>
-        </div>
+      <div class="crack compact-crack">
+        <span class="blocked-impact">${esc(oneLineImpact)}</span>
       </div>
-      ${mathSummary(data, state)}
-      <div class="button-row">
-        ${state.blocked ? `<button class="primary" data-action="rewind">${t(state, 'rewind')}</button>` : `<button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button>`}
-        <button data-action="zoom-out">${t(state, 'panoramic')}</button>
+      <div class="dialog-footer-bar">
+        ${compactMath}
+        ${state.blocked
+          ? `<button class="primary" data-action="rewind">${t(state, 'rewind')}</button>`
+          : `<button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button>`}
       </div>
     </aside>`;
   }
@@ -2246,7 +2338,7 @@
     }
 
     const wallpaper = `<div class="mountain-stage mountain-fullscreen ${state.blocked ? 'storm-shake' : ''}" data-biome="${stage.id}" data-dialog-ready="${dialogVisible ? 'true' : 'false'}">
-      ${svgMarkup(state.summit ? 0 : stage.offset, state.summit ? biomes[3].point : stage.point, state.history || [], state.blocked, couple, state.votes, fail, lang, { stage: state.summit ? 3 : stageIdx, initialViewBox: initBox, inspectedRisk: activeRiskIdx })}
+      ${svgMarkup(state.summit ? 0 : stage.offset, state.summit ? biomes[3].point : stage.point, state.history || [], state.blocked, couple, state.votes, fail, lang, { stage: state.summit ? 3 : stageIdx, initialViewBox: initBox, inspectedRisk: activeRiskIdx, people: s.people })}
     </div>`;
 
     const contrast = buildContrastSummary(state, data);
@@ -2258,6 +2350,8 @@
     const thermoText = thermoLabels[lang][activeThermometer(state)];
 
     let panel = '';
+    const campFab = `<button type="button" class="floating-overview-cta ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'is-hidden'}" data-action="focus-active" title="${esc(t(state, 'focusActive'))}" aria-label="${esc(t(state, 'focusActive'))}" ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'hidden'}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20h18M4.5 20L12 5l7.5 15M12 5V3M9.5 20l2.5-6 2.5 6"/></svg></button>`;
+
     if (view === 'brief') {
       panel = `<aside class="floating-panel panel-wide">
         <p class="eyebrow">${t(state, 'brief')}</p>
@@ -2283,6 +2377,9 @@
           ${entries.map(x => `<p><strong>${esc(biome(x.stage || 0, lang).label)}:</strong> ${esc((x.decisionChosen && x.decisionChosen[lang]) || t(state, 'ignore'))} → ${esc(fail.label)}</p>`).join('') || `<p>${t(state, 'noDiscarded')}</p>`}
         </div>
         ${mathSummary(data, state)}
+        <div class="button-row">
+          <button type="button" class="room-btn-ghost" data-action="redo-eval">${t(state, 'redoEval')}</button>
+        </div>
       </aside>`;
     } else if (view === 'current') {
       panel = `<aside class="floating-panel">
@@ -2304,17 +2401,18 @@
     } else if ((state.blocked && focusedIdx === stageIdx) || activeRiskIdx != null) {
       const cardHtml = renderRiskInspectionCard(state, data, persona, s, activeRiskIdx != null ? activeRiskIdx : Math.max(0, entries.length - 1));
       panel = (dialogVisible ? cardHtml : cardHtml.replace('class="floating-dialog"', 'class="floating-dialog is-dialog-hidden" hidden'))
-        + `<div class="floating-overview-cta ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'is-hidden'}" ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'hidden'}><span>${t(state, 'panoramicHint')}</span><button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button></div>`;
+        + campFab;
     } else {
       const inspectingOther = (focusedIdx !== stageIdx) || state.summit || view === 'overview';
-      const focusedBiome = biome(focusedIdx, lang);
       const focusedMove = stepGoodOption(state, data, s, focusedIdx);
       const activeMove = stepGoodOption(state, data, s, stageIdx);
       const campRiskIdx = entries.findIndex(e => Number(e.stage) === focusedIdx);
-      const focusBannerHtml = stageIdx === 0 && contrast.top1
-        ? `<div class="focus-priority-pill"><strong>${t(state, 'focusBanner')}:</strong> ${esc(contrast.top1.shortTitle || contrast.top1.title)}</div>`
-        : '';
-      const campReframe = stageIdx === 0 ? buildThermometerReframe(state, data) : s.reframe;
+      const es = lang === 'ES';
+      const campLineTitle = `${shortLabels[stageIdx]} · ${campAlts[stageIdx]}`;
+      const focusedLineTitle = `${shortLabels[focusedIdx]} · ${campAlts[focusedIdx]}`;
+      const compactMath = mathSummary(data, state)
+        .replace('<details class="exact-math">', '<details class="exact-math compact-math">')
+        .replace(`<summary>${t(state, 'exact')}</summary>`, `<summary>${es ? 'Cálculo' : 'Math'}</summary>`);
       const isRemoteCouple = couple && state.coupleSyncMode !== 'local';
       const roomBarCampHtml = isRemoteCouple ? renderCoupleRoomBar(state, s, couple) : '';
       const stageDec = (state.roomDecisions && state.roomDecisions[String(stageIdx)]) || null;
@@ -2328,9 +2426,9 @@
       let activeCampBody = '';
       if (showDecisionWait) {
         activeCampBody = `${roomBarCampHtml}
-          <div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'phase')} · ${esc(stage.label)}</p><h2>${t(state, 'waitingFor')} ${esc(partnerName)}...</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
-          <p class="compact-line"><strong>${t(state, 'yourChoice')}:</strong> ${esc(myStageVote.label || (myStageVote.route === 'bad' ? t(state, 'riskRoute') : t(state, 'safeRoute')))}</p>
-          <p class="compact-sub">${t(state, 'waitingDecSub')}</p>
+          <div class="floating-dialog-head"><span class="camp-line-title">${esc(campLineTitle)}</span><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
+          <p class="compact-line"><strong>${t(state, 'waitingFor')} ${esc(partnerName)}...</strong></p>
+          <p class="compact-sub">${t(state, 'yourChoice')}: ${esc(shortWords(myStageVote.label || (myStageVote.route === 'bad' ? t(state, 'riskRoute') : t(state, 'safeRoute')), 8))}</p>
           <div class="button-row">
             <button type="button" class="primary" data-action="copy-room-link">${state.roomCopied ? t(state, 'copied') : `${t(state, 'copyLinkFor')} ${esc(partnerName)}`}</button>
             <button type="button" data-action="open-partner-tab">${t(state, 'openPartnerTab')} ${esc(partnerName)} ${t(state, 'inNewTab')}</button>
@@ -2338,51 +2436,65 @@
       } else if (showPathCompare) {
         const aIsBad = stageDec.A.route === 'bad';
         const bIsBad = stageDec.B.route === 'bad';
+        const nextCampName = shortLabels[Math.min(3, stageIdx + 1)];
+        const failShort = fail && fail.hasExhaustion
+          ? (es ? `cayó en ${fail.year}` : `dropped in ${fail.year}`)
+          : (es ? 'tomó el desvío de riesgo' : 'took the risk deviation');
+        const aSummary = aIsBad ? failShort : (es ? `siguió hacia ${nextCampName}` : `climbed to ${nextCampName}`);
+        const bSummary = bIsBad ? failShort : (es ? `siguió hacia ${nextCampName}` : `climbed to ${nextCampName}`);
         activeCampBody = `${roomBarCampHtml}
-          <div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'pathCompareTitle')} · ${esc(shortLabels[stageIdx])}</p><h2>${esc(activeMove.title)}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
+          <div class="floating-dialog-head"><span class="camp-line-title">${t(state, 'pathCompareTitle')} · ${esc(campLineTitle)}</span><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
           <div class="path-compare-grid">
             <div class="path-card ${aIsBad ? 'is-risk' : 'is-safe'}">
-              <span class="path-badge ${aIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[0])} · ${aIsBad ? t(state, 'riskRoute') : t(state, 'safeRoute')}</span>
-              <p class="compact-sub">${esc(stageDec.A.label || (aIsBad ? activeMove.badLabel : activeMove.label))}</p>
+              <span class="path-badge ${aIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[0])}</span>
+              <p class="compact-sub">${esc(aSummary)}</p>
             </div>
             <div class="path-card ${bIsBad ? 'is-risk' : 'is-safe'}">
-              <span class="path-badge ${bIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[1])} · ${bIsBad ? t(state, 'riskRoute') : t(state, 'safeRoute')}</span>
-              <p class="compact-sub">${esc(stageDec.B.label || (bIsBad ? activeMove.badLabel : activeMove.label))}</p>
+              <span class="path-badge ${bIsBad ? 'is-risk' : 'is-safe'}">${esc(peopleNames[1])}</span>
+              <p class="compact-sub">${esc(bSummary)}</p>
             </div>
           </div>
-          <p class="compact-line"><strong>${t(state, 'impact')}:</strong> ${esc(fail.label)}</p>
           <div class="button-row">
             <button class="primary" data-action="room-agree-good">${t(state, 'agreeAdvance')}</button>
-            ${campRiskIdx >= 0 ? `<button data-action="inspect-risk" data-risk-index="${campRiskIdx}">${t(state, 'seeRedBranch')}</button>` : ''}
+            <button data-action="rewind">${t(state, 'rewind')}</button>
           </div>`;
       } else {
+        const goodText = activeMove.shortFact
+          ? `${activeMove.title} · ${activeMove.shortFact}`
+          : activeMove.title;
+        const badText = activeMove.badLabel || neutralAlternativeCopy('overview', lang);
+        const caseIdx = Math.max(0, ids.indexOf(state.caseId));
+        const flipOrder = ((stageIdx + caseIdx) % 2) === 1;
+        const optionsPair = flipOrder
+          ? [{ value: 'bad', text: badText }, { value: 'good', text: goodText }]
+          : [{ value: 'good', text: goodText }, { value: 'bad', text: badText }];
+        const optionsHtml = optionsPair.map((opt, idx) => `<label class="choice choice-compact"><input type="radio" name="route" value="${opt.value}" ${idx === 0 ? 'checked' : ''}><span class="choice-text">${esc(opt.text)}</span></label>`).join('');
         activeCampBody = `${roomBarCampHtml}
-           <div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'phase')} · ${esc(stage.label)}</p><h2>${t(state, 'choose')}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
-           ${state.roomAlignedBanner ? `<div class="focus-priority-pill">${t(state, 'alignedAdvancing')}</div>` : focusBannerHtml}
-           <p class="reframe">${esc(campReframe)}</p>
-           <div class="choice-list">
-             <label class="choice"><input type="radio" name="route" value="good" checked><span>${esc(activeMove.label)}</span></label>
-             <label class="choice"><input type="radio" name="route" value="bad"><span>${esc(activeMove.badLabel || t(state, 'ignore'))}</span></label>
+           <div class="floating-dialog-head"><span class="camp-line-title">${esc(campLineTitle)}</span><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
+           ${state.roomAlignedBanner ? `<div class="focus-priority-pill">${t(state, 'alignedAdvancing')}</div>` : ''}
+           <div class="choice-list compact-choices">
+             ${optionsHtml}
            </div>
-           <p class="preview" data-preview>${esc(preview(state, data, 'good'))}</p>
-           ${mathSummary(data, state)}
-           <div class="button-row"><button class="primary" data-action="advance">${t(state, 'confirm')}</button></div>`;
+           <div class="dialog-footer-bar">
+             ${compactMath}
+             <button class="primary" data-action="advance">${es ? 'Confirmar' : 'Confirm'}</button>
+           </div>`;
       }
 
       const dialogContent = inspectingOther
-        ? `<div class="floating-dialog-head"><div><p class="eyebrow">${t(state, 'inspectCamp')} · ${esc(focusedBiome.label)}</p><h2>${esc(shortLabels[focusedIdx])}</h2></div><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
-           <p class="reframe">${esc(focusedMove.label)}</p>
-           <p class="preview">${esc(focusedMove.trend)}</p>
-           ${campRiskIdx >= 0 ? `<div class="crack"><strong>${t(state, 'whatCaused')}:</strong> ${esc(fail.label)} <button data-action="inspect-risk" data-risk-index="${campRiskIdx}">${t(state, 'inspectRiskTitle')}</button></div>` : ''}
-           ${mathSummary(data, state)}
-           <div class="button-row">
-             ${!state.summit && focusedIdx !== stageIdx ? `<button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button>` : ''}
-             <button data-action="zoom-out">${t(state, 'panoramic')}</button>
-             ${state.summit ? `<button data-action="repeat">${t(state, 'repeat')}</button>` : ''}
+        ? `<div class="floating-dialog-head"><span class="camp-line-title">${esc(focusedLineTitle)}</span><button class="dialog-close-btn" data-action="zoom-out">${t(state, 'panoramic')}</button></div>
+           <p class="compact-line"><strong>${esc(focusedMove.title)}</strong>${focusedMove.shortFact ? ` · ${esc(focusedMove.shortFact)}` : ''} <span class="score-pill">${esc(focusedMove.scoreBefore)} → ${esc(focusedMove.scoreAfter)}</span></p>
+           ${campRiskIdx >= 0 ? `<div class="crack compact-crack">${esc(fail.label)} <button class="link-toggle-btn" data-action="inspect-risk" data-risk-index="${campRiskIdx}">${t(state, 'seeRedBranch')}</button></div>` : ''}
+           <div class="dialog-footer-bar">
+             ${compactMath}
+             <div class="button-row compact-row">
+               ${!state.summit && focusedIdx !== stageIdx ? `<button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button>` : ''}
+               ${state.summit ? `<button data-action="repeat">${t(state, 'repeat')}</button>` : ''}
+             </div>
            </div>`
         : activeCampBody;
-      panel = `<aside class="floating-dialog ${dialogVisible ? '' : 'is-dialog-hidden'}" data-dialog="decision" ${dialogVisible ? '' : 'hidden'}>${dialogContent}</aside>
-        <div class="floating-overview-cta ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'is-hidden'}" ${state.cameraMode === 'panoramic' && !dialogVisible ? '' : 'hidden'}><span>${t(state, 'panoramicHint')}</span><button class="primary" data-action="focus-active">${t(state, 'focusActive')}</button></div>`;
+      panel = `<aside class="floating-dialog compact-card ${dialogVisible ? '' : 'is-dialog-hidden'}" data-dialog="decision" ${dialogVisible ? '' : 'hidden'}>${dialogContent}</aside>
+        ${campFab}`;
     }
 
     return `${renderHeader(state, data)}<main class="page-shell page-mountain-full">${wallpaper}${panel}</main>`;
@@ -2549,13 +2661,110 @@
       animateViewBox(svg, from, fullCamera.slice(), 480, done, tk);
       return;
     }
+    const moveClimbersTogether = (mx, my) => {
+      const mA = svg.querySelector('#climberMarkerA');
+      const mB = svg.querySelector('#climberMarkerB');
+      if (mA && mB) {
+        mA.setAttribute('transform', `translate(${(mx - 4).toFixed(2)} ${my.toFixed(2)})`);
+        mB.setAttribute('transform', `translate(${(mx + 4).toFixed(2)} ${my.toFixed(2)})`);
+      } else {
+        const mSingle = svg.querySelector('#climberMarker');
+        if (mSingle) mSingle.setAttribute('transform', `translate(${mx.toFixed(2)} ${my.toFixed(2)})`);
+      }
+    };
+
+    if (type === 'couple-split') {
+      const fromStage = Math.max(0, Math.min(3, Number(intent.fromStage != null ? intent.fromStage : stage)));
+      const toStage = Math.max(0, Math.min(3, Number(intent.toStage != null ? intent.toStage : Math.min(3, fromStage + 1))));
+      const goodMember = intent.goodMember === 'B' ? 'B' : 'A';
+      const badMember = goodMember === 'A' ? 'B' : 'A';
+      const goodMarker = svg.querySelector(`#climberMarker${goodMember}`);
+      const badMarker = svg.querySelector(`#climberMarker${badMember}`);
+      const goodRope = svg.querySelector(`#partnerRope${goodMember}`);
+      const risks = svg.querySelectorAll('.risk-path');
+      const risk = svg.querySelector('.risk-path[data-active-risk="true"]') || risks[risks.length - 1];
+      const group = risk && risk.closest ? risk.closest('.risk-group') : null;
+      const activeNode = group ? group.querySelector('.risk-node') : null;
+      const pts = risk ? String(risk.dataset.riskBreak || '684,319').split(',').map(Number) : biomes[toStage].point;
+      const toPt = biomes[toStage].point;
+      const fromPt = biomes[fromStage].point;
+      const minX = Math.min(fromPt[0], toPt[0], pts[0]) - 110;
+      const maxX = Math.max(fromPt[0], toPt[0], pts[0]) + 140;
+      const minY = Math.min(fromPt[1], toPt[1], pts[1]) - 90;
+      const maxY = Math.max(fromPt[1], toPt[1], pts[1]) + 110;
+      const boxW = Math.max(760, Math.min(fullCamera[2], maxX - minX));
+      const boxH = Math.min(fullCamera[3], Math.max(475, boxW * (750 / 1200)));
+      const midX = (minX + maxX) / 2;
+      const midY = (minY + maxY) / 2;
+      const splitBox = [
+        Math.max(0, Math.min(fullCamera[2] - boxW, midX - boxW / 2)),
+        Math.max(0, Math.min(fullCamera[3] - boxH, midY - boxH / 2)),
+        boxW,
+        boxH
+      ];
+
+      const fromOff = biomes[fromStage].offset;
+      const toOff = biomes[toStage].offset;
+      const fromFrac = TRAIL_FRACS[fromStage] != null ? TRAIL_FRACS[fromStage] : 0;
+      const toFrac = TRAIL_FRACS[toStage] != null ? TRAIL_FRACS[toStage] : 1;
+      const len = risk && risk.getTotalLength ? risk.getTotalLength() : 260;
+
+      if (!hasRaf()) {
+        if (risk) { risk.style.strokeDashoffset = '0'; risk.style.strokeDasharray = 'none'; }
+        if (activeNode) activeNode.style.opacity = '1';
+        if (goodRope) { goodRope.setAttribute('opacity', '.78'); goodRope.setAttribute('stroke-dashoffset', String(toOff)); }
+        if (goodMarker) goodMarker.setAttribute('transform', `translate(${toPt[0]} ${toPt[1]})`);
+        if (badMarker) badMarker.setAttribute('transform', `translate(${pts[0]} ${pts[1]})`);
+        setViewBox(svg, splitBox);
+        if (done) done();
+        return;
+      }
+
+      if (risk) { risk.style.strokeDasharray = '1000'; risk.style.strokeDashoffset = '1000'; }
+      if (activeNode) activeNode.style.opacity = '0';
+      if (goodRope) goodRope.setAttribute('opacity', '.78');
+
+      // Act 1 (470ms): pull back to frame both safe ridge camp and red deviation
+      animateSteps(470, tk, p => {
+        const e = easeInOut(p);
+        setViewBox(svg, from.map((n, i) => n + (splitBox[i] - n) * e));
+      }, () => {
+        // Act 2 (1800ms): SIMULTANEOUS safe climb (goodMember) + red deviation (badMember)
+        animateSteps(1800, tk, p => {
+          const eSafe = easeInOut(p);
+          if (goodRope) goodRope.setAttribute('stroke-dashoffset', String(fromOff + (toOff - fromOff) * eSafe));
+          if (goodMarker) {
+            const [gx, gy] = trailPointAt(svg, fromFrac + (toFrac - fromFrac) * eSafe);
+            goodMarker.setAttribute('transform', `translate(${gx.toFixed(2)} ${gy.toFixed(2)})`);
+          }
+          const progBad = p < 0.7 ? (p / 0.7) * 0.75 : 0.75 + Math.pow((p - 0.7) / 0.3, 1.8) * 0.25;
+          if (risk) {
+            risk.style.strokeDashoffset = String((1000 * (1 - progBad)).toFixed(2));
+            if (badMarker && typeof risk.getPointAtLength === 'function') {
+              const bpt = risk.getPointAtLength(len * progBad);
+              badMarker.setAttribute('transform', `translate(${bpt.x.toFixed(2)} ${bpt.y.toFixed(2)})`);
+            }
+          }
+        }, () => {
+          if (risk) { risk.style.strokeDashoffset = '0'; risk.style.strokeDasharray = 'none'; }
+          // Act 3 (360ms): reveal red node + 145ms breath before showing comparison card
+          animateSteps(360, tk, p => {
+            if (activeNode) activeNode.style.opacity = String(easeOut(p).toFixed(3));
+          }, () => {
+            if (activeNode) activeNode.style.opacity = '1';
+            if (done) setTimeout(() => { if (tk === activeToken) done(); }, 145);
+          });
+        });
+      });
+      return;
+    }
+
     if (type === 'risk') {
       const risks = svg.querySelectorAll('.risk-path');
       const risk = svg.querySelector('.risk-path[data-active-risk="true"]') || risks[risks.length - 1];
       if (!risk) { if (done) done(); return; }
       const group = risk.closest ? risk.closest('.risk-group') : null;
       const activeNode = group ? group.querySelector('.risk-node') : null;
-      const markerEl = svg.querySelector('#climberMarker');
       const pts = String(risk.dataset.riskBreak || '684,319').split(',').map(Number);
       const w = 696, h = 435;
       const crash = [Math.max(0, Math.min(fullCamera[2] - w, pts[0] - w * 0.55)), Math.max(0, Math.min(fullCamera[3] - h, pts[1] - h * 0.45)), w, h];
@@ -2565,17 +2774,17 @@
         risk.style.strokeDashoffset = '0';
         risk.style.strokeDasharray = 'none';
         if (activeNode) activeNode.style.opacity = '1';
-        if (markerEl && typeof risk.getPointAtLength === 'function') {
+        if (typeof risk.getPointAtLength === 'function') {
           const endPt = risk.getPointAtLength(len);
-          markerEl.setAttribute('transform', `translate(${endPt.x.toFixed(2)} ${endPt.y.toFixed(2)})`);
+          moveClimbersTogether(endPt.x, endPt.y);
         }
         setViewBox(svg, crash);
         if (done) done();
         return;
       }
 
-      risk.style.strokeDasharray = String(len);
-      risk.style.strokeDashoffset = String(len);
+      risk.style.strokeDasharray = '1000';
+      risk.style.strokeDashoffset = '1000';
       if (activeNode) activeNode.style.opacity = '0';
 
       // Natural 3-phase pacing: steady ridge ascent (0..0.68), tension pause at break (0.68..0.78), gravity drop (0.78..1)
@@ -2595,15 +2804,13 @@
         curBox = from.map((n, i) => n + (fullCamera[i] - n) * e);
         setViewBox(svg, curBox);
       }, () => {
-        // Act 2 (1770-2130ms): organic ink draw + #climberMarker riding tip + exponentially damped camera follow
+        // Act 2 (1770-2130ms): organic ink draw (normalized pathLength=1000) + climber riding tip + smooth camera follow
         animateSteps(act2Ms, tk, p => {
           const prog = riskPacing(p);
-          risk.style.strokeDashoffset = String(len * (1 - prog));
+          risk.style.strokeDashoffset = String((1000 * (1 - prog)).toFixed(2));
           if (typeof risk.getPointAtLength === 'function') {
             const pt = risk.getPointAtLength(len * prog);
-            if (markerEl) {
-              markerEl.setAttribute('transform', `translate(${pt.x.toFixed(2)} ${pt.y.toFixed(2)})`);
-            }
+            moveClimbersTogether(pt.x, pt.y);
             const zoomT = easeInOut(Math.min(1, p * 1.05));
             const targetW = fullCamera[2] + (w - fullCamera[2]) * zoomT;
             const targetH = fullCamera[3] + (h - fullCamera[3]) * zoomT;
@@ -2648,13 +2855,13 @@
       const toStage = Math.max(0, Math.min(3, Number(intent.toStage != null ? intent.toStage : stage)));
       const fromOff = biomes[fromStage].offset;
       const toOff = biomes[toStage].offset;
-      const trailFracs = [0.1104, 0.4883, 0.6713, 1];
-      const fromFrac = trailFracs[fromStage] != null ? trailFracs[fromStage] : (1 - fromOff / TRAIL_LENGTH);
-      const toFrac = trailFracs[toStage] != null ? trailFracs[toStage] : (1 - toOff / TRAIL_LENGTH);
+      const fromFrac = TRAIL_FRACS[fromStage] != null ? TRAIL_FRACS[fromStage] : (1 - fromOff / TRAIL_LENGTH);
+      const toFrac = TRAIL_FRACS[toStage] != null ? TRAIL_FRACS[toStage] : (1 - toOff / TRAIL_LENGTH);
       const trailEl = svg.querySelector('#activeTrail');
       const ropeA = svg.querySelector('#partnerRopeA');
       const ropeB = svg.querySelector('#partnerRopeB');
-      const markerEl = svg.querySelector('#climberMarker');
+      if (ropeA) ropeA.setAttribute('opacity', '.72');
+      if (ropeB) ropeB.setAttribute('opacity', '.72');
       animateViewBox(svg, from, fullCamera.slice(), 400, () => {
         animateSteps(560, tk, p => {
           const e = easeInOut(p);
@@ -2662,10 +2869,8 @@
           if (trailEl) trailEl.setAttribute('stroke-dashoffset', offVal);
           if (ropeA) ropeA.setAttribute('stroke-dashoffset', offVal);
           if (ropeB) ropeB.setAttribute('stroke-dashoffset', offVal);
-          if (markerEl) {
-            const [mx, my] = trailPointAt(svg, fromFrac + (toFrac - fromFrac) * e);
-            markerEl.setAttribute('transform', `translate(${mx.toFixed(2)} ${my.toFixed(2)})`);
-          }
+          const [mx, my] = trailPointAt(svg, fromFrac + (toFrac - fromFrac) * e);
+          moveClimbersTogether(mx, my);
         }, () => {
           animateViewBox(svg, fullCamera.slice(), campCamera(toStage), 620, done, tk);
         });
@@ -2722,6 +2927,90 @@
     return state.history.length - 1;
   }
 
+  function animateAdvanceStage(el, state, rerender, onSummit) {
+    const syncViewportClass = () => {
+      if (root.document && root.document.body) root.document.body.classList.add('is-mountain-viewport');
+    };
+    const svg = el && el.querySelector ? el.querySelector('.mountain-svg[data-camera]') : null;
+    const fromStage = Number(state.stage) || 0;
+    const isSummitStep = fromStage >= 3;
+    const toStage = isSummitStep ? 3 : fromStage + 1;
+    state.inspectedRisk = null;
+    state.roomWaiting = false;
+    if (el && el.querySelector) hideDialogs(el, state);
+    if (hasRaf() && svg) {
+      runCamera(svg, { type: 'advance', fromStage, toStage }, () => {
+        if (isSummitStep) {
+          setTimeout(() => {
+            state.initialViewBox = null;
+            if (typeof onSummit === 'function') onSummit();
+            syncViewportClass();
+          }, 340);
+        } else {
+          state.stage = toStage;
+          state.focusedNode = toStage;
+          state.cameraMode = 'camp';
+          state.dialogVisible = true;
+          state.initialViewBox = campCamera(toStage);
+          if (typeof rerender === 'function') rerender();
+          state.initialViewBox = null;
+          syncViewportClass();
+        }
+      });
+    } else {
+      if (isSummitStep) {
+        if (typeof onSummit === 'function') onSummit();
+      } else {
+        state.stage = toStage;
+        state.focusedNode = toStage;
+        state.cameraMode = 'camp';
+        state.dialogVisible = true;
+        state.initialViewBox = campCamera(toStage);
+        if (typeof rerender === 'function') rerender();
+        state.initialViewBox = null;
+      }
+      syncViewportClass();
+    }
+  }
+
+  function animateRiskStage(el, state, rerender, opts) {
+    const syncViewportClass = () => {
+      if (root.document && root.document.body) root.document.body.classList.add('is-mountain-viewport');
+    };
+    const keepPathCompare = !!(opts && opts.keepPathCompare);
+    const split = (opts && opts.split) || null;
+    const svg = el && el.querySelector ? el.querySelector('.mountain-svg[data-camera]') : null;
+    const prevBox = svg ? parseViewBox(svg) : fullCamera.slice();
+    const riskIdx = ensureStageRiskEntry(state);
+    state.roomWaiting = false;
+    if (keepPathCompare) {
+      state.inspectedRisk = null;
+      state.blocked = false;
+      state.phase = 'expedition';
+    } else {
+      state.inspectedRisk = riskIdx;
+      state.blocked = true;
+      state.phase = 'blocked';
+    }
+    state.cameraMode = 'camp';
+    state.dialogVisible = !hasRaf();
+    state.initialViewBox = hasRaf() ? prevBox : riskCameraBox(riskRecord(state.caseId, langOf(state)), biomes[state.stage].point, state.stage);
+    if (typeof rerender === 'function') rerender();
+    syncViewportClass();
+    if (hasRaf() && el && el.querySelector) {
+      const nextSvg = el.querySelector('.mountain-svg[data-camera]');
+      const intent = split
+        ? { type: 'couple-split', fromStage: state.stage, toStage: Math.min(3, (Number(state.stage) || 0) + 1), goodMember: split.goodMember, badMember: split.badMember }
+        : { type: 'risk', stage: state.stage };
+      runCamera(nextSvg, intent, () => {
+        state.initialViewBox = null;
+        revealDialog(el, state);
+      });
+    } else {
+      state.initialViewBox = null;
+    }
+  }
+
   function applyRoomSnapshot(state, roomData, el, rerender, onSummit) {
     if (!state || !roomData || state.coupleSyncMode === 'local') return false;
     const raw = dataFor(state.caseId) || {};
@@ -2755,6 +3044,8 @@
       const merged = [...new Set([aFears[0], bFears[0], ...aFears, ...bFears].filter(Boolean))].slice(0, 3);
       state.fearOrder = merged.length ? merged : allConcernIds.slice(0, 3);
       state.roomWaiting = false;
+      state.evaluationDone = true;
+      ProfileEvalStore.save(state.caseId, state);
       state.phase = 'cross';
       changed = true;
     }
@@ -2764,28 +3055,22 @@
     const stKey = String(Number(state.stage) || 0);
     const curDec = decs[stKey];
     if (curDec && curDec.ready && state.phase === 'expedition') {
-      if (state.roomWaiting === 'decision') {
-        state.roomWaiting = false;
-        changed = true;
-      }
-      if (curDec.aligned && curDec.A && curDec.A.route === 'good') {
-        const fromStage = Number(state.stage) || 0;
-        const isSummitStep = fromStage >= 3;
-        const toStage = isSummitStep ? 3 : fromStage + 1;
-        state.roomAlignedBanner = true;
-        if (isSummitStep) {
-          if (typeof onSummit === 'function') onSummit();
-        } else {
-          state.stage = toStage;
-          state.focusedNode = toStage;
-          state.inspectedRisk = null;
-          state.dialogVisible = true;
-          state.initialViewBox = campCamera(toStage);
-          changed = true;
+      state.animatedCoupleKeys = state.animatedCoupleKeys || {};
+      const decKey = `${stKey}:${curDec.A && curDec.A.route}:${curDec.B && curDec.B.route}`;
+      if (!state.animatedCoupleKeys[decKey]) {
+        state.animatedCoupleKeys[decKey] = true;
+        if (curDec.aligned && curDec.A && curDec.A.route === 'good') {
+          state.roomAlignedBanner = true;
+          animateAdvanceStage(el, state, rerender, onSummit);
+          return true;
         }
-      } else if (!curDec.aligned || (curDec.A && curDec.A.route === 'bad') || (curDec.B && curDec.B.route === 'bad')) {
-        ensureStageRiskEntry(state);
-        changed = true;
+        if (!curDec.aligned || (curDec.A && curDec.A.route === 'bad') || (curDec.B && curDec.B.route === 'bad')) {
+          const split = !curDec.aligned
+            ? { goodMember: curDec.A.route === 'good' ? 'A' : 'B', badMember: curDec.A.route === 'bad' ? 'A' : 'B' }
+            : null;
+          animateRiskStage(el, state, rerender, { keepPathCompare: true, split });
+          return true;
+        }
       }
     }
 
@@ -2955,28 +3240,32 @@
     }
 
     if (action === 'room-agree-good') {
-      const fromStage = Number(state.stage) || 0;
-      const isSummitStep = fromStage >= 3;
-      const toStage = isSummitStep ? 3 : fromStage + 1;
-      state.roomWaiting = false;
       state.roomAlignedBanner = false;
-      state.inspectedRisk = null;
-      if (isSummitStep) {
-        onSummit();
-      } else {
-        state.stage = toStage;
-        state.focusedNode = toStage;
-        state.cameraMode = 'camp';
-        state.dialogVisible = true;
-        state.initialViewBox = campCamera(toStage);
-        rerender();
-        state.initialViewBox = null;
-      }
-      syncViewportClass();
+      animateAdvanceStage(el, state, rerender, onSummit);
+      return true;
+    }
+
+    if (action === 'redo-eval') {
+      ProfileEvalStore.clear(state.caseId);
+      state.evaluationDone = false;
+      state.phase = 'fears';
+      state.view = viewName('expedition', langOf(state), state.irlDay);
+      state.fearOrder = [];
+      state.votes = {};
+      state.voteTurn = state.coupleSyncMode === 'local' ? 'A' : (state.memberRole || 'A');
+      state.roomWaiting = false;
+      state.stage = 0;
+      state.focusedNode = 0;
+      state.summit = false;
+      state.blocked = false;
+      state.history = [];
+      rerender();
       return true;
     }
 
     if (action === 'start-expedition') {
+      state.evaluationDone = true;
+      ProfileEvalStore.save(state.caseId, state);
       state.phase = 'expedition';
       state.roomWaiting = false;
       state.roomAlignedBanner = false;
@@ -2998,8 +3287,6 @@
 
     if (action === 'advance') {
       const route = (el.querySelector('[name="route"]:checked') || {}).value || 'good';
-      const svg = el.querySelector('.mountain-svg[data-camera]');
-      const prevBox = svg ? parseViewBox(svg) : fullCamera.slice();
       const raw = dataFor(state.caseId) || {};
       const isRemoteCouple = !!(raw.meta && raw.meta.isCouple) && state.coupleSyncMode !== 'local';
       SherpasAI.request('reframe', strictCasePayload(state.caseId, langOf(state), state.stage, state), { mode: 'deterministic' });
@@ -3007,82 +3294,41 @@
       if (isRemoteCouple) {
         const loc = localizeData(raw, langOf(state));
         const opt = stepGoodOption(state, loc, getSpec(state.caseId, langOf(state), raw), state.stage);
-        const chosenLabel = route === 'bad' ? (opt.badLabel || t(state, 'ignore')) : opt.label;
+        const chosenLabel = route === 'bad' ? (opt.badLabel || t(state, 'ignore')) : opt.title;
         const role = state.memberRole === 'B' ? 'B' : 'A';
+        const stKey = String(Number(state.stage) || 0);
         const roomSnap = CoupleRoomSync.submitDecision(state.roomId, state.caseId, role, state.stage, route, chosenLabel);
         state.roomDecisions = Object.assign({}, roomSnap.decisions || {});
-        const stDec = state.roomDecisions[String(Number(state.stage) || 0)];
+        const stDec = state.roomDecisions[stKey];
         if (stDec && stDec.ready) {
-          state.roomWaiting = false;
-          if (stDec.aligned && stDec.A.route === 'good') {
-            state.roomAlignedBanner = true;
-            // Fall through to normal good advance below
-          } else {
-            ensureStageRiskEntry(state);
-            rerender();
-            syncViewportClass();
-            return true;
+          state.animatedCoupleKeys = state.animatedCoupleKeys || {};
+          const decKey = `${stKey}:${stDec.A && stDec.A.route}:${stDec.B && stDec.B.route}`;
+          if (!state.animatedCoupleKeys[decKey]) {
+            state.animatedCoupleKeys[decKey] = true;
+            if (stDec.aligned && stDec.A.route === 'good') {
+              state.roomAlignedBanner = true;
+              animateAdvanceStage(el, state, rerender, onSummit);
+            } else {
+              const split = !stDec.aligned
+                ? { goodMember: stDec.A.route === 'good' ? 'A' : 'B', badMember: stDec.A.route === 'bad' ? 'A' : 'B' }
+                : null;
+              animateRiskStage(el, state, rerender, { keepPathCompare: true, split });
+            }
           }
-        } else {
-          state.roomWaiting = 'decision';
-          rerender();
-          syncViewportClass();
           return true;
         }
-      }
-
-      if (route === 'bad') {
-        state.inspectedRisk = ensureStageRiskEntry(state);
-        state.blocked = true;
-        state.phase = 'blocked';
-        state.cameraMode = 'camp';
-        state.dialogVisible = !hasRaf();
-        state.initialViewBox = hasRaf() ? prevBox : riskCameraBox(riskRecord(state.caseId, langOf(state)), biomes[state.stage].point, state.stage);
+        state.roomWaiting = 'decision';
         rerender();
         syncViewportClass();
-        if (hasRaf()) {
-          const nextSvg = el.querySelector('.mountain-svg[data-camera]');
-          runCamera(nextSvg, { type: 'risk', stage: state.stage }, () => { state.initialViewBox = null; revealDialog(el, state); });
-        }
         return true;
       }
 
-      const fromStage = Number(state.stage) || 0;
-      const isSummitStep = fromStage >= 3;
-      const toStage = isSummitStep ? 3 : fromStage + 1;
-      state.inspectedRisk = null;
-      hideDialogs(el, state);
-      if (hasRaf() && svg) {
-        runCamera(svg, { type: 'advance', fromStage, toStage }, () => {
-          if (isSummitStep) {
-            setTimeout(() => {
-              state.initialViewBox = null;
-              onSummit();
-              syncViewportClass();
-            }, 340);
-          } else {
-            state.stage = toStage;
-            state.focusedNode = toStage;
-            state.cameraMode = 'camp';
-            state.dialogVisible = true;
-            state.initialViewBox = campCamera(toStage);
-            rerender();
-            state.initialViewBox = null;
-            syncViewportClass();
-          }
-        });
-      } else {
-        if (isSummitStep) onSummit();
-        else {
-          state.stage = toStage;
-          state.focusedNode = toStage;
-          state.dialogVisible = true;
-          state.initialViewBox = campCamera(toStage);
-          rerender();
-          state.initialViewBox = null;
-        }
-        syncViewportClass();
+      if (route === 'bad') {
+        animateRiskStage(el, state, rerender, { keepPathCompare: false });
+        return true;
       }
+
+      animateAdvanceStage(el, state, rerender, onSummit);
       return true;
     }
 
@@ -3341,6 +3587,7 @@
     buildThermometerReframe,
     orderedTopMoves,
     CoupleRoomSync,
+    ProfileEvalStore,
     applyRoomSnapshot,
     buildPartnerUrl,
     failTags,

@@ -364,7 +364,10 @@
           <summary>${u(state, 'exact')}</summary>
           ${expedition.yearlyMarkup(d, lang)}
         </details>
-        <div class="button-row"><button data-action="copy">${u(state, 'copy')}</button></div>
+        <div class="button-row">
+          <button data-action="copy">${u(state, 'copy')}</button>
+          <button type="button" class="room-btn-ghost" data-action="redo-eval">${t(state, 'redoEval')}</button>
+        </div>
       </aside>`;
     }
 
