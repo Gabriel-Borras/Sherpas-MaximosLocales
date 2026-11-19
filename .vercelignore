@@ -1,0 +1,13 @@
+# Nunca subir configuracion local ni secretos
+.env
+.env.*
+!.env.example
+data/
+# No forma parte de la app publicada
+agentes/
+central/
+docs/
+n8n/
+tests/
+instalar.ps1
+**/__pycache__/

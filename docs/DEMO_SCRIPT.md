@@ -62,13 +62,15 @@ Ejecuta estos pasos desde la raíz del repositorio antes de empezar la presentac
 
 ---
 
-### `2:15 – 3:00` · Momento 4: Día 0 + Radio Telegram + Resumen del Asesor (`Advisor Brief`)
+### `2:15 – 3:00` · Momento 4: Día a Día + La Radio del Sherpa (Telegram) + Resumen del Asesor
+- **Antes de salir:** abre en el móvil `https://t.me/SherpasRadioBot?start=<case_id>_client` y pulsa *Start* (el bot responde «Radio del Sherpa activada»).
 - **Qué hacer en pantalla:**
-  1. Al llegar a **Cima alcanzada**, pasa a la vista de enfoque **Día 0** (*Run IRL*), mostrando el próximo paso inmediato accionable.
-  2. Pulsa el icono de **La Radio del Sherpa** en la barra superior: es únicamente un hipervínculo directo al bot de Telegram (`https://t.me/SherpasRadioBot?start=<caseId>_<voter|client>`), sin UI ni lógica adicional en el frontend.
-  3. Abre la pestaña de **Resumen del Asesor (`Advisor Brief`)** (`POST /api/ai/brief`) y muestra el botón de copiar resumen en texto plano.
+  1. Pulsa **Día 0** en la barra superior: la montaña del Basecamp (sin biomas) con un nodo por día. La tarjeta muestra **«Hoy te toca»** con el paso real del caso y una línea de **Por qué**.
+  2. Pulsa **Día siguiente →**: el escalador sube. En días sin paso verás **«Hoy toca esperar»** (si ya lo hiciste) o **«Hoy no hay paso nuevo»** con lo pendiente; cada 2 días llega un **recordatorio por Telegram** nombrando a quien le falta. Arrastra y usa la rueda para mover/ampliar la cámara.
+  3. En el panel **📻 Radio** (abajo a la izquierda) pulsa **📉 Cae la bolsa**: llega a Telegram la caída histórica más parecida que la cartera ya superó (p. ej. Johnson: *«En abril de 2025 tu cartera cayó un 8,1 %… te recuperaste en 61 días»*).
+  4. Abre el **Resumen del Asesor (`Advisor Brief`)** y muestra el botón de copiar en texto plano.
 - **Qué decir a los jueces:**
-  - *"Tras la cima no volvemos a abrumar con 30 años de gráficos: el cliente solo ve su **Día 0** ejecutable. **La Radio del Sherpa** exporta sus hitos reales a `.ics` y aporta calma ante caídas de mercado con los shocks históricos reales de su cartera. Y el asesor recibe un **Advisor Brief** listo para la reunión con miedos, pacto de pareja y dudas."*
+  - *"Tras la cima no abrumamos con 30 años de gráficos: cada día solo ves lo que toca, por qué, y si no hay nada, esperas. Fuera de la app, La Radio del Sherpa insiste cada dos días si algo queda pendiente y, si cae la bolsa, te recuerda con tus datos reales que ya superaste algo parecido."*
 
 ---
 
@@ -79,4 +81,6 @@ Ejecuta estos pasos desde la raíz del repositorio antes de empezar la presentac
 - `POST /api/sessions`, `POST /api/sessions/<id>/quest` y alias `/api/expedition`, `/api/expedition/<id>/quest`: creación y avance de sesión de expedición en Basecamp con reordenación dinámica de `camps` y `active_camp` según el miedo Top-1 (`ranked_concerns[0]` / `fear_ranking[0]`).
 - `POST /api/irl` y `GET/POST /api/irl/<run_id>/...`: motor de *Run IRL* (Día 0, Día 3, Día 30).
 - `GET /api/radio/...`: feed de *La Radio del Sherpa* y exportación `.ics`.
+- `GET /api/dia-a-dia/<case_id>` y `POST /api/dia-a-dia/<case_id>/day`: plan real Día 0 → 30, estado de cada día y aviso por Telegram.
+- `GET /api/telegram/config`, `POST /api/telegram/demo/day` y `POST /api/telegram/demo/shock`: puente con n8n/Telegram (ver `docs/TELEGRAM_N8N.md`).
 - `POST /api/ai/reframe`, `POST /api/ai/pact`, `POST /api/ai/brief`: capa narrativa conductual (con fallback determinista sin `TEAM_KEY`).

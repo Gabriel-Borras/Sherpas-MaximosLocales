@@ -1,48 +1,86 @@
-# SHERPAS-19-11 — Conversación y Coordinación Multi-Máquina (Windows)
+# Sherpa Basecamp × Run IRL — Sherpas Máximos Locales
 
-Adaptación nativa para Windows (PowerShell / CMD / Windows Terminal) del sistema de conversación entre agentes y coordinación multi-máquina de [BauDahn/claude-central](https://github.com/BauDahn/claude-central).
+> Hackathon UPV 2026 · Reto Sherpas · **Paso 3 del asesor: *Bring the plan to life***
 
-## Instalación en Windows
+**Demo en vivo:** _se completa tras el despliegue en Vercel_
 
-En PowerShell (dentro de la carpeta del repo):
+Convertimos el informe financiero de 22 páginas de Sherpas en una **expedición de montaña interactiva** que la familia hace una sola vez (menos de 90 s), conectada a una **línea de vida real** que la acompaña día a día y fuera de la app. Todo sale de los **datos reales de los 4 casos** de Sherpas (`financial-health.json`, `investment-analysis.json`, `persona.md`), **sin inventar cifras**.
 
-```powershell
-# Añade agentes\bin al PATH de usuario y crea agentes\agentes.conf
-.\instalar.ps1
+## Qué hace
 
-# Opcional: registra la tarea programada cada 10 min para publicar estado
-.\instalar.ps1 -ConTimer
+| Fase | Qué ve la familia | Problema de Sherpas que resuelve |
+| :--- | :--- | :--- |
+| **1. Quest de miedos** | Elige y ordena sus 3 preocupaciones reales (`O1..O8`). | El campo *Subjective concerns* llega vacío. |
+| **2. Cordada a ciegas (parejas)** | Cada miembro vota por separado; se muestra primero en qué coinciden. | Parejas con riesgo `MISALIGNED` que no acuerdan. |
+| **3. Basecamp (montaña sumi-e)** | Decide en 4 campamentos sobre la curva real `projections.yearly`. Si elige mal, la montaña **le bloquea en el año exacto** en que el plan falla y le deja **rebobinar**. | No ven cómo una decisión de hoy cambia su futuro; un buen score oculta problemas (Samantha `82` → sin liquidez en 2053). |
+| **4. Salud y Tu mochila** | Pentágono de los 5 pilares y balance real, solo lectura. | Cifras grandes sin contexto. |
+| **5. Día a Día (Run IRL)** | La montaña con un nodo por día (0 → 30). Cada día: **qué hacer**, **por qué** (coste real de retrasarlo) o **«hoy toca esperar»**. Se puede arrastrar y ampliar. | Demasiadas opciones sin primer paso; el plan se olvida a los 3 y 30 días. |
+| **6. La Radio del Sherpa (Telegram)** | El paso de cada día y un **recordatorio cada 2 días** si algo queda pendiente. Si cae la bolsa, la caída histórica más parecida que su cartera **ya superó** (p. ej. *«En abril de 2025 tu cartera cayó un 8,1 %… te recuperaste en 61 días»*). | El pánico ante caídas y la inercia fuera de la app. |
+| **7. Resumen para el asesor** | Miedos, pacto de pareja, ramas descartadas y dudas, listo para copiar. | El asesor no conoce los miedos reales. |
+
+Fundamentación completa (sesgos conductuales, mapa de datos por caso): [`docs/BIBLIA_FINAL_V1.md`](docs/BIBLIA_FINAL_V1.md).
+
+## Ejecutar en local
+
+Requisitos: **Python 3.10+**. Solo usa la biblioteca estándar; no hay dependencias que instalar.
+
+```bash
+python -m backend.server            # http://127.0.0.1:8000
 ```
 
-Requisitos: Python 3.10+, `git` y GitHub CLI (`gh auth login`).
+Abre `http://127.0.0.1:8000/` (un caso concreto: `?case=michael-carter`, `samantha-lewis`, `timothy-melanie-weah` o `daniel-emily-johnson`).
 
-## Uso diario
+Configuración opcional en `.env` (plantilla en [`.env.example`](.env.example), nunca se sube):
 
-```powershell
-# 1. Inicializar cada máquina (una sola vez por máquina):
-equipo init --maquina gabriel --rol orquestador --repo Gabriel-Borras/Sherpas-MaximosLocales --dir .
-equipo init --maquina compa   --rol miembro     --repo Gabriel-Borras/Sherpas-MaximosLocales --dir .
+| Variable | Para qué |
+| :--- | :--- |
+| `MCP_URL`, `MCP_TOKEN` | Leer los casos del MCP de Sherpas. Sin token se usan los datos incluidos en el repo. Guía: [`docs/GUIA_API_IA_SHERPAS.md`](docs/GUIA_API_IA_SHERPAS.md). |
+| `LLM_PROXY_URL`, `TEAM_KEY` | Capa narrativa con IA. Sin clave responde con texto determinista. |
+| `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET`, `TELEGRAM_BOT_USERNAME` | La Radio del Sherpa por Telegram vía n8n. |
+| `SHERPAS_ENABLE_TELEGRAM_TEST=1` | Muestra el panel **📻 Radio** de demo (Día 0/3/14/30 · Cae la bolsa). |
 
-# 2. Coordinación entre máquinas:
-equipo ver                          # (orquestador) estado de máquinas, issues y PRs
-equipo asignar compa "Título" --cuerpo "Qué hacer y archivos"
-equipo mias                         # ver issues asignados a esta máquina
-equipo avisar gabriel "PR #1 listo" # enviar mensaje a otra máquina
-equipo mensajes                     # leer mensajes nuevos
-estado                              # guarda ESTADO.md y publica en GitHub
-
-# 3. Agentes y tablero local:
-lanzar --listar                     # ver agentes en agentes.conf
-lanzar backend                      # abre pestaña en Windows Terminal con el rol
-tareas add "Implementar API" -p app --para backend
-tareas tomar 1 -p app --como backend
-tareas listo 1 -p app --nota "hecho"
-```
-
-> Si aún no reiniciaste la terminal tras `.\instalar.ps1`, puedes invocar `.\agentes\bin\equipo.cmd`, `.\agentes\bin\tareas.cmd`, `.\agentes\bin\lanzar.cmd` y `.\agentes\bin\estado.cmd`.
+Puesta en marcha de Telegram + n8n (flujo importable incluido): [`docs/TELEGRAM_N8N.md`](docs/TELEGRAM_N8N.md).
 
 ## Tests
 
-```powershell
-python -m unittest tests/test_sistema.py -v
+```bash
+python -m unittest discover -s tests          # backend (Python)
+node --test tests/frontend/test_dia_a_dia.mjs n8n/test_code_nodes.mjs   # vista Día a Día y nodos de n8n
 ```
+
+## Despliegue (Vercel)
+
+- `frontend/` se publica como web estática.
+- `/api/*` y `/health` van a una función Python ([`api/index.py`](api/index.py)) que reutiliza el mismo manejador que el servidor local.
+- Las variables de entorno se configuran en el proyecto de Vercel, no en el repo.
+- En serverless no hay memoria compartida entre peticiones. Las salas de pareja usan el respaldo local del navegador; el Día a Día y la Radio no guardan estado. Los avisos automáticos programados (`SHERPAS_SCHEDULER_INTERVAL`) solo funcionan con el servidor local.
+
+## Estructura
+
+```
+frontend/     Web (HTML/CSS/JS sin dependencias): expedicion.js (Basecamp), post-cima.js, dia-a-dia.js, radio-demo.js
+backend/      API en Python estándar: server.py, timeline_engine.py, irl_engine.py, notifications.py,
+              dia_a_dia.py, radio_demo.py, telegram_relay.py, mcp_client.py, llm_proxy.py, behavioral_narrator.py
+api/          Entrada de la función de Vercel
+n8n/          Flujo de n8n para Telegram (importable) y tests de sus nodos
+tests/        Tests de backend (Python) y de la vista Día a Día (Node)
+docs/         Documentación del proyecto
+agentes/, central/, instalar.ps1   Herramientas internas de coordinación del equipo (docs/HERRAMIENTAS_EQUIPO.md)
+```
+
+## Documentación
+
+| Documento | Contenido |
+| :--- | :--- |
+| [`docs/BIBLIA_FINAL_V1.md`](docs/BIBLIA_FINAL_V1.md) | Documento maestro: problema, flujo, datos por caso y economía conductual. |
+| [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) | Guion de la demo de 3 minutos. |
+| [`docs/TELEGRAM_N8N.md`](docs/TELEGRAM_N8N.md) | La Radio del Sherpa: backend → n8n → Telegram. |
+| [`docs/SPEC_UI_SALUD_Y_MOCHILA.md`](docs/SPEC_UI_SALUD_Y_MOCHILA.md) | Especificación de Salud y Tu mochila. |
+| [`docs/CAPACIDADES_BACKEND.md`](docs/CAPACIDADES_BACKEND.md) | Catálogo del backend. |
+| [`docs/GUIA_API_IA_SHERPAS.md`](docs/GUIA_API_IA_SHERPAS.md) | Acceso al MCP y a la IA de Sherpas. |
+| [`docs/HERRAMIENTAS_EQUIPO.md`](docs/HERRAMIENTAS_EQUIPO.md) | Coordinación multi-máquina del equipo. |
+| `docs/PROPUESTA_SHERPA_BASECAMP.md`, `docs/ESTADO_PROYECTO_FINAL.md`, `docs/DEMO_SCRIPT_variante-servidor-unificado.md` | Histórico del proceso. |
+
+## Equipo
+
+Gabriel (orquestación), Juan (frontend) y Adrián / Sabater (backend).

@@ -972,22 +972,8 @@ def _handle_telegram(
     raise KeyError("Ruta Telegram no encontrada")
 
 
-def create_server(
-    host: str = "127.0.0.1",
-    port: int = 8000,
-    *,
-    store: SessionStore | None = None,
-    cases_dir: str | Path | None = None,
-    frontend_dir: str | Path | None = None,
-    llm_client: LLMProxyClient | None = None,
-) -> ThreadingHTTPServer:
-    """Create the standard-library threaded API server without starting it."""
-    state = ServerState(
-        session_store=store,
-        cases_dir=cases_dir,
-        llm_client=llm_client,
-    )
-    static_root = Path(frontend_dir) if frontend_dir is not None else DEFAULT_FRONTEND_DIR
+def make_handler(state: "ServerState", static_root: Path) -> type[BaseHTTPRequestHandler]:
+    """Build the request handler class (shared by the local server and Vercel's api/index.py)."""
 
     class Handler(BaseHTTPRequestHandler):
         """HTTP adapter for static files and the unified deterministic API."""
@@ -1136,6 +1122,28 @@ def create_server(
 
         def log_message(self, format_string: str, *args: Any) -> None:
             """Keep the library server quiet; callers may add their own logging."""
+
+    return Handler
+
+
+def create_server(
+    host: str = "127.0.0.1",
+    port: int = 8000,
+    *,
+    store: SessionStore | None = None,
+    cases_dir: str | Path | None = None,
+    frontend_dir: str | Path | None = None,
+    llm_client: LLMProxyClient | None = None,
+) -> ThreadingHTTPServer:
+    """Create the standard-library threaded API server without starting it."""
+    state = ServerState(
+        session_store=store,
+        cases_dir=cases_dir,
+        llm_client=llm_client,
+    )
+    static_root = Path(frontend_dir) if frontend_dir is not None else DEFAULT_FRONTEND_DIR
+
+    Handler = make_handler(state, static_root)
 
     httpd = ThreadingHTTPServer((host, port), Handler)
     httpd.state = state  # type: ignore[attr-defined]
