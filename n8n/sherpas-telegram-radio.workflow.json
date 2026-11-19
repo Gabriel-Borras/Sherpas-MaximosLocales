@@ -1,0 +1,203 @@
+{
+  "name": "Sherpas · La Radio del Sherpa (Telegram)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## La Radio del Sherpa\n**Flujo A (arriba):** el usuario pulsa el enlace `t.me/<Bot>?start=<case>_<owner>` y se guarda su chat_id.\n**Flujo B (abajo):** el backend (`N8N_WEBHOOK_URL`) envia cada aviso, se formatea y se manda por Telegram.\n\nAntes de activar: asigna la credencial *Telegram API* (token de @BotFather) y la credencial *Header Auth* del webhook (cabecera `X-Sherpas-Secret` = `N8N_WEBHOOK_SECRET` del backend).\nEl flujo debe estar **activo** para que el registro de chats persista.",
+        "height": 220,
+        "width": 560
+      },
+      "id": "note",
+      "name": "Leeme",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -120,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "tg-trigger",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        200,
+        200
+      ],
+      "webhookId": "sherpas-radio-telegram",
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ME",
+          "name": "Sherpas Radio Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// n8n Code node (Run Once for All Items) — \"Registrar suscripción\".\n// Input : Telegram Trigger item ({ message: { chat, text } }).\n// Output: one item { chat_id, reply } for the Telegram \"sendMessage\" node.\n// The deep link built by the backend is https://t.me/<Bot>?start=<case_id>_<owner>.\nconst item = $input.first().json || {};\nconst msg = item.message || {};\nconst chatId = msg.chat && msg.chat.id;\nif (!chatId) return [];\n\nconst store = $getWorkflowStaticData('global');\nstore.subs = store.subs || {};\nconst text = String(msg.text || '').trim();\n\nif (/^\\/stop(@\\w+)?$/i.test(text)) {\n  for (const key of Object.keys(store.subs)) {\n    store.subs[key] = store.subs[key].filter(s => s.chat_id !== chatId);\n  }\n  return [{ json: { chat_id: chatId, reply: '🔕 Has dejado de recibir La Radio del Sherpa. Vuelve a abrir el enlace de la app cuando quieras reactivarla.' } }];\n}\n\nconst start = text.match(/^\\/start(?:@\\w+)?(?:\\s+(\\S+))?$/i);\nif (!start) {\n  return [{ json: { chat_id: chatId, reply: 'Hola 👋 Soy La Radio del Sherpa. Para activar tus avisos, abre el enlace «Sintonizar Radio en Telegram» desde la app.' } }];\n}\n\nconst payload = start[1] || '';\nconst cut = payload.lastIndexOf('_');\nconst caseId = cut > 0 ? payload.slice(0, cut) : (payload || 'demo');\nconst owner = cut > 0 ? payload.slice(cut + 1) : 'client';\nif (!/^[A-Za-z0-9-]{1,64}$/.test(caseId) || !/^[A-Za-z0-9]{1,16}$/.test(owner)) {\n  return [{ json: { chat_id: chatId, reply: 'Ese enlace no es válido. Ábrelo de nuevo desde la app.' } }];\n}\n\nconst list = store.subs[caseId] = store.subs[caseId] || [];\nconst existing = list.find(s => s.chat_id === chatId);\nif (existing) existing.owner = owner; else list.push({ chat_id: chatId, owner });\n\nreturn [{ json: { chat_id: chatId, reply: '✅ <b>Radio del Sherpa activada</b>\\nTe avisaré aquí de tus próximos pasos (Día 0, 3, 14 y 30) y de las caídas de mercado. Escribe /stop para pararla.' } }];\n"
+      },
+      "id": "register",
+      "name": "Registrar suscripción",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.reply }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false
+        }
+      },
+      "id": "tg-welcome",
+      "name": "Responder al usuario",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        680,
+        200
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ME",
+          "name": "Sherpas Radio Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "sherpas-radio",
+        "authentication": "headerAuth",
+        "responseMode": "onReceived",
+        "responseCode": 200,
+        "options": {}
+      },
+      "id": "webhook",
+      "name": "Webhook Sherpas",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        440
+      ],
+      "webhookId": "sherpas-radio",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "REPLACE_ME",
+          "name": "Sherpas Webhook Secret"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// n8n Code node (Run Once for All Items) — \"Formatear y enrutar\".\n// Input : Webhook item ({ body: <payload del backend> }).\n// Output: one item per Telegram recipient { chat_id, text, notification_id }.\nconst raw = $input.first().json || {};\nconst p = raw.body && typeof raw.body === 'object' ? raw.body : raw;\nif (!p || !p.case_id) return [];\n\nconst store = $getWorkflowStaticData('global');\nstore.subs = store.subs || {};\nstore.sent = store.sent || [];\n\nconst esc = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');\nconst EMOJI = { critical: '🚨', warning: '⚠️', info: '🧭' };\n\n// 1) Texto (HTML de Telegram; máx. 4096 caracteres).\nlet text;\nif (p.type === 'macro_shock_radio' || p.kind === 'macro_shock') {\n  const body = p.anti_panic_message_plain || p.anti_panic_message_math || '';\n  text = `📻 <b>${esc(p.headline || 'La Radio del Sherpa')}</b>\\n${esc(body)}`;\n} else {\n  const icon = EMOJI[p.severity] || '🧭';\n  const day = Number.isFinite(Number(p.day)) ? `\\n<i>Día ${esc(p.day)} · Sherpas</i>` : '';\n  text = `${icon} <b>${esc(p.title || 'La Radio del Sherpa')}</b>\\n${esc(p.message_plain || '')}${day}`;\n}\nif (text.length > 4000) text = text.slice(0, 3997) + '…';\n\n// 2) Destinatarios: suscriptores del caso; si el aviso es de \"Owner A/B\", solo ese\n//    titular (y quien se suscribió como client/all). Sin letra => todo el hogar.\nconst subs = store.subs[p.case_id] || [];\nconst m = String(p.target_owner || '').match(/Owner\\s+([AB])\\b/i);\nconst who = m ? m[1].toUpperCase() : null;\nconst recipients = subs.filter(s => !who || ['client', 'all'].includes(String(s.owner).toLowerCase()) || String(s.owner).toUpperCase() === who);\n\n// 3) Idempotencia: no reenviar el mismo aviso al mismo chat (reintentos del outbox).\nconst out = [];\nfor (const s of recipients) {\n  const key = `${p.notification_id || text.slice(0, 40)}|${s.chat_id}`;\n  if (store.sent.includes(key)) continue;\n  store.sent.push(key);\n  out.push({ json: { chat_id: s.chat_id, text, notification_id: p.notification_id || null } });\n}\nif (store.sent.length > 1000) store.sent = store.sent.slice(-500);\nreturn out;\n"
+      },
+      "id": "route",
+      "name": "Formatear y enrutar",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        440
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{ $json.chat_id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "parse_mode": "HTML",
+          "appendAttribution": false
+        }
+      },
+      "id": "tg-send",
+      "name": "Enviar por Telegram",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        680,
+        440
+      ],
+      "credentials": {
+        "telegramApi": {
+          "id": "REPLACE_ME",
+          "name": "Sherpas Radio Bot"
+        }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Registrar suscripción",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar suscripción": {
+      "main": [
+        [
+          {
+            "node": "Responder al usuario",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Sherpas": {
+      "main": [
+        [
+          {
+            "node": "Formatear y enrutar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Formatear y enrutar": {
+      "main": [
+        [
+          {
+            "node": "Enviar por Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
