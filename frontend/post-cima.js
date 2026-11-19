@@ -90,7 +90,7 @@
       current: 'Actual', target: 'Objetivo óptimo', delta: 'Diferencia', overdue: 'Inercia acumulada',
       inertia: 'Coste documentado de inercia', exact: 'Ver cálculo exacto',
       nextDay3: 'Día 3', nextDay14: 'Día 14', nextDay30: 'Día 30', nextMilestone: 'Próximo hito',
-      radio: 'La Radio del Sherpa', download: 'Descargar calendario .ics', telegram: 'Conectar a Telegram', historical: 'Shock histórico',
+      radio: 'La Radio del Sherpa', tuneTelegram: 'Sintonizar Radio en Telegram', download: 'Descargar calendario .ics', historical: 'Shock histórico',
       simulate: 'Simular caída bursátil hoy', through: 'Los activos atravesaron',
       historic: 'shocks de 2023 a 2026. La caída histórica es comparable; el plan ayuda a mantener la calma.',
       calm: 'Alerta de calma', fell: 'La cartera del hogar cayó', recovered: 'y se recuperó',
@@ -112,7 +112,7 @@
       current: 'Current', target: 'Optimal target', delta: 'Delta', overdue: 'Accumulated inertia',
       inertia: 'Documented cost of inertia', exact: 'See exact math',
       nextDay3: 'Day 3', nextDay14: 'Day 14', nextDay30: 'Day 30', nextMilestone: 'Next milestone',
-      radio: 'Sherpa Radio', download: 'Download .ics calendar', telegram: 'Connect to Telegram', historical: 'Historical shock',
+      radio: 'Sherpa Radio', tuneTelegram: 'Tune Radio on Telegram', download: 'Download .ics calendar', historical: 'Historical shock',
       simulate: 'Simulate market drop today', through: 'Assets moved through',
       historic: 'shocks from 2023 to 2026. The historical decline is comparable; the plan helps preserve calm.',
       calm: 'Calm alert', fell: 'The household portfolio fell', recovered: 'and recovered',
@@ -197,6 +197,20 @@
     return valid ? (lang === 'ES' ? `en ${n} días` : `in ${n} days`) : (missing || (lang === 'ES' ? 'sin días de recuperación cerrados' : 'no closed recovery-day count'));
   };
 
+  function telegramRadioUrl(state) {
+    if (expedition && typeof expedition.telegramRadioUrl === 'function') {
+      return expedition.telegramRadioUrl(state);
+    }
+    const cleanPart = (val, fallback) => {
+      const s = String(val || '').trim().replace(/\s+/g, '_').replace(/[^A-Za-z0-9_-]/g, '');
+      return s || fallback;
+    };
+    const casePart = cleanPart(state && state.caseId, 'demo');
+    const voterRaw = (state && Array.isArray(state.voters) && state.voters[0]) ? state.voters[0] : '';
+    const voterPart = cleanPart(voterRaw, 'client');
+    return `https://t.me/SherpasRadioBot?start=${`${casePart}_${voterPart}`.slice(0, 64)}`;
+  }
+
   function view(state) {
     state = state || initial(ids[0]);
     const lang = langOf(state);
@@ -274,53 +288,9 @@
         </section>
       </aside>`;
     } else if (key === 'radio') {
-      const sh = d.shocks || [];
-      const s = sh[state.shock] || {};
-      const dd = s.drawdown || {};
-      const hh = dd.household || {};
-      const bench = dd.sameRiskBenchmark || {};
-      const pct = n => {
-        const x = Number(n || 0);
-        const v = Math.abs(x * 100) < 0.1 ? 0 : Math.round(x * 1000) / 10;
-        return v.toFixed(1) + '%';
-      };
-
-      const telegramVoter = (state.voters && state.voters[0]) ? state.voters[0] : 'client';
-      const telegramUrl = `https://t.me/SherpasRadioBot?start=${state.caseId || 'demo'}_${telegramVoter}`;
-
-      panel = `<aside class="floating-panel panel-wide post-view">
-        <p class="eyebrow">${u(state, 'radio')}</p>
-        <h1>${u(state, 'radio')}</h1>
-        <div class="radio-box">
-          <div class="radio-controls">
-            <div class="button-row">
-              <button data-action="ics">${u(state, 'download')}</button>
-              <a class="btn-telegram" href="${esc(telegramUrl)}" target="_blank" rel="noopener noreferrer" data-action="telegram" style="display:inline-flex;align-items:center;padding:0.55rem 0.95rem;border-radius:999px;border:1px solid currentColor;text-decoration:none;font:inherit;font-weight:600;color:inherit">${u(state, 'telegram')}</a>
-              <button class="primary" data-action="simulate-shock">${u(state, 'simulate')}</button>
-            </div>
-            <label>${u(state, 'historical')}
-              <select data-shock class="shock-picker">${sh.map((x, i) => `<option value="${i}" ${i === state.shock ? 'selected' : ''}>${esc(x.dateLabel || '')} · ${esc(x.name || '')}</option>`).join('')}</select>
-            </label>
-          </div>
-          <p>${u(state, 'through')} ${sh.length} ${u(state, 'historic')}</p>
-          ${state.simulatedShock ? `<aside class="calm-alert" data-simulated-shock="true"><strong>${u(state, 'calm')}: ${esc(s.name || '')}</strong><p>${u(state, 'fell')} ${pct(hh.drawdownPct)} ${u(state, 'recovered')} ${esc(recovery(hh.recoveryDays, u(state, 'noDays'), lang))}. ${u(state, 'hold')}</p></aside>` : ''}
-          <div class="shock-detail">
-            <h2>${esc(s.name || u(state, 'historical'))}</h2>
-            <p>${esc(s.dateLabel || '')} · ${esc(s.portfolioImpact || '')} · ${u(state, 'householdDrop')}: ${pct(hh.drawdownPct)} (${u(state, 'back')} ${esc(recovery(hh.recoveryDays, u(state, 'noDays'), lang))}).</p>
-            <p>${clean(s.description)}</p>
-            ${state.caseId === 'timothy-melanie-weah' ? `<p>UPRO ${lang === 'ES' ? 'añade exposición apalancada 3x.' : 'adds 3x leveraged exposure.'}</p>` : ''}
-            <details class="exact-math">
-              <summary>${u(state, 'exact')}</summary>
-              <ul>
-                <li><strong>${u(state, 'benchmark')}:</strong> ${pct(bench.drawdownPct)} (${u(state, 'recovery')} ${esc(recovery(bench.recoveryDays, '', lang))})</li>
-                <li><strong>${u(state, 'divergence')}:</strong> ${(Number(dd.divergencePp || 0) * 100).toFixed(1)} pp</li>
-                <li><strong>Sharpe 3y:</strong> ${Number((d.performanceSummary.benchmark && d.performanceSummary.benchmark.sharpe3y) || d.performanceSummary.sharpe3y || 0).toFixed(2)}</li>
-                <li><strong>${u(state, 'maxDrop')}:</strong> ${pct(d.performanceSummary.maxDrawdown3y)} (${u(state, 'recovery')} ${esc(recovery(d.performanceSummary.maxDrawdownRecoveryDays, '', lang))})</li>
-                <li><strong>${u(state, 'source')}:</strong> analysis.events / perEventDrawdowns</li>
-              </ul>
-            </details>
-          </div>
-        </div>
+      const telegramUrl = telegramRadioUrl(state);
+      panel = `<aside class="floating-panel post-view">
+        <a class="primary radio-telegram-btn" href="${esc(telegramUrl)}" target="_blank" rel="noopener noreferrer">${u(state, 'tuneTelegram')}</a>
       </aside>`;
     } else {
       const priority = {
@@ -477,15 +447,6 @@
           state.step++;
           state.stepAt = state.irlDay;
           state.checks[state.step] = [];
-        } else if (a === 'ics') {
-          const blob = new Blob([calendar(state.caseId, langOf(state))], { type: 'text/calendar' });
-          const link = document.createElement('a');
-          link.href = URL.createObjectURL(blob);
-          link.download = 'sherpas-run-irl.ics';
-          link.click();
-        } else if (a === 'simulate-shock') {
-          state.shock = (state.shock + 1) % (dataFor(state.caseId).shocks || []).length;
-          state.simulatedShock = true;
         } else if (a === 'copy') {
           const pv = el.querySelector('.post-view');
           if (pv && root.navigator && root.navigator.clipboard) {
@@ -501,11 +462,6 @@
         state = initial(c.value);
         state.lang = lang;
         attachRoom();
-        render();
-      };
-      const s = el.querySelector('[data-shock]');
-      if (s) s.onchange = () => {
-        state.shock = Number(s.value);
         render();
       };
       el.querySelectorAll('[data-owner]').forEach(chk => chk.onchange = () => {
@@ -588,5 +544,5 @@
     };
   }
 
-  return { createInitialState: initial, render: view, mount, makeIcs: calendar };
+  return { createInitialState: initial, render: view, mount, makeIcs: calendar, telegramRadioUrl };
 });
