@@ -10,10 +10,22 @@ Día a Día y los botones de La Radio son sin estado.
 """
 
 import sys
+from http.server import BaseHTTPRequestHandler
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backend.server import DEFAULT_FRONTEND_DIR, ServerState, make_handler  # noqa: E402
 
-handler = make_handler(ServerState(), DEFAULT_FRONTEND_DIR)
+_Shared = make_handler(ServerState(), DEFAULT_FRONTEND_DIR)
+
+
+class handler(BaseHTTPRequestHandler):  # nombre y base que exige el runtime de Python de Vercel
+    pass
+
+
+# Copia los métodos del manejador compartido (todos funcionan sobre cualquier
+# subclase de BaseHTTPRequestHandler; el estado va en el cierre de make_handler).
+for _name, _value in vars(_Shared).items():
+    if not _name.startswith("__"):
+        setattr(handler, _name, _value)

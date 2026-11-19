@@ -11,3 +11,8 @@ agentes/contexto/conversaciones/
 
 # Outbox local de avisos n8n (SHERPAS_OUTBOX_DIR)
 data/
+
+# Vercel (enlace local del proyecto y token OIDC)
+.vercel
+.env*
+!.env.example
