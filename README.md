@@ -2,7 +2,7 @@
 
 > Hackathon UPV 2026 · Reto Sherpas · **Paso 3 del asesor: *Bring the plan to life***
 
-**Demo en vivo:** _se completa tras el despliegue en Vercel_
+**Demo en vivo:** https://sherpas-maximoslocales.vercel.app  (casos: `?case=michael-carter`, `samantha-lewis`, `timothy-melanie-weah`, `daniel-emily-johnson`)
 
 Convertimos el informe financiero de 22 páginas de Sherpas en una **expedición de montaña interactiva** que la familia hace una sola vez (menos de 90 s), conectada a una **línea de vida real** que la acompaña día a día y fuera de la app. Todo sale de los **datos reales de los 4 casos** de Sherpas (`financial-health.json`, `investment-analysis.json`, `persona.md`), **sin inventar cifras**.
 
