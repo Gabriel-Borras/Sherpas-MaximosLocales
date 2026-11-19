@@ -11,8 +11,10 @@ import argparse
 import copy
 import json
 import mimetypes
+import os
 import sys
 import threading
+import urllib.request
 import uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -29,7 +31,7 @@ from backend.api import SessionStore, dispatch_request
 from backend.behavioral_narrator import BehavioralNarrator
 from backend.irl_engine import IRLEngine, create_irl_run
 from backend.llm_proxy import LLMProxyClient
-from backend.mcp_client import CaseNotFoundError, get_case, list_cases
+from backend.mcp_client import CaseNotFoundError, get_case, list_cases, load_env_file
 from backend.notifications import NotificationEngine
 from backend.timeline_engine import TimelineEngine
 
@@ -37,6 +39,65 @@ from backend.timeline_engine import TimelineEngine
 REPOSITORY_ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_FRONTEND_DIR = REPOSITORY_ROOT / "frontend"
 OFFICIAL_CASES_DATA = DEFAULT_FRONTEND_DIR / "cases-data.js"
+
+_N8N_MILESTONE_FIELDS = (
+    "notification_id",
+    "kind",
+    "type",
+    "day",
+    "severity",
+    "case_id",
+    "target_owner",
+    "title",
+    "message_plain",
+    "message_math",
+    "deep_link",
+)
+
+
+def _n8n_webhook_url() -> str:
+    """Return the optional n8n URL, loading the local .env only as a fallback."""
+    if "N8N_WEBHOOK_URL" not in os.environ:
+        load_env_file()
+    return os.environ.get("N8N_WEBHOOK_URL", "").strip()
+
+
+def _emit_n8n_webhook(payload: dict[str, Any]) -> None:
+    """Best-effort, asynchronous n8n delivery that never delays an API response."""
+    webhook_url = _n8n_webhook_url()
+    if not webhook_url:
+        return
+
+    def post_webhook() -> None:
+        try:
+            request = urllib.request.Request(
+                webhook_url,
+                data=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                method="POST",
+                headers={"Content-Type": "application/json"},
+            )
+            with urllib.request.urlopen(request, timeout=2):
+                pass
+        except Exception:
+            # The webhook is an optional side effect: transport, HTTP and JSON
+            # errors must never affect the deterministic API response.
+            return
+
+    try:
+        threading.Thread(target=post_webhook, daemon=True).start()
+    except Exception:
+        # Thread creation is equally optional from the API caller's viewpoint.
+        return
+
+
+def _milestone_webhook_payload(
+    notification: dict[str, Any], run_id: str,
+) -> dict[str, Any]:
+    """Expose the n8n milestone contract without internal notification fields."""
+    return {
+        **{field: notification[field] for field in _N8N_MILESTONE_FIELDS},
+        "run_id": run_id,
+    }
 
 
 class BadRequestError(ValueError):
@@ -411,7 +472,7 @@ def _handle_irl(
 
     run_id = parts[2]
     suffix = parts[3:]
-    engine, _ = state.runs.get(run_id)
+    engine, notifications = state.runs.get(run_id)
     with state.runs.lock:
         if method == "GET" and not suffix:
             mountain = engine.get_mountain_overview()
@@ -433,6 +494,8 @@ def _handle_irl(
                 member=body.get("member"),
                 completed_day=body.get("completed_day"),
             )
+            for notification in notifications.generate_milestone_notifications(engine):
+                _emit_n8n_webhook(_milestone_webhook_payload(notification, run_id))
             return 200, {"run_id": run_id, **result}
         if method == "POST" and suffix == ["uncheck"]:
             step_id = body.get("step_id")
@@ -445,6 +508,8 @@ def _handle_irl(
             if day is None:
                 raise BadRequestError("day es obligatorio")
             result = engine.advance_day(int(day))
+            for notification in notifications.generate_milestone_notifications(engine):
+                _emit_n8n_webhook(_milestone_webhook_payload(notification, run_id))
             return 200, {"run_id": run_id, **result}
         if method == "POST" and suffix == ["repeat"]:
             reset_irl = body.get("reset_irl", False)
@@ -511,6 +576,7 @@ def _handle_radio(
             notification = notifications.generate_macro_shock_notification(
                 **kwargs, event_name=matched["name"]
             )
+        _emit_n8n_webhook({**notification, "run_id": run_id})
         return 200, {"run_id": run_id, **notification}, None
     if method == "GET" and suffix == ["ics"]:
         if run_id is None:

@@ -147,7 +147,7 @@ class MCPClientTests(unittest.TestCase):
 
     def test_env_example_exact_keys_no_secret(self):
         lines = (ROOT / ".env.example").read_text().splitlines()
-        self.assertEqual(lines, ["MCP_URL=https://mcp-hackathon.sherpaswealth.com/mcp","MCP_TOKEN=","LLM_PROXY_URL=https://llm-hackathon.sherpaswealth.com/v1","TEAM_KEY="])
+        self.assertEqual(lines, ["MCP_URL=https://mcp-hackathon.sherpaswealth.com/mcp","MCP_TOKEN=","LLM_PROXY_URL=https://llm-hackathon.sherpaswealth.com/v1","TEAM_KEY=","N8N_WEBHOOK_URL="])
 
     def test_json_initialize_auth_headers_session_and_tools(self):
         c = self.client()

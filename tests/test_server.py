@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import tempfile
 import threading
 import unittest
 from urllib import error, request
 from urllib.parse import urlsplit
+from unittest.mock import MagicMock, patch
 
 from backend.behavioral_narrator import (
     extract_case_allowed_numbers,
@@ -21,7 +23,10 @@ from backend.server import (
     BadRequestError,
     ServerState,
     _handle_ai,
+    _handle_irl,
+    _handle_radio,
     _handle_rooms,
+    _n8n_webhook_url,
     create_server,
 )
 
@@ -338,6 +343,198 @@ class UnifiedServerTests(unittest.TestCase):
         status, _, body = self.api_request("GET", "/api/does-not-exist")
         self.assertEqual(status, 404)
         self.assertEqual(body["error"], "not_found")
+
+
+class N8NWebhookUnitTests(unittest.TestCase):
+    """Exercise optional n8n effects without opening a webhook socket."""
+
+    def setUp(self) -> None:
+        self.state = ServerState(
+            llm_client=LLMProxyClient(team_key="", transport="urllib")
+        )
+
+    @staticmethod
+    def milestone_notification(case_id: str) -> dict[str, object]:
+        return {
+            "notification_id": "notif-test",
+            "kind": "milestone",
+            "type": "milestone_insistence",
+            "day": 3,
+            "severity": "warning",
+            "case_id": case_id,
+            "target_owner": "Michael",
+            "title": "Hito de prueba",
+            "message_plain": "Completa el paso.",
+            "message_math": "Completa el paso con matematicas.",
+            "deep_link": "irl://node/test#step=test",
+            "internal_only": "must not be sent",
+        }
+
+    def capture_webhook(self):
+        sent: list[tuple[request.Request, float]] = []
+        delivered = threading.Event()
+
+        def fake_urlopen(webhook_request, timeout):
+            sent.append((webhook_request, timeout))
+            delivered.set()
+            response = MagicMock()
+            response.__enter__.return_value = response
+            return response
+
+        return sent, delivered, fake_urlopen
+
+    def assert_request(
+        self,
+        sent: list[tuple[request.Request, float]],
+        expected_payload: dict[str, object],
+    ) -> None:
+        self.assertEqual(len(sent), 1)
+        webhook_request, timeout = sent[0]
+        self.assertEqual(webhook_request.full_url, "https://n8n.example.test/hook")
+        self.assertEqual(webhook_request.get_method(), "POST")
+        self.assertEqual(webhook_request.get_header("Content-type"), "application/json")
+        self.assertEqual(timeout, 2)
+        self.assertEqual(
+            json.loads(webhook_request.data.decode("utf-8")), expected_payload
+        )
+
+    def test_advance_emits_exact_milestone_payload(self) -> None:
+        run_id, engine = self.state.runs.create("michael-carter")
+        notification = self.milestone_notification(engine.case_id)
+        expected = {
+            key: notification[key]
+            for key in (
+                "notification_id", "kind", "type", "day", "severity", "case_id",
+                "target_owner", "title", "message_plain", "message_math", "deep_link",
+            )
+        }
+        expected["run_id"] = run_id
+        sent, delivered, fake_urlopen = self.capture_webhook()
+
+        with patch.dict(
+            os.environ, {"N8N_WEBHOOK_URL": "https://n8n.example.test/hook"}, clear=False
+        ), patch(
+            "backend.server.NotificationEngine.generate_milestone_notifications",
+            return_value=[notification],
+        ), patch("backend.server.urllib.request.urlopen", side_effect=fake_urlopen):
+            status, _ = _handle_irl(
+                "POST", urlsplit(f"/api/irl/{run_id}/advance"), {"day": 3}, self.state
+            )
+            self.assertEqual(status, 200)
+            self.assertTrue(delivered.wait(1))
+
+        self.assert_request(sent, expected)
+
+    def test_check_emits_exact_milestone_payload(self) -> None:
+        run_id, engine = self.state.runs.create("michael-carter")
+        notification = self.milestone_notification(engine.case_id)
+        expected = {
+            key: notification[key]
+            for key in (
+                "notification_id", "kind", "type", "day", "severity", "case_id",
+                "target_owner", "title", "message_plain", "message_math", "deep_link",
+            )
+        }
+        expected["run_id"] = run_id
+        sent, delivered, fake_urlopen = self.capture_webhook()
+
+        with patch.dict(
+            os.environ, {"N8N_WEBHOOK_URL": "https://n8n.example.test/hook"}, clear=False
+        ), patch(
+            "backend.server.NotificationEngine.generate_milestone_notifications",
+            return_value=[notification],
+        ), patch("backend.server.urllib.request.urlopen", side_effect=fake_urlopen):
+            status, _ = _handle_irl(
+                "POST",
+                urlsplit(f"/api/irl/{run_id}/check"),
+                {"step_id": "step_0_pay_amex"},
+                self.state,
+            )
+            self.assertEqual(status, 200)
+            self.assertTrue(delivered.wait(1))
+
+        self.assert_request(sent, expected)
+
+    def test_shock_emits_exact_notification_with_run_id(self) -> None:
+        run_id, engine = self.state.runs.create("michael-carter")
+        notification = {
+            "notification_id": "notif-macro-test",
+            "kind": "macro_shock",
+            "type": "macro_shock_radio",
+            "case_id": engine.case_id,
+            "headline": "Shock de prueba",
+            "matched_event": {"name": "Evento de prueba"},
+            "anti_panic_message_plain": "No vender.",
+        }
+        expected = {**notification, "run_id": run_id}
+        sent, delivered, fake_urlopen = self.capture_webhook()
+
+        with patch.dict(
+            os.environ, {"N8N_WEBHOOK_URL": "https://n8n.example.test/hook"}, clear=False
+        ), patch(
+            "backend.server.NotificationEngine.generate_macro_shock_notification",
+            return_value=notification,
+        ), patch("backend.server.urllib.request.urlopen", side_effect=fake_urlopen):
+            status, response, _ = _handle_radio(
+                "POST",
+                urlsplit(f"/api/radio/{run_id}/shock"),
+                {"event_name": "April 2025 tariffs shock"},
+                self.state,
+            )
+            self.assertEqual(status, 200)
+            self.assertEqual(response["run_id"], run_id)
+            self.assertTrue(delivered.wait(1))
+
+        self.assert_request(sent, expected)
+
+    def test_webhook_failures_never_break_advance_response(self) -> None:
+        failures = (
+            error.URLError("n8n unavailable"),
+            error.HTTPError("https://n8n.example.test/hook", 500, "error", {}, None),
+        )
+        for webhook_error in failures:
+            with self.subTest(webhook_error=type(webhook_error).__name__):
+                run_id, _ = self.state.runs.create("michael-carter")
+                attempted = threading.Event()
+
+                def failing_urlopen(*args, **kwargs):
+                    attempted.set()
+                    raise webhook_error
+
+                with patch.dict(
+                    os.environ, {"N8N_WEBHOOK_URL": "https://n8n.example.test/hook"}, clear=False
+                ), patch("backend.server.urllib.request.urlopen", side_effect=failing_urlopen):
+                    status, response = _handle_irl(
+                        "POST", urlsplit(f"/api/irl/{run_id}/advance"), {"day": 3}, self.state
+                    )
+                    self.assertEqual(status, 200)
+                    self.assertEqual(response["run_id"], run_id)
+                    self.assertTrue(attempted.wait(1))
+
+    def test_missing_webhook_url_is_a_silent_noop(self) -> None:
+        run_id, _ = self.state.runs.create("michael-carter")
+        with patch.dict(os.environ, {}, clear=True), patch(
+            "backend.server.urllib.request.urlopen"
+        ) as urlopen:
+            status, response = _handle_irl(
+                "POST", urlsplit(f"/api/irl/{run_id}/advance"), {"day": 3}, self.state
+            )
+
+        self.assertEqual(status, 200)
+        self.assertEqual(response["run_id"], run_id)
+        urlopen.assert_not_called()
+
+    def test_webhook_url_loads_from_dotenv_only_when_not_in_environment(self) -> None:
+        def load_dotenv() -> None:
+            os.environ["N8N_WEBHOOK_URL"] = "https://n8n.example.test/from-dotenv"
+
+        with patch.dict(os.environ, {}, clear=True), patch(
+            "backend.server.load_env_file", side_effect=load_dotenv
+        ) as load_env_file:
+            self.assertEqual(
+                _n8n_webhook_url(), "https://n8n.example.test/from-dotenv"
+            )
+            load_env_file.assert_called_once_with()
 
 
 class NarrativeRouteUnitTests(unittest.TestCase):
