@@ -507,6 +507,134 @@ class TimelineEngineTests(unittest.TestCase):
             result["uncalculated_questions"],
         )
 
+    def test_submit_quest_reorders_camps_and_options_by_top1_fear(self):
+        """Adapt active_camp, camps order, and top option to Top-1 fear."""
+        michael = Expedition(self.engine.load_case("michael-carter"))
+        retire_state = michael.submit_quest(["O1"])
+        self.assertEqual(retire_state["active_camp"]["id"], "camp_2047_retire")
+        self.assertEqual(
+            [camp["id"] for camp in retire_state["camps"]],
+            ["camp_2047_retire", "camp_2026", "camp_2027_home"],
+        )
+        self.assertEqual(
+            retire_state["active_camp"]["options"][0]["id"], "cut_withdrawals"
+        )
+
+        # Repeating submit_quest reorders cleanly from base order without drift.
+        home_state = michael.submit_quest(["O2"])
+        self.assertEqual(home_state["active_camp"]["id"], "camp_2027_home")
+        self.assertEqual(
+            [camp["id"] for camp in home_state["camps"]],
+            ["camp_2027_home", "camp_2026", "camp_2047_retire"],
+        )
+
+        shield_state = michael.submit_quest(["O4"])
+        self.assertEqual(shield_state["active_camp"]["id"], "camp_2026")
+        self.assertEqual(
+            [camp["id"] for camp in shield_state["camps"]],
+            ["camp_2026", "camp_2027_home", "camp_2047_retire"],
+        )
+        self.assertEqual(
+            shield_state["active_camp"]["options"][0]["id"], "umbrella"
+        )
+
+        invest_state = michael.submit_quest(["concentración de inversión"])
+        self.assertEqual(invest_state["active_camp"]["id"], "camp_2026")
+        self.assertEqual(
+            invest_state["active_camp"]["options"][0]["id"], "growth"
+        )
+
+        base_state = michael.submit_quest([])
+        self.assertEqual(
+            [camp["id"] for camp in base_state["camps"]],
+            ["camp_2026", "camp_2027_home", "camp_2047_retire"],
+        )
+        self.assertEqual(
+            base_state["active_camp"]["options"][0]["id"], "umbrella"
+        )
+
+        # Samantha Lewis: housing/university vs protection vs concentration.
+        samantha = Expedition(self.engine.load_case("samantha-lewis"))
+        sam_home = samantha.submit_quest(["O3"])
+        self.assertEqual(
+            sam_home["active_camp"]["id"], "camp_2027_2030_transitions"
+        )
+        sam_shield = samantha.submit_quest(["seguro de hogar"])
+        self.assertEqual(sam_shield["active_camp"]["id"], "camp_2026_shield")
+        self.assertEqual(
+            sam_shield["active_camp"]["options"][0]["id"], "home_insurance"
+        )
+        sam_vti = samantha.submit_quest(["concentración VTI"])
+        self.assertEqual(sam_vti["active_camp"]["id"], "camp_2026_shield")
+        self.assertEqual(
+            sam_vti["active_camp"]["options"][0]["id"], "reduce_vti"
+        )
+
+        # Weah & Johnson (single decision camp): prioritize matching option.
+        weah = Expedition(self.engine.load_case("timothy-melanie-weah"))
+        weah_prot = weah.submit_quest(["O1"])
+        self.assertEqual(
+            weah_prot["active_camp"]["options"][0]["id"],
+            "shield_life_umbrella",
+        )
+        weah_debt = weah.submit_quest(["O2"])
+        self.assertEqual(
+            weah_debt["active_camp"]["options"][0]["id"], "pay_card_18k"
+        )
+        weah_inv = weah.submit_quest(["O3"])
+        self.assertEqual(
+            weah_inv["active_camp"]["options"][0]["id"], "rebalance_upro_401k"
+        )
+
+        johnson = Expedition(self.engine.load_case("daniel-emily-johnson"))
+        john_prot = johnson.submit_quest(["O2"])
+        self.assertEqual(
+            john_prot["active_camp"]["options"][0]["id"], "life_insurance"
+        )
+        john_debt = johnson.submit_quest(["deuda de tarjeta"])
+        self.assertEqual(
+            john_debt["active_camp"]["options"][0]["id"], "redirect_cashflow"
+        )
+        john_liq = johnson.submit_quest(["O4"])
+        self.assertEqual(
+            john_liq["active_camp"]["options"][0]["id"], "redirect_cashflow"
+        )
+
+    def test_reordering_preserves_summit_anchor_and_zero_invented_numbers(self):
+        """Preserve every verified camp field and keep summit camps anchored."""
+        base_case = copy.deepcopy(SEED_CASES["michael-carter"])
+        base_by_id = {camp["id"]: camp for camp in base_case["camps"]}
+        expedition = Expedition(base_case)
+        reordered = expedition.submit_quest(["O1"])
+        self.assertEqual(len(reordered["camps"]), len(base_case["camps"]))
+        for camp in reordered["camps"]:
+            original = base_by_id[camp["id"]]
+            self.assertEqual(
+                {k: v for k, v in camp.items() if k != "options"},
+                {k: v for k, v in original.items() if k != "options"},
+            )
+            self.assertEqual(
+                {opt["id"]: opt for opt in camp["options"]},
+                {opt["id"]: opt for opt in original["options"]},
+            )
+
+        restarted = expedition.restart()
+        self.assertEqual(
+            [camp["id"] for camp in restarted["camps"]],
+            ["camp_2026", "camp_2027_home", "camp_2047_retire"],
+        )
+
+        # A trailing summit/closing camp stays anchored at the end.
+        with_summit = copy.deepcopy(SEED_CASES["michael-carter"])
+        with_summit["camps"].append({
+            "id": "camp_summit", "year": 2080, "age": 91,
+            "kind": "summit", "options": [],
+        })
+        summit_exp = Expedition(with_summit)
+        state = summit_exp.submit_quest(["O1"])
+        self.assertEqual(state["camps"][0]["id"], "camp_2047_retire")
+        self.assertEqual(state["camps"][-1]["id"], "camp_summit")
+
 
 class ApiTests(unittest.TestCase):
     """Verify dispatcher and real HTTP and WSGI adapters."""
@@ -694,6 +822,42 @@ class ApiTests(unittest.TestCase):
                 self.assertEqual(status, 200)
                 self.assertEqual(data["mode"], "math")
         self.assertEqual(store.get(session_id).mode, "plain")
+
+    def test_session_creation_fear_ranking_and_quest_api_reordering(self):
+        """Reorder camps via POST /api/sessions (fear_ranking) and /quest."""
+        store = SessionStore()
+        status, session = dispatch_request(
+            "POST",
+            "/api/sessions",
+            {"case_id": "michael-carter", "fear_ranking": ["O1"]},
+            store=store,
+        )
+        self.assertEqual(status, 201)
+        self.assertEqual(session["active_camp"]["id"], "camp_2047_retire")
+        self.assertEqual(session["camps"][0]["id"], "camp_2047_retire")
+
+        session_id = session["session_id"]
+        status, quest_home = dispatch_request(
+            "POST",
+            f"/api/sessions/{session_id}/quest",
+            {"ranked_concerns": ["liquidez y vivienda"]},
+            store=store,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(quest_home["active_camp"]["id"], "camp_2027_home")
+        self.assertEqual(quest_home["camps"][0]["id"], "camp_2027_home")
+
+        status, quest_shield = dispatch_request(
+            "POST",
+            f"/api/sessions/{session_id}/quest",
+            {"fear_ranking": ["seguro paraguas"]},
+            store=store,
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(quest_shield["active_camp"]["id"], "camp_2026")
+        self.assertEqual(
+            quest_shield["active_camp"]["options"][0]["id"], "umbrella"
+        )
 
 
 if __name__ == "__main__":

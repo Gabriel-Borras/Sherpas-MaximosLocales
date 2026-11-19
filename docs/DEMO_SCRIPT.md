@@ -76,7 +76,7 @@ Ejecuta estos pasos desde la raíz del repositorio antes de empezar la presentac
 
 - `GET /health`: estado del servidor.
 - `GET /api/cases` y `GET /api/cases/<case_id>`: listado y detalle de casos.
-- `POST /api/sessions`: creación y avance de sesión de expedición en Basecamp.
+- `POST /api/sessions`, `POST /api/sessions/<id>/quest` y alias `/api/expedition`, `/api/expedition/<id>/quest`: creación y avance de sesión de expedición en Basecamp con reordenación dinámica de `camps` y `active_camp` según el miedo Top-1 (`ranked_concerns[0]` / `fear_ranking[0]`).
 - `POST /api/irl` y `GET/POST /api/irl/<run_id>/...`: motor de *Run IRL* (Día 0, Día 3, Día 30).
 - `GET /api/radio/...`: feed de *La Radio del Sherpa* y exportación `.ics`.
 - `POST /api/ai/reframe`, `POST /api/ai/pact`, `POST /api/ai/brief`: capa narrativa conductual (con fallback determinista sin `TEAM_KEY`).

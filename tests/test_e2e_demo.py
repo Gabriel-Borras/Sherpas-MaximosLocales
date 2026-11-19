@@ -20,7 +20,7 @@ CASE_CONFIGS = {
     "michael-carter": {
         "dual": False,
         "partners": (),
-        "option_id": "umbrella",
+        "option_id": "cut_withdrawals",
     },
     "samantha-lewis": {
         "dual": False,

@@ -196,17 +196,19 @@ class UnifiedServerTests(unittest.TestCase):
         prefix = f"/api/expedition/{expedition_id}"
 
         self.assertEqual(self.api_request("GET", prefix)[0], 200)
-        self.assertEqual(
-            self.api_request("POST", f"{prefix}/quest", {"ranked_concerns": ["O1"]})[0],
-            200,
+        quest_status, _, quest_state = self.api_request(
+            "POST", f"{prefix}/quest", {"ranked_concerns": ["O1"]}
         )
+        self.assertEqual(quest_status, 200)
+        self.assertEqual(quest_state["active_camp"]["id"], "camp_2047_retire")
+        self.assertEqual(quest_state["camps"][0]["id"], "camp_2047_retire")
         preview_status, _, preview = self.api_request(
-            "POST", f"{prefix}/preview", {"option_id": "umbrella"}
+            "POST", f"{prefix}/preview", {"option_id": "cut_withdrawals"}
         )
         self.assertEqual(preview_status, 200)
-        self.assertEqual(preview["option_id"], "umbrella")
+        self.assertEqual(preview["option_id"], "cut_withdrawals")
         self.assertEqual(
-            self.api_request("POST", f"{prefix}/decide", {"option_id": "umbrella"})[0],
+            self.api_request("POST", f"{prefix}/decide", {"option_id": "cut_withdrawals"})[0],
             200,
         )
         self.assertEqual(self.api_request("GET", f"{prefix}/overview?mode=plain")[0], 200)
@@ -262,6 +264,58 @@ class UnifiedServerTests(unittest.TestCase):
         self.assertEqual(blocked_status, 200)
         self.assertTrue(blocked["blocked"])
         self.assertEqual(self.api_request("POST", f"{dual_prefix}/rewind", {})[0], 200)
+
+    def test_expedition_and_session_reorder_camps_by_top1_fear(self) -> None:
+        # Session creation with fear_ranking reorders immediately.
+        status, _, created = self.api_request(
+            "POST",
+            "/api/expedition",
+            {"case_id": "michael-carter", "fear_ranking": ["O1"]},
+        )
+        self.assertEqual(status, 201)
+        self.assertEqual(created["active_camp"]["id"], "camp_2047_retire")
+        self.assertEqual(
+            [camp["id"] for camp in created["camps"]],
+            ["camp_2047_retire", "camp_2026", "camp_2027_home"],
+        )
+
+        # Submitting a different Top-1 fear via /api/expedition/{id}/quest reorders cleanly from base.
+        exp_prefix = f"/api/expedition/{created['session_id']}"
+        status, _, home_state = self.api_request(
+            "POST", f"{exp_prefix}/quest", {"ranked_concerns": ["O2"]}
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(home_state["active_camp"]["id"], "camp_2027_home")
+        self.assertEqual(
+            [camp["id"] for camp in home_state["camps"]],
+            ["camp_2027_home", "camp_2026", "camp_2047_retire"],
+        )
+
+        status, _, shield_state = self.api_request(
+            "POST", f"{exp_prefix}/quest", {"ranked_concerns": ["O4"]}
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(shield_state["active_camp"]["id"], "camp_2026")
+        self.assertEqual(
+            shield_state["active_camp"]["options"][0]["id"], "umbrella"
+        )
+
+        # Canonical /api/sessions/{id}/quest also adapts camps for Samantha Lewis.
+        status, _, sam = self.api_request(
+            "POST", "/api/sessions", {"case_id": "samantha-lewis"}
+        )
+        self.assertEqual(status, 201)
+        sam_prefix = f"/api/sessions/{sam['session_id']}"
+        status, _, sam_home = self.api_request(
+            "POST", f"{sam_prefix}/quest", {"ranked_concerns": ["O3"]}
+        )
+        self.assertEqual(status, 200)
+        self.assertEqual(
+            sam_home["active_camp"]["id"], "camp_2027_2030_transitions"
+        )
+        self.assertEqual(
+            sam_home["camps"][0]["id"], "camp_2027_2030_transitions"
+        )
 
     def test_irl_radio_and_calendar_routes(self) -> None:
         status, _, created = self.api_request(
