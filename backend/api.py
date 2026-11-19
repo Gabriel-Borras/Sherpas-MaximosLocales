@@ -24,12 +24,18 @@ class SessionStore:
         self.sessions = {}
         self.lock = threading.RLock()
 
-    def create(self, case_id, mode="plain"):
+    def create(self, case_id, mode="plain", fear_ranking=None,
+               ranked_concerns=None):
         """Create and store an expedition session."""
         with self.lock:
             case = self.engine.load_case(case_id)
             session_id = str(uuid.uuid4())
-            self.sessions[session_id] = Expedition(case, mode)
+            self.sessions[session_id] = Expedition(
+                case,
+                mode,
+                fear_ranking=fear_ranking,
+                ranked_concerns=ranked_concerns,
+            )
             return session_id
 
     def get(self, session_id):
@@ -50,12 +56,18 @@ def get_case_overview(case_id, store=None, mode=None):
     return (store or SessionStore()).engine.overview(case_id, mode)
 
 
-def create_session(case_id=None, store=None, mode="plain"):
+def create_session(case_id=None, store=None, mode="plain", fear_ranking=None,
+                   ranked_concerns=None):
     """Create a session and return its initial state."""
     if not case_id:
         raise ValueError("case_id es obligatorio")
     selected_store = store or SessionStore()
-    session_id = selected_store.create(case_id, mode)
+    session_id = selected_store.create(
+        case_id,
+        mode,
+        fear_ranking=fear_ranking,
+        ranked_concerns=ranked_concerns,
+    )
     return {"session_id": session_id, **selected_store.get(session_id).state()}
 
 
@@ -75,8 +87,11 @@ def set_view_mode(session_id, mode, store):
 
 def submit_quest(session_id, body, store):
     """Submit ranked fears and subjective concerns."""
+    ranked = body.get("ranked_concerns")
+    if ranked is None:
+        ranked = body.get("fear_ranking", [])
     return store.get(session_id).submit_quest(
-        body.get("ranked_concerns", []), body.get("subjective_concern", ""))
+        ranked, body.get("subjective_concern", ""))
 
 
 def submit_cordada(session_id, body, store):
@@ -148,8 +163,13 @@ def _response_for(method, path, body, query, store):
     if method == "GET" and len(parts) == 3 and parts[:2] == ["api", "cases"]:
         return 200, get_case_overview(parts[2], store, mode)
     if method == "POST" and parts == ["api", "sessions"]:
-        return 201, create_session(payload.get("case_id"), store,
-                                   payload.get("mode", mode or "plain"))
+        return 201, create_session(
+            payload.get("case_id"),
+            store,
+            payload.get("mode", mode or "plain"),
+            fear_ranking=payload.get("fear_ranking"),
+            ranked_concerns=payload.get("ranked_concerns"),
+        )
     if len(parts) < 3 or parts[:2] != ["api", "sessions"]:
         return 404, {"error": "not_found", "message": "Ruta no encontrada"}
     session_id = parts[2]
