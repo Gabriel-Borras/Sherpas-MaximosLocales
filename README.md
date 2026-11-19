@@ -20,6 +20,13 @@ Convertimos el informe financiero de 22 páginas de Sherpas en una **expedición
 
 Fundamentación completa (sesgos conductuales, mapa de datos por caso): [`docs/BIBLIA_FINAL_V1.md`](docs/BIBLIA_FINAL_V1.md).
 
+## Probar en 2 minutos
+
+1. Abre la demo y elige un caso arriba a la izquierda (p. ej. *Timothy & Melanie*).
+2. Elige tus 3 preocupaciones y entra al **Basecamp**; decide en los campamentos (si eliges mal, la montaña te bloquea y puedes rebobinar).
+3. Pulsa **Día 0** en la barra superior: ves lo que toca hoy y por qué; avanza con **Día siguiente →** (arrastra y usa la rueda para mover/ampliar la cámara).
+4. Para recibir los avisos por Telegram: abre `https://t.me/SherpasRadioBot?start=<caso>_client` y pulsa *Start* (parejas: `_A` / `_B`). Después, en el panel **📻 Radio** pulsa **📉 Cae la bolsa**.
+
 ## Ejecutar en local
 
 Requisitos: **Python 3.10+**. Solo usa la biblioteca estándar; no hay dependencias que instalar.
@@ -64,7 +71,7 @@ backend/      API en Python estándar: server.py, timeline_engine.py, irl_engine
 api/          Entrada de la función de Vercel
 n8n/          Flujo de n8n para Telegram (importable) y tests de sus nodos
 tests/        Tests de backend (Python) y de la vista Día a Día (Node)
-docs/         Documentación del proyecto
+docs/         Documentación del proyecto (docs/historico/: documentos del proceso)
 agentes/, central/, instalar.ps1   Herramientas internas de coordinación del equipo (docs/HERRAMIENTAS_EQUIPO.md)
 ```
 
@@ -79,7 +86,7 @@ agentes/, central/, instalar.ps1   Herramientas internas de coordinación del eq
 | [`docs/CAPACIDADES_BACKEND.md`](docs/CAPACIDADES_BACKEND.md) | Catálogo del backend. |
 | [`docs/GUIA_API_IA_SHERPAS.md`](docs/GUIA_API_IA_SHERPAS.md) | Acceso al MCP y a la IA de Sherpas. |
 | [`docs/HERRAMIENTAS_EQUIPO.md`](docs/HERRAMIENTAS_EQUIPO.md) | Coordinación multi-máquina del equipo. |
-| `docs/PROPUESTA_SHERPA_BASECAMP.md`, `docs/ESTADO_PROYECTO_FINAL.md`, `docs/DEMO_SCRIPT_variante-servidor-unificado.md` | Histórico del proceso. |
+| [`docs/historico/`](docs/historico/) | Documentos del proceso del hackathon (propuesta inicial, estado intermedio, guion alternativo). |
 
 ## Equipo
 
