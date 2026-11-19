@@ -65,8 +65,8 @@ backend/server.py (ThreadingHTTPServer stdlib, CORS *, UTF-8 sin BOM)
   - Disparado automáticamente en:
     - `POST /api/irl/{run_id}/advance` y `POST /api/irl/{run_id}/check`: emite las notificaciones de hitos generadas por `NotificationEngine.generate_milestone_notifications(engine)`.
     - `POST /api/radio/{identifier}/shock`: emite la alerta de shock macro generada por `NotificationEngine.generate_macro_shock_notification(...)`.
-- **Propuesta de Deep Linking para Telegram (en coordinación con `juan`):**
-  - Flujo validado: botón *"Conectar Telegram"* en La Radio del Sherpa apuntando a `https://t.me/<TELEGRAM_BOT_USERNAME>?start=<case_id>_<owner_key>`, vinculando `chat_id` en n8n al pulsar *Start*. Pendiente de acordar con `juan` el momento exacto de exposición en `/api/radio` y el botón en `frontend/` para evitar solapamientos.
+- **Botón "Conectar a Telegram" (Deep Linking en `frontend/post-cima.js`):**
+  - Implementado en el panel de **La Radio del Sherpa** junto a **Descargar calendario `.ics`** con enlace directo `https://t.me/SherpasRadioBot?start=${state.caseId || 'demo'}_${state.voters ? state.voters[0] : 'client'}` (`target="_blank"`), vinculando `chat_id` en n8n al pulsar *Start*. Documentado en el Momento 4 de `docs/DEMO_SCRIPT.md`.
 
 ---
 
