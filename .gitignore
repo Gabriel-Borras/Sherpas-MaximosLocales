@@ -8,3 +8,6 @@ agentes/tareas/
 agentes/locks/
 agentes/contexto/conversaciones/
 .env
+
+# Outbox local de avisos n8n (SHERPAS_OUTBOX_DIR)
+data/
