@@ -568,8 +568,8 @@ class N8NWebhookUnitTests(unittest.TestCase):
     def test_missing_webhook_url_is_a_silent_noop(self) -> None:
         run_id, _ = self.state.runs.create("michael-carter")
         with patch.dict(os.environ, {}, clear=True), patch(
-            "backend.server.urllib.request.urlopen"
-        ) as urlopen:
+            "backend.server.load_env_file"  # hermético: sin leer el .env local
+        ), patch("backend.server.urllib.request.urlopen") as urlopen:
             status, response = _handle_irl(
                 "POST", urlsplit(f"/api/irl/{run_id}/advance"), {"day": 3}, self.state
             )

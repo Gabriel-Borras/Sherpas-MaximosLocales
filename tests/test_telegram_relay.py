@@ -125,6 +125,7 @@ class SchedulerTests(unittest.TestCase):
             day_seconds=86400,
             max_day=40,
             clock=lambda: self.clock_now[0],
+            notify_days=[],  # hermético: no leer SHERPAS_NOTIFY_DAYS del .env
         )
 
     def _create_run(self, case_id="michael-carter") -> str:
