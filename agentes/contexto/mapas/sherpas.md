@@ -1,4 +1,4 @@
-<!-- fuente: frontend/ | fecha: 2026-11-19 | git HEAD: dc8616b -->
+<!-- fuente: frontend/ | fecha: 2026-11-19 | git HEAD: 9e5669d -->
 # Mapa Compacto del Repositorio — Sherpa Basecamp × Run IRL
 
 > Reemplaza la lectura completa de `frontend/` (~820 KB) en ~900 tokens. Documentación integral en `docs/ESTADO_PROYECTO_FINAL.md`.
