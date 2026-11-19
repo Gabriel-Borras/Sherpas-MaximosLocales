@@ -140,7 +140,7 @@
       shock: 0,
       simulatedShock: false,
       // Modo Día a Día: plan y estado vienen de /api/dia-a-dia (motor IRL del caso).
-      dd: { plan: null, status: null, statusDay: null, completed: {}, notification: null, loading: false, error: false, notified: {}, shownDay: null },
+      dd: { plan: null, status: null, statusDay: null, completed: {}, notification: null, loading: false, error: false, notified: {}, shownDay: null, panBox: null },
       view: viewName('expedition', langOf(base), 0),
       summit: false
     });
@@ -414,13 +414,18 @@
     }
     function ddAfterRender() {
       const dd = state.dd, day = ddDay();
+      const svgEl = el.querySelector('.dd-mountain');
       if (dd.shownDay != null && dd.shownDay !== day) {
-        const from = dd.shownDay;
+        const from = dd.shownDay, fromBox = dd.panBox;
         dd.shownDay = day;
-        diaADia.animate(el.querySelector('.dd-mountain'), from, day);
-      } else if (dd.shownDay == null) {
-        dd.shownDay = day;
+        dd.panBox = null;  // al cambiar de día, la cámara vuelve al escalador
+        diaADia.animate(svgEl, from, day, null, fromBox);
+      } else {
+        if (dd.shownDay == null) dd.shownDay = day;
+        // Conserva lo que el usuario haya recorrido arrastrando (p. ej. al marcar una casilla).
+        if (dd.panBox && svgEl) svgEl.setAttribute('viewBox', dd.panBox.map(n => n.toFixed(1)).join(' '));
       }
+      diaADia.enablePan(svgEl, box => { dd.panBox = box; });
       if (!dd.error && !dd.loading && dd.statusDay !== day) ddFetch(!dd.notified[day]);
     }
     function summit() {

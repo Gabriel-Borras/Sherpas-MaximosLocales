@@ -1432,3 +1432,5 @@ details.exact-math dl {
 .dd-panel .dd-telegram { font-size: 12.5px; color: #2E9E75; margin: 10px 0 0; }
 .dd-panel .dd-telegram[data-tone="warn"] { color: #D4A04A; }
 .dd-panel .dd-nav { justify-content: space-between; }
+.dd-mountain { cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; }
+.dd-mountain.is-dragging { cursor: grabbing; }
