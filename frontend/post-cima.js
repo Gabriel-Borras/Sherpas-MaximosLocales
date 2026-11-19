@@ -7,6 +7,7 @@
 
   const expedition = root.SherpaExpedicion || (typeof require === 'function' ? require('./expedicion.js') : null);
   const cases = root.SherpaCasesData || (typeof require === 'function' ? require('./cases-data.js') : null);
+  const diaADia = root.SherpaDiaADia || (typeof require === 'function' ? require('./dia-a-dia.js') : null);
   const ids = cases.listCases().map(x => x.meta.slug);
 
   const owners = {
@@ -138,6 +139,8 @@
       checks: {},
       shock: 0,
       simulatedShock: false,
+      // Modo Día a Día: plan y estado vienen de /api/dia-a-dia (motor IRL del caso).
+      dd: { plan: null, status: null, statusDay: null, completed: {}, notification: null, loading: false, error: false, notified: {}, shownDay: null },
       view: viewName('expedition', langOf(base), 0),
       summit: false
     });
@@ -249,7 +252,17 @@
     </div>`;
 
     let panel = '';
-    if (key === 'current') {
+    if (key === 'current' && diaADia) {
+      const dd = state.dd;
+      const day = Math.max(0, Math.min(diaADia.HORIZON, Number(state.irlDay) || 0));
+      const ddWallpaper = `<div class="mountain-stage mountain-fullscreen" data-biome="none">${diaADia.svg(dd.plan, dd.shownDay != null ? dd.shownDay : day, dd.completed, lang)}</div>`;
+      const ddPanel = diaADia.card({
+        lang, day, plan: dd.plan, completed: dd.completed, error: dd.error,
+        status: dd.statusDay === day ? dd.status : null,
+        notification: dd.statusDay === day ? dd.notification : null
+      });
+      return `${expedition.renderHeader(state, d)}<main class="page-shell page-mountain-full">${ddWallpaper}${ddPanel}</main>`;
+    } else if (key === 'current') {
       const elapsed = Math.max(0, state.irlDay - (state.stepAt || 0));
       const wf = (d.savingsWaterfall || []).find(x => Number(x.step) === (state.step === 0 ? (state.caseId === 'samantha-lewis' ? 2 : 8) : 13)) || {};
       const done = state.step >= steps.length;
@@ -375,7 +388,41 @@
       el.innerHTML = view(state);
       syncViewport();
       bind();
+      if (diaADia && viewKey(state.view) === 'current') ddAfterRender();
     };
+    // --- Modo Día a Día ---
+    const ddDay = () => Math.max(0, Math.min(diaADia.HORIZON, Number(state.irlDay) || 0));
+    function ddFetch(notify) {
+      const dd = state.dd, caseId = state.caseId, day = ddDay();
+      if (dd.loading || typeof root.fetch !== 'function') { if (typeof root.fetch !== 'function') { dd.error = true; } return; }
+      dd.loading = true;
+      const base = `/api/dia-a-dia/${encodeURIComponent(caseId)}`;
+      const planReq = dd.plan ? Promise.resolve(dd.plan) : root.fetch(base).then(r => { if (!r.ok) throw Error('plan'); return r.json(); });
+      planReq.then(plan => {
+        dd.plan = plan;
+        return root.fetch(`${base}/day`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ day, completed: dd.completed, notify: !!notify })
+        }).then(r => { if (!r.ok) throw Error('day'); return r.json(); });
+      }).then(res => {
+        if (state.caseId !== caseId) return;
+        dd.status = res.status; dd.statusDay = day; dd.error = false;
+        if (notify) { dd.notified[day] = true; dd.notification = res.notification; }
+        else if (!dd.notified[day]) dd.notification = null;
+      }).catch(() => { dd.error = true; })
+        .finally(() => { dd.loading = false; if (state.caseId === caseId && viewKey(state.view) === 'current') render(); });
+    }
+    function ddAfterRender() {
+      const dd = state.dd, day = ddDay();
+      if (dd.shownDay != null && dd.shownDay !== day) {
+        const from = dd.shownDay;
+        dd.shownDay = day;
+        diaADia.animate(el.querySelector('.dd-mountain'), from, day);
+      } else if (dd.shownDay == null) {
+        dd.shownDay = day;
+      }
+      if (!dd.error && !dd.loading && dd.statusDay !== day) ddFetch(!dd.notified[day]);
+    }
     function summit() {
       state.summit = true;
       state.phase = 'summit';
@@ -443,6 +490,10 @@
           if (viewKey(state.view) === 'current') {
             state.view = viewName('current', langOf(state), state.irlDay);
           }
+        } else if (a === 'dd-prev' || a === 'dd-next') {
+          state.irlDay = Math.max(0, Math.min(diaADia.HORIZON, ddDay() + (a === 'dd-next' ? 1 : -1)));
+          state.view = viewName('current', langOf(state), state.irlDay);
+          state.dd.notification = null;
         } else if (a === 'done') {
           state.step++;
           state.stepAt = state.irlDay;
@@ -464,6 +515,14 @@
         attachRoom();
         render();
       };
+      el.querySelectorAll('[data-dd-step]').forEach(chk => chk.onchange = () => {
+        const dd = state.dd, id = chk.dataset.ddStep, m = chk.dataset.ddMember;
+        const cur = dd.completed[id] || [];
+        dd.completed[id] = chk.checked ? [...new Set([...cur, m])] : cur.filter(x => x !== m);
+        dd.statusDay = null;  // recalcula el día con lo marcado (sin reenviar a Telegram)
+        dd.notified[ddDay()] = true;
+        render();
+      });
       el.querySelectorAll('[data-owner]').forEach(chk => chk.onchange = () => {
         const a = state.checks[state.step] || [];
         const v = Number(chk.dataset.owner);

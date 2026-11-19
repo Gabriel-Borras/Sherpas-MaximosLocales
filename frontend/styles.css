@@ -1409,3 +1409,26 @@ details.exact-math dl {
 .radio-demo-status[data-tone="ok"] { color: #2E9E75; }
 .radio-demo-status[data-tone="warn"] { color: #D4A04A; }
 .radio-demo-status[data-tone="error"] { color: #C83A2B; }
+
+/* ---------- Modo Día a Día (montaña del Basecamp sin biomas + tarjeta del día) ---------- */
+.dd-mountain .dd-dot { fill: #141414; opacity: .28; }
+.dd-mountain .dd-dot.is-passed { opacity: .7; }
+.dd-mountain .dd-task .dd-node-ring { fill: #ffffff; stroke: #141414; stroke-width: .9; }
+.dd-mountain .dd-task .dd-node-tent { fill: #ffffff; stroke: #141414; stroke-width: .6; stroke-linejoin: round; }
+.dd-mountain .dd-task text { font: 600 4.2px system-ui, sans-serif; fill: #141414; opacity: .85; }
+.dd-mountain .dd-task.is-done .dd-node-ring { fill: #141414; }
+.dd-mountain .dd-task.is-done .dd-node-tent { fill: #141414; stroke: #ffffff; }
+.dd-mountain .dd-task.is-late .dd-node-ring { stroke: #E07A68; stroke-width: 1.4; }
+.dd-mountain .dd-task.is-late text { fill: #C83A2B; }
+.dd-mountain .dd-task.is-today .dd-node-ring { stroke-width: 1.5; }
+.dd-panel .dd-step { padding: 10px 0; border-top: 1px solid var(--border-hairline); }
+.dd-panel .dd-step:first-of-type { border-top: 0; }
+.dd-panel .dd-step.is-done .dd-step-title { text-decoration: line-through; opacity: .6; }
+.dd-panel .dd-step p { margin: 4px 0; }
+.dd-panel .dd-why { font-size: 13px; color: var(--ink-muted); }
+.dd-panel .dd-why span { font-weight: 600; color: var(--ink-primary); }
+.dd-panel .dd-late { font-size: 13px; color: #C83A2B; }
+.dd-panel .dd-sub { margin: 12px 0 0; font-weight: 600; }
+.dd-panel .dd-telegram { font-size: 12.5px; color: #2E9E75; margin: 10px 0 0; }
+.dd-panel .dd-telegram[data-tone="warn"] { color: #D4A04A; }
+.dd-panel .dd-nav { justify-content: space-between; }
