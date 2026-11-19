@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="Sherpa Basecamp × Run IRL: expedición financiera determinista sobre montaña sumi-e conectada a tu plan real.">
+  <title>Sherpa Basecamp × Run IRL</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="is-mountain-viewport">
+  <div id="app"></div>
+  <script src="cases-data.js"></script>
+  <script src="expedicion.js"></script>
+  <script src="post-cima.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      if (window.SherpaCasesData && window.SherpaPostCima && document.querySelector('#app')) {
+        var params = new URLSearchParams(window.location.search || '');
+        var requestedCase = params.get('case') || 'michael-carter';
+        window.SherpaCasesData.loadCaseData(requestedCase).then(function (loaded) {
+          window.SherpaPostCima.mount('#app', { caseId: loaded && loaded.meta ? loaded.meta.slug : requestedCase });
+        }).catch(function () {
+          window.SherpaPostCima.mount('#app', { caseId: requestedCase });
+        });
+      }
+    });
+  </script>
+</body>
+</html>

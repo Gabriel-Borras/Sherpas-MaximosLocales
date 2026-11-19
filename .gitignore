@@ -5,3 +5,6 @@ agentes/agentes.conf
 agentes/equipo.conf
 agentes/estado/
 agentes/tareas/
+agentes/locks/
+agentes/contexto/conversaciones/
+.env

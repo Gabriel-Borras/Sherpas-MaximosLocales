@@ -1,0 +1,181 @@
+#!/usr/bin/env python3
+"""bloqueo — evita que dos agentes editen el mismo archivo a la vez (multiplataforma Windows/POSIX).
+
+  bloqueo tomar <ruta> [--como agente] [--ttl MIN]   exit 1 si lo tiene otro
+  bloqueo soltar <ruta> [--como agente]
+  bloqueo soltar-todo [--como agente]
+  bloqueo ver
+  bloqueo hook      # para PreToolUse (Edit/Write): lee el JSON del hook, bloquea (exit 2) si otro agente tiene el
+                    # archivo y, si no, lo toma automáticamente. No hace NADA si no hay $AGENTE.
+
+Un bloqueo sobre un directorio cubre todo lo que hay dentro. Los bloqueos caducan (def. 30 min).
+Datos en $AGENTES_HOME/locks/.
+"""
+import argparse
+from contextlib import contextmanager
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+import time
+
+for _s in (sys.stdout, sys.stderr):
+    if hasattr(_s, "reconfigure"):
+        _s.reconfigure(encoding="utf-8", errors="replace")
+
+DEFAULT_HOME = Path(__file__).resolve().parent.parent
+HOME = Path(os.environ.get("AGENTES_HOME") or DEFAULT_HOME)
+DIR = HOME / "locks"
+TTL = int(os.environ.get("BLOQUEO_TTL_MIN", "30"))
+
+
+def real(p: str) -> str:
+    return os.path.normcase(os.path.realpath(os.path.expanduser(p)))
+
+
+def solapa(a: str, b: str) -> bool:
+    sep = os.sep
+    a_dir = a.rstrip("\\/") + sep
+    b_dir = b.rstrip("\\/") + sep
+    return a == b or a.startswith(b_dir) or b.startswith(a_dir)
+
+
+def leer():
+    DIR.mkdir(parents=True, exist_ok=True)
+    ahora = time.time()
+    out = []
+    for f in DIR.glob("*.json"):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if d.get("expira", 0) < ahora:
+            f.unlink(missing_ok=True)
+            continue
+        d["_f"] = f
+        out.append(d)
+    return out
+
+
+@contextmanager
+def _lock_file(lock_path: Path):
+    if os.name == "nt":
+        import msvcrt
+
+        with open(lock_path, "a+b") as lk:
+            if lk.tell() == 0:
+                lk.write(b"0")
+                lk.flush()
+            lk.seek(0)
+            while True:
+                try:
+                    msvcrt.locking(lk.fileno(), msvcrt.LK_LOCK, 1)
+                    break
+                except OSError:
+                    time.sleep(0.05)
+            try:
+                yield
+            finally:
+                lk.seek(0)
+                msvcrt.locking(lk.fileno(), msvcrt.LK_UNLCK, 1)
+    else:
+        import fcntl
+
+        with open(lock_path, "w", encoding="utf-8") as lk:
+            fcntl.flock(lk, fcntl.LOCK_EX)
+            try:
+                yield
+            finally:
+                fcntl.flock(lk, fcntl.LOCK_UN)
+
+
+def con_candado(fn):
+    DIR.mkdir(parents=True, exist_ok=True)
+    with _lock_file(DIR / ".lock"):
+        return fn()
+
+
+def tomar(ruta: str, ag: str, ttl: int = TTL):
+    def f():
+        r = real(ruta)
+        for d in leer():
+            if solapa(r, d["ruta"]) and d["agente"] != ag:
+                return d
+        destino = DIR / (hashlib.sha1(r.encode("utf-8")).hexdigest()[:16] + ".json")
+        destino.write_text(
+            json.dumps({"ruta": r, "agente": ag, "expira": time.time() + ttl * 60}),
+            encoding="utf-8",
+        )
+        return None
+
+    return con_candado(f)
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(prog="bloqueo")
+    s = ap.add_subparsers(dest="cmd", required=True)
+    for n in ("tomar", "soltar"):
+        x = s.add_parser(n)
+        x.add_argument("ruta")
+        x.add_argument("--como")
+        x.add_argument("--ttl", type=int, default=TTL)
+    x = s.add_parser("soltar-todo")
+    x.add_argument("--como")
+    s.add_parser("ver")
+    s.add_parser("hook")
+    a = ap.parse_args()
+    ag = getattr(a, "como", None) or os.environ.get("AGENTE") or "?"
+
+    if a.cmd == "hook":
+        ag = os.environ.get("AGENTE")
+        if not ag:
+            return 0
+        try:
+            ruta = json.load(sys.stdin).get("tool_input", {}).get("file_path") or ""
+        except ValueError:
+            return 0
+        if not ruta:
+            return 0
+        d = tomar(ruta, ag)
+        if d:
+            print(
+                f"BLOQUEADO: {ruta} está siendo editado por '{d['agente']}' (caduca en "
+                f"{int((d['expira'] - time.time()) / 60)} min). Coordiná con el orquestador o esperá.",
+                file=sys.stderr,
+            )
+            return 2
+        return 0
+    if a.cmd == "tomar":
+        d = tomar(a.ruta, ag, a.ttl)
+        if d:
+            print(f"lo tiene {d['agente']}")
+            return 1
+        print("ok")
+        return 0
+    if a.cmd == "soltar":
+        r = real(a.ruta)
+
+        def f():
+            for d in leer():
+                if d["ruta"] == r and d["agente"] == ag:
+                    d["_f"].unlink(missing_ok=True)
+
+        con_candado(f)
+        return 0
+    if a.cmd == "soltar-todo":
+
+        def f():
+            for d in leer():
+                if d["agente"] == ag:
+                    d["_f"].unlink(missing_ok=True)
+
+        con_candado(f)
+        return 0
+    for d in con_candado(leer):
+        print(f"{d['agente']:<12} {int((d['expira'] - time.time()) / 60):>3} min  {d['ruta']}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
