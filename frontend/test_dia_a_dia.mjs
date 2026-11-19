@@ -73,5 +73,7 @@ test('zoom: la cámara admite anchos entre 300 y la montaña entera, sin salirse
 });
 
 test('el svg arranca con el zoom guardado', () => {
-  assert.match(DD.svg(plan, 10, {}, 'ES', 400), /viewBox="[\d.]+ [\d.]+ 400\.0 250\.0"/);
+  const m = DD.svg(plan, 10, {}, 'ES', 400).match(/viewBox="([\d.]+) ([\d.]+) ([\d.]+) ([\d.]+)"/);
+  assert.equal(Number(m[3]), 400);
+  assert.ok(Math.abs(Number(m[3]) / Number(m[4]) - 660 / 412) < 0.01, 'mantiene la proporción');
 });
