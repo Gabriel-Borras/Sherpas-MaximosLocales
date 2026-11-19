@@ -397,6 +397,7 @@
       }
     };
     const render = () => {
+      if (expedition.cancelMotion) expedition.cancelMotion();
       el.innerHTML = view(state);
       syncViewport();
       bind();
@@ -576,6 +577,7 @@
       unmount() {
         if (unsubRoom) { try { unsubRoom(); } catch (_) {} unsubRoom = null; }
         unbindOverlay();
+        if (expedition.cancelMotion) expedition.cancelMotion();
         el.innerHTML = '';
         if (root.document && root.document.body) root.document.body.classList.remove('is-mountain-viewport');
       }

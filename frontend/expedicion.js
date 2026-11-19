@@ -284,11 +284,30 @@
     });
   }
 
+  let biomeCrossfadeToken = 0;
+  let biomeCrossfadeRaf1 = null;
+  let biomeCrossfadeRaf2 = null;
+  function cancelBiomeCrossfade() {
+    biomeCrossfadeToken++;
+    if (typeof root.cancelAnimationFrame === 'function') {
+      if (biomeCrossfadeRaf1) root.cancelAnimationFrame(biomeCrossfadeRaf1);
+      if (biomeCrossfadeRaf2) root.cancelAnimationFrame(biomeCrossfadeRaf2);
+    }
+    biomeCrossfadeRaf1 = null;
+    biomeCrossfadeRaf2 = null;
+  }
+
   function scheduleBiomeCrossfade(el, nextBiome) {
+    cancelBiomeCrossfade();
     if (!hasRaf() || !el) return;
     const raf = root.requestAnimationFrame;
-    raf(() => {
-      raf(() => {
+    const token = biomeCrossfadeToken;
+    biomeCrossfadeRaf1 = raf(() => {
+      biomeCrossfadeRaf1 = null;
+      if (token !== biomeCrossfadeToken) return;
+      biomeCrossfadeRaf2 = raf(() => {
+        biomeCrossfadeRaf2 = null;
+        if (token !== biomeCrossfadeToken) return;
         applyBiomeToDom(el, nextBiome);
       });
     });
@@ -2457,6 +2476,7 @@
     const briefTitle = words[lang].brief;
     const radioTitle = words[lang].radio;
     const packAria = es ? 'Tu mochila · Balance real' : 'Your pack · Real balance';
+    const redoAria = es ? 'Rehacer encuesta de miedos' : 'Redo priorities survey';
     const healthLabel = es ? 'Salud' : 'Health';
 
     return `<header class="site-header header-floating">
@@ -2468,6 +2488,9 @@
         </button>
         ${packOpen ? renderPackPopover(state, data) : ''}
       </div>
+      <button type="button" class="redo-survey-btn" data-action="redo-eval" aria-label="${esc(redoAria)}" title="${esc(redoAria)}">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+      </button>
       <nav class="site-nav" aria-label="${t(state, 'nav')}">
         <button type="button" class="health-pill-btn ${healthOpen ? 'is-active' : ''}" data-action="toggle-health" aria-expanded="${healthOpen ? 'true' : 'false'}" aria-haspopup="dialog">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12h4l2.5-6 4 12 2.5-6H21"/></svg>
@@ -3033,11 +3056,17 @@
 
   let activeToken = 0;
   let activeRaf = null;
+  let activeMotionTimer = null;
   const cancelMotion = () => {
     activeToken++;
+    cancelBiomeCrossfade();
     if (activeRaf && typeof root.cancelAnimationFrame === 'function') {
       root.cancelAnimationFrame(activeRaf);
       activeRaf = null;
+    }
+    if (activeMotionTimer) {
+      clearTimeout(activeMotionTimer);
+      activeMotionTimer = null;
     }
   };
 
@@ -3315,6 +3344,13 @@
       const trailEl = svg.querySelector('#activeTrail');
       const ropeA = svg.querySelector('#partnerRopeA');
       const ropeB = svg.querySelector('#partnerRopeB');
+      const onBiomeTrigger = intent && typeof intent.onBiomeTrigger === 'function' ? intent.onBiomeTrigger : null;
+      let biomeTriggered = false;
+      const fireBiome = () => {
+        if (biomeTriggered || tk !== activeToken) return;
+        biomeTriggered = true;
+        if (onBiomeTrigger) onBiomeTrigger();
+      };
       if (ropeA) ropeA.setAttribute('opacity', '.72');
       if (ropeB) ropeB.setAttribute('opacity', '.72');
       animateViewBox(svg, from, fullCamera.slice(), 400, () => {
@@ -3326,7 +3362,9 @@
           if (ropeB) ropeB.setAttribute('stroke-dashoffset', offVal);
           const [mx, my] = trailPointAt(svg, fromFrac + (toFrac - fromFrac) * e);
           moveClimbersTogether(mx, my);
+          if (!biomeTriggered && p >= 0.6) fireBiome();
         }, () => {
+          fireBiome();
           animateViewBox(svg, fullCamera.slice(), campCamera(toStage), 620, done, tk);
         });
       }, tk);
@@ -3392,15 +3430,24 @@
     const toStage = isSummitStep ? 3 : fromStage + 1;
     const nextBiome = biomes[toStage].id;
     state.hasEnteredCamp = true;
-    state.activeBiome = nextBiome;
     state.inspectedRisk = null;
     state.roomWaiting = false;
     if (el && el.querySelector) hideDialogs(el, state);
     if (hasRaf() && svg) {
-      applyBiomeToDom(el, nextBiome);
-      runCamera(svg, { type: 'advance', fromStage, toStage }, () => {
+      let biomeApplied = false;
+      const triggerBiome = () => {
+        if (biomeApplied) return;
+        biomeApplied = true;
+        state.activeBiome = nextBiome;
+        applyBiomeToDom(el, nextBiome);
+      };
+      runCamera(svg, { type: 'advance', fromStage, toStage, onBiomeTrigger: triggerBiome }, () => {
+        triggerBiome();
         if (isSummitStep) {
-          setTimeout(() => {
+          const tk = activeToken;
+          activeMotionTimer = setTimeout(() => {
+            activeMotionTimer = null;
+            if (tk !== activeToken) return;
             state.initialViewBox = null;
             if (typeof onSummit === 'function') onSummit();
             syncViewportClass();
@@ -3417,6 +3464,7 @@
         }
       });
     } else {
+      state.activeBiome = nextBiome;
       if (isSummitStep) {
         if (typeof onSummit === 'function') onSummit();
       } else {
@@ -3705,7 +3753,9 @@
     }
 
     if (action === 'redo-eval') {
+      cancelMotion();
       ProfileEvalStore.clear(state.caseId);
+      state.openOverlay = null;
       state.evaluationDone = false;
       state.phase = 'fears';
       state.view = viewName('expedition', langOf(state), state.irlDay);
@@ -3713,14 +3763,21 @@
       state.votes = {};
       state.voteTurn = state.coupleSyncMode === 'local' ? 'A' : (state.memberRole || 'A');
       state.roomWaiting = false;
+      state.roomAlignedBanner = false;
       state.stage = 0;
       state.focusedNode = 0;
       state.hasEnteredCamp = false;
       state.activeBiome = null;
+      state.inspectedRisk = null;
+      state.cameraMode = 'panoramic';
+      state.dialogVisible = false;
+      state.initialViewBox = fullCamera.slice();
       state.summit = false;
       state.blocked = false;
       state.history = [];
       rerender();
+      state.initialViewBox = null;
+      syncViewportClass();
       return true;
     }
 
@@ -3926,11 +3983,11 @@
       const target = ev.target;
       if (!target || typeof target.closest !== 'function') return;
       if (st.openOverlay === 'pack') {
-        if (target.closest('.pack-anchor') || target.closest('.health-pill-btn') || target.closest('.language-toggle') || target.closest('.case-select')) return;
+        if (target.closest('.pack-anchor') || target.closest('.redo-survey-btn') || target.closest('.health-pill-btn') || target.closest('.language-toggle') || target.closest('.case-select')) return;
         st.openOverlay = null;
         rerender();
       } else if (st.openOverlay === 'health') {
-        if (target.closest('.health-modal-card') || target.closest('.health-pill-btn') || target.closest('.pack-btn') || target.closest('.language-toggle')) return;
+        if (target.closest('.health-modal-card') || target.closest('.health-pill-btn') || target.closest('.pack-btn') || target.closest('.redo-survey-btn') || target.closest('.language-toggle')) return;
         st.openOverlay = null;
         rerender();
       }
@@ -4127,6 +4184,7 @@
     persistLanguage,
     SherpasAI,
     runCamera,
+    cancelMotion,
     campCamera,
     fullCamera,
     isMountainPhase,

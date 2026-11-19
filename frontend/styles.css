@@ -153,7 +153,8 @@ body.is-mountain-viewport {
   align-items: center;
   flex-shrink: 0;
 }
-.pack-btn {
+.pack-btn,
+.redo-survey-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -165,9 +166,11 @@ body.is-mountain-viewport {
   background: #FFFFFF;
   color: #1E293B;
   cursor: pointer;
+  flex-shrink: 0;
   transition: border-color 140ms ease-out, box-shadow 140ms ease-out, background 140ms ease-out, transform 140ms ease-out;
 }
-.pack-btn:hover:not(:disabled) {
+.pack-btn:hover:not(:disabled),
+.redo-survey-btn:hover:not(:disabled) {
   border-color: #475569;
   background: #F8FAFC;
 }
