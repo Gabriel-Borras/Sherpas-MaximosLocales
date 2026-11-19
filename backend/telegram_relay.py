@@ -155,6 +155,8 @@ class NotificationScheduler:
                     engine.advance_day(plan_day)
                 pending = notifications.generate_milestone_notifications(engine)
             for notification in pending:
+                if notification.get("kind") == "overdue_insistence" and int(notification.get("days_overdue") or 0) % 2:
+                    continue  # seguimiento cada dos días, no a diario
                 key = (run_id, notification["notification_id"])
                 if key in self._sent:
                     continue

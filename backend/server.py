@@ -34,7 +34,7 @@ from backend.irl_engine import IRLEngine, create_irl_run
 from backend.llm_proxy import LLMProxyClient
 from backend.mcp_client import CaseNotFoundError, get_case, list_cases, load_env_file
 from backend.notifications import NotificationEngine
-from backend import radio_demo, telegram_relay
+from backend import dia_a_dia, radio_demo, telegram_relay
 from backend.timeline_engine import TimelineEngine
 
 
@@ -821,6 +821,47 @@ def _json_bytes(data: Any) -> bytes:
     return json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
 
 
+def _handle_dia_a_dia(
+    method: str,
+    parsed,
+    body: dict[str, Any],
+    state: ServerState,
+) -> tuple[int, Any]:
+    """Modo Día a Día: plan real del Run IRL y estado/aviso de cada día."""
+    parts = [part for part in parsed.path.split("/") if part]
+    if len(parts) < 3 or parts[:2] != ["api", "dia-a-dia"]:
+        raise KeyError("Ruta Día a Día no encontrada")
+    case_id = parts[2]
+    if method == "GET" and len(parts) == 3:
+        return 200, dia_a_dia.build_plan(case_id, cases_dir=state.cases_dir)
+    if method == "POST" and parts[3:] == ["day"]:
+        try:
+            day = int(body.get("day"))
+        except (TypeError, ValueError) as error:
+            raise BadRequestError("day debe ser un entero") from error
+        if not 0 <= day <= dia_a_dia.HORIZON_DAYS:
+            raise BadRequestError(f"day debe estar entre 0 y {dia_a_dia.HORIZON_DAYS}")
+        completed = body.get("completed") or {}
+        if not isinstance(completed, dict) or not all(
+            isinstance(k, str) and isinstance(v, list) and all(isinstance(m, str) for m in v)
+            for k, v in completed.items()
+        ):
+            raise BadRequestError("completed debe ser {step_id: [miembros]}")
+        plan = dia_a_dia.build_plan(case_id, cases_dir=state.cases_dir)
+        status = dia_a_dia.day_status(plan, day, completed)
+        notification = None
+        if body.get("notify") is True:
+            payload = dia_a_dia.notification_for_day(case_id, day, completed, cases_dir=state.cases_dir)
+            if payload is not None:
+                sent = bool(_n8n_webhook_url()) and _post_n8n(payload)
+                if _n8n_webhook_url() and not sent:
+                    telegram_relay.record_failure(payload)
+                notification = {"kind": payload["kind"], "sent": sent, "title": payload["title"],
+                                "configured": bool(_n8n_webhook_url())}
+        return 200, {"case_id": case_id, "status": status, "notification": notification}
+    raise KeyError("Ruta Día a Día no encontrada")
+
+
 def _demo_enabled() -> bool:
     """Demo buttons and test routes are only exposed with SHERPAS_ENABLE_TELEGRAM_TEST=1."""
     if "SHERPAS_ENABLE_TELEGRAM_TEST" not in os.environ:
@@ -1067,6 +1108,10 @@ def create_server(
                         self.command, parsed, body, state
                     )
                     self._send(status, data, content_type)
+                    return
+                if parsed.path.startswith("/api/dia-a-dia/"):
+                    status, data = _handle_dia_a_dia(self.command, parsed, body, state)
+                    self._send(status, data)
                     return
                 if parsed.path.startswith("/api/telegram/"):
                     status, data = _handle_telegram(self.command, parsed, body, state)
