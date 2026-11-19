@@ -19,7 +19,9 @@ Backend (scheduler / advance / check / shock) ──POST──► [n8n · Flujo 
 | `SHERPAS_DAY_SECONDS` | Segundos por día del plan (por defecto `86400` = tiempo real). Para demo: `60`. |
 | `SHERPAS_MAX_DAY` | Tope de días que avanza el scheduler (por defecto `90`, evita avisos infinitos). |
 | `SHERPAS_OUTBOX_DIR` | Carpeta del outbox (`n8n-outbox.jsonl`). Vacío = sin persistencia de fallos. |
-| `SHERPAS_ENABLE_TELEGRAM_TEST` | `1` habilita `POST /api/telegram/test`. Déjalo vacío en producción. |
+| `SHERPAS_ENABLE_TELEGRAM_TEST` | `1` habilita `POST /api/telegram/test` y `POST /api/telegram/demo/restart`. Déjalo vacío en producción. |
+| `SHERPAS_NOTIFY_DAYS` | Solo para en esos días del plan (p. ej. `0,3,14,30`). Vacío = todos los días. |
+| `SHERPAS_DEMO_CASES` | `all` o lista de casos: crea un Run IRL por caso al arrancar (la web no crea runs). |
 
 El scheduler solo arranca si hay `N8N_WEBHOOK_URL` y `SHERPAS_SCHEDULER_INTERVAL > 0`. Cada pasada avanza cada Run IRL según el reloj real desde que se creó, genera sus avisos y emite **cada uno una sola vez**; además reintenta el outbox.
 
@@ -46,6 +48,22 @@ Telegram exige HTTPS público para el *Telegram Trigger*: si n8n corre en local,
    ```
 3. Estado del puente: `GET /api/telegram/config` (n8n configurado, scheduler, avisos en cola; nunca devuelve secretos ni la URL).
 4. Demo acelerada: `SHERPAS_DAY_SECONDS=60 SHERPAS_SCHEDULER_INTERVAL=10`; crea un run (`POST /api/irl {"case_id":"…"}`) y los hitos de Día 0/3/14/30 llegan en minutos.
+
+## 3 bis. Modo demo (configuración recomendada)
+
+```env
+N8N_WEBHOOK_URL=<Production URL del nodo Webhook Sherpas>
+N8N_WEBHOOK_SECRET=<el mismo valor que la credencial Header Auth>
+TELEGRAM_BOT_USERNAME=SherpasRadioBot
+SHERPAS_SCHEDULER_INTERVAL=5
+SHERPAS_DAY_SECONDS=20
+SHERPAS_NOTIFY_DAYS=0,3,14,30
+SHERPAS_MAX_DAY=30
+SHERPAS_DEMO_CASES=all
+SHERPAS_ENABLE_TELEGRAM_TEST=1
+```
+
+Guion: (1) antes de salir, abre `https://t.me/SherpasRadioBot?start=michael-carter_client` y pulsa *Start*; (2) durante la demo lanza `POST /api/telegram/demo/restart` → llega el **Día 0** al instante, el **Día 3** a los 60 s, el **Día 14** a los ~5 min y el **Día 30** a los 10 min. Para parejas: `?start=timothy-melanie-weah_A` en un móvil y `_B` en otro.
 
 ## 4. Reglas de enrutado y mensaje
 

@@ -263,5 +263,52 @@ class TelegramEndpointTests(unittest.TestCase):
             _handle_telegram("GET", urlsplit("/api/telegram/nope"), {}, self.state)
 
 
+class DemoModeTests(unittest.TestCase):
+    def test_parse_notify_days_and_demo_cases(self) -> None:
+        self.assertEqual(telegram_relay.parse_notify_days("30, 0,3,x,14,3"), [0, 3, 14, 30])
+        self.assertEqual(telegram_relay.parse_notify_days(""), [])
+        known = ["michael-carter", "samantha-lewis"]
+        self.assertEqual(telegram_relay.demo_cases(known, "all"), known)
+        self.assertEqual(telegram_relay.demo_cases(known, "samantha-lewis, nope"), ["samantha-lewis"])
+        self.assertEqual(telegram_relay.demo_cases(known, ""), [])
+
+    def test_checkpoints_only_stop_at_notify_days(self) -> None:
+        state = _state()
+        now = [1_000_000.0]
+        emitted: list[dict] = []
+        scheduler = telegram_relay.NotificationScheduler(
+            state, lambda n, r: emitted.append(n), day_seconds=10, clock=lambda: now[0], notify_days=[0, 3, 14, 30]
+        )
+        with patch("backend.server.time.time", return_value=now[0]):
+            run_id, engine = state.runs.create("michael-carter")
+        seen_days = []
+        for _ in range(35):
+            scheduler.tick()
+            seen_days.append(engine.current_day)
+            now[0] += 10
+        self.assertEqual(sorted(set(seen_days)), [0, 3, 14, 30])
+        self.assertEqual(sorted({n["day"] for n in emitted}), [0, 3, 14, 30])
+
+    def test_demo_restart_recreates_runs_and_resends_day_zero(self) -> None:
+        state = _state()
+        sent = []
+        state.scheduler.emit = lambda n, r: sent.append((r, n["day"]))
+        env = {"SHERPAS_ENABLE_TELEGRAM_TEST": "1", "SHERPAS_DEMO_CASES": "michael-carter,timothy-melanie-weah"}
+        with patch.dict(os.environ, env, clear=True), patch("backend.server.load_env_file"):
+            status, data = _handle_telegram("POST", urlsplit("/api/telegram/demo/restart"), {}, state)
+            self.assertEqual(status, 200)
+            self.assertEqual([r["case_id"] for r in data["runs"]], ["michael-carter", "timothy-melanie-weah"])
+            first = len(sent)
+            self.assertGreater(first, 0)
+            self.assertTrue(all(day == 0 for _, day in sent))
+            _handle_telegram("POST", urlsplit("/api/telegram/demo/restart"), {}, state)
+        self.assertEqual(len(state.runs._runs), 2)
+        self.assertEqual(len(sent), 2 * first)
+
+    def test_demo_restart_is_disabled_by_default(self) -> None:
+        with patch.dict(os.environ, {}, clear=True), self.assertRaises(KeyError):
+            _handle_telegram("POST", urlsplit("/api/telegram/demo/restart"), {}, _state())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -117,6 +117,7 @@ class NotificationScheduler:
         max_day: int | None = None,
         clock: Callable[[], float] = time.time,
         drain: Callable[[], int] | None = None,
+        notify_days: list[int] | None = None,
     ) -> None:
         self.state = state
         self.emit = emit
@@ -126,6 +127,7 @@ class NotificationScheduler:
         )
         self.clock = clock
         self.drain = drain
+        self.notify_days = notify_days if notify_days is not None else parse_notify_days()
         self._sent: set[tuple[str, str]] = set()
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -144,6 +146,10 @@ class NotificationScheduler:
             ]
         for run_id, engine, notifications, created in snapshot:
             plan_day = min(int((now - created) // self.day_seconds), self.max_day)
+            if self.notify_days:
+                # Demo: only stop at the checkpoints (e.g. Dia 0 -> 3 -> 14 -> 30).
+                reached = [d for d in self.notify_days if d <= plan_day]
+                plan_day = max(reached) if reached else 0
             with runs.lock:
                 if plan_day > engine.current_day:
                     engine.advance_day(plan_day)
@@ -181,6 +187,10 @@ class NotificationScheduler:
     def stop(self) -> None:
         self._stop.set()
 
+    def reset(self) -> None:
+        """Forget what was already sent (used when the demo runs are recreated)."""
+        self._sent.clear()
+
     @property
     def running(self) -> bool:
         return self._thread is not None and self._thread.is_alive()
@@ -192,3 +202,25 @@ def scheduler_interval() -> float:
         return max(0.0, float(os.environ.get("SHERPAS_SCHEDULER_INTERVAL", "") or 0))
     except ValueError:
         return 0.0
+
+
+def parse_notify_days(raw: str | None = None) -> list[int]:
+    """``SHERPAS_NOTIFY_DAYS=0,3,14,30`` -> ``[0, 3, 14, 30]``; empty = every day."""
+    raw = os.environ.get("SHERPAS_NOTIFY_DAYS", "") if raw is None else raw
+    days: set[int] = set()
+    for part in raw.split(","):
+        part = part.strip()
+        if part.isdigit():
+            days.add(int(part))
+    return sorted(days)
+
+
+def demo_cases(available: list[str], raw: str | None = None) -> list[str]:
+    """``SHERPAS_DEMO_CASES=all`` or a comma list, filtered to known case ids."""
+    raw = (os.environ.get("SHERPAS_DEMO_CASES", "") if raw is None else raw).strip()
+    if not raw:
+        return []
+    if raw.lower() == "all":
+        return list(available)
+    wanted = [part.strip() for part in raw.split(",") if part.strip()]
+    return [case_id for case_id in wanted if case_id in available]

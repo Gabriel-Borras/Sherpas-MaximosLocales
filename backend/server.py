@@ -169,6 +169,12 @@ class IRLRunStore:
             self._created[run_id] = time.time()
             return run_id, engine
 
+    def clear(self) -> None:
+        with self.lock:
+            self._runs.clear()
+            self._notifications.clear()
+            self._created.clear()
+
     def get(self, run_id: str) -> tuple[IRLEngine, NotificationEngine]:
         with self.lock:
             try:
@@ -815,6 +821,19 @@ def _json_bytes(data: Any) -> bytes:
     return json.dumps(data, ensure_ascii=False, default=str).encode("utf-8")
 
 
+def _start_demo_runs(state: ServerState) -> list[dict[str, str]]:
+    """(Re)create one Run IRL per ``SHERPAS_DEMO_CASES`` so the radio has something to say."""
+    available = [str(item.get("id") or item.get("case_id")) for item in list_cases(cases_dir=state.cases_dir)]
+    cases = telegram_relay.demo_cases(available)
+    state.runs.clear()
+    state.scheduler.reset()
+    created = []
+    for case_id in cases:
+        run_id, _ = state.runs.create(case_id)
+        created.append({"run_id": run_id, "case_id": case_id})
+    return created
+
+
 def _handle_telegram(
     method: str,
     parsed,
@@ -833,9 +852,19 @@ def _handle_telegram(
             "scheduler_ticks": state.scheduler.ticks,
             "scheduler_emitted": state.scheduler.emitted,
             "day_seconds": state.scheduler.day_seconds,
+            "notify_days": state.scheduler.notify_days,
+            "demo_runs": sorted(state.runs._runs),
             "outbox_enabled": telegram_relay.outbox_path() is not None,
             "outbox_pending": telegram_relay.pending_count(),
         }
+    if method == "POST" and parts == ["api", "telegram", "demo", "restart"]:
+        if os.environ.get("SHERPAS_ENABLE_TELEGRAM_TEST", "").strip() != "1":
+            raise KeyError("Ruta Telegram no encontrada")
+        runs = _start_demo_runs(state)
+        if runs:
+            state.scheduler.tick()
+        return 200, {"status": "restarted", "runs": runs, "day_seconds": state.scheduler.day_seconds,
+                     "notify_days": state.scheduler.notify_days}
     if method == "POST" and parts == ["api", "telegram", "test"]:
         if os.environ.get("SHERPAS_ENABLE_TELEGRAM_TEST", "").strip() != "1":
             raise KeyError("Ruta Telegram no encontrada")
@@ -1034,6 +1063,8 @@ def create_server(
     httpd.frontend_dir = static_root  # type: ignore[attr-defined]
     interval = telegram_relay.scheduler_interval()
     if interval > 0 and _n8n_webhook_url():
+        if os.environ.get("SHERPAS_DEMO_CASES", "").strip():
+            _start_demo_runs(state)
         state.scheduler.start(interval)
     return httpd
 
