@@ -116,15 +116,76 @@
     </svg>`;
   }
 
+  const readBox = svgEl => (svgEl.getAttribute('viewBox') || FULL.join(' ')).trim().split(/\s+/).map(Number);
+  const clampBox = ([x, y, w, h]) => [
+    Math.max(0, Math.min(FULL[2] - w, x)),
+    Math.max(0, Math.min(FULL[3] - h, y)), w, h
+  ];
+  const writeBox = (svgEl, box) => svgEl.setAttribute('viewBox', box.map(n => n.toFixed(1)).join(' '));
+
+  // Mover la cámara suavemente de una caja a otra (p. ej. recentrar con doble clic).
+  function glide(svgEl, toBox, ms) {
+    if (!svgEl || typeof requestAnimationFrame !== 'function') { if (svgEl) writeBox(svgEl, toBox); return; }
+    const from = readBox(svgEl), t0 = performance.now(), dur = ms || 450;
+    const token = (svgEl._ddAnim = (svgEl._ddAnim || 0) + 1);
+    (function frame(now) {
+      if (svgEl._ddAnim !== token || svgEl._ddDragging) return;
+      const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3);
+      writeBox(svgEl, from.map((v, i) => v + (toBox[i] - v) * e));
+      if (k < 1) requestAnimationFrame(frame);
+    })(t0);
+  }
+
+  // Arrastrar con el ratón (o el dedo) para recorrer la montaña. Doble clic: volver al escalador.
+  function enablePan(svgEl, onChange) {
+    if (!svgEl || svgEl._ddPan || typeof svgEl.addEventListener !== 'function') return;
+    svgEl._ddPan = true;
+    let drag = null;
+    svgEl.addEventListener('pointerdown', ev => {
+      if (ev.button !== 0) return;
+      const rect = svgEl.getBoundingClientRect();
+      const box = readBox(svgEl);
+      // preserveAspectRatio="slice": unidades de viewBox por píxel de pantalla.
+      const scale = Math.min(box[2] / (rect.width || 1), box[3] / (rect.height || 1));
+      drag = { x: ev.clientX, y: ev.clientY, box, scale, id: ev.pointerId };
+      svgEl._ddDragging = true;
+      svgEl._ddAnim = (svgEl._ddAnim || 0) + 1; // corta cualquier animación en curso
+      svgEl.classList.add('is-dragging');
+      if (svgEl.setPointerCapture) svgEl.setPointerCapture(ev.pointerId);
+      ev.preventDefault();
+    });
+    svgEl.addEventListener('pointermove', ev => {
+      if (!drag || ev.pointerId !== drag.id) return;
+      const dx = (ev.clientX - drag.x) * drag.scale, dy = (ev.clientY - drag.y) * drag.scale;
+      writeBox(svgEl, clampBox([drag.box[0] - dx, drag.box[1] - dy, drag.box[2], drag.box[3]]));
+    });
+    const end = ev => {
+      if (!drag || (ev && ev.pointerId !== drag.id)) return;
+      drag = null;
+      svgEl._ddDragging = false;
+      svgEl.classList.remove('is-dragging');
+      if (onChange) onChange(readBox(svgEl));
+    };
+    svgEl.addEventListener('pointerup', end);
+    svgEl.addEventListener('pointercancel', end);
+    svgEl.addEventListener('dblclick', () => {
+      const day = Number(svgEl.getAttribute('data-day')) || 0;
+      glide(svgEl, cameraFor(day));
+      if (onChange) onChange(null);
+    });
+  }
+
   // Sube el nodo (y la cámara) del día anterior al nuevo.
-  function animate(svgEl, fromDay, toDay, ms) {
+  function animate(svgEl, fromDay, toDay, ms, fromBox) {
     if (!svgEl || fromDay === toDay || typeof requestAnimationFrame !== 'function') return;
     const climber = svgEl.querySelector('#ddClimber');
     const trail = svgEl.querySelector('#ddTrail');
     const t0 = performance.now(), dur = ms || 650;
     const ease = t => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2);
-    const fromCam = cameraFor(fromDay), toCam = cameraFor(toDay);
+    const fromCam = fromBox || cameraFor(fromDay), toCam = cameraFor(toDay);
+    const token = (svgEl._ddAnim = (svgEl._ddAnim || 0) + 1);
     function frame(now) {
+      if (svgEl._ddAnim !== token || svgEl._ddDragging) return;
       const k = ease(Math.min(1, (now - t0) / dur));
       const d = fromDay + (toDay - fromDay) * k;
       const [px, py] = dayPoint(d);
@@ -207,5 +268,5 @@
     return `<aside class="floating-panel post-view dd-panel"><article class="focus-card">${head}${body}${nav}</article></aside>`;
   }
 
-  return { svg, card, animate, dayPoint, cameraFor, isDone, HORIZON, TRAIL_LENGTH: TRAIL.length };
+  return { svg, card, animate, enablePan, glide, clampBox, dayPoint, cameraFor, isDone, HORIZON, TRAIL_LENGTH: TRAIL.length };
 });
