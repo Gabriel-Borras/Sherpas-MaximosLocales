@@ -6,6 +6,7 @@ import copy
 import importlib
 import json
 import os
+import re
 from pathlib import Path
 
 
@@ -704,14 +705,261 @@ class TimelineEngine:
         return case
 
 
+_TOPIC_RULES = (
+    (
+        "home_purchase",
+        re.compile(
+            r"home purchase|down payment|closing costs|buy(?:ing)? (?:a )?home|"
+            r"buy_as_planned|home_price|compra de vivienda|vivienda|\bcasa\b|"
+            r"entrada de|hipoteca|mortgage",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "debt",
+        re.compile(
+            r"credit card|high-interest|high-rate|\bapr\b|debt|\bdti\b|"
+            r"revolving|amex|chase|pay_card|tarjeta|deuda",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "protection",
+        re.compile(
+            r"life insurance|mortality|umbrella|home or auto insurance|"
+            r"homeowners|home_insurance|uninsured|liability|coverage|shield|"
+            r"porsche|seguro|paraguas|cobertura|proteger|protecci[oó]n|"
+            r"\bvida\b|hijos",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "liquidity",
+        re.compile(
+            r"cash reserve|accessible cash|thin reserve|thin cash|idle cash|"
+            r"emergency|cash_months|liquidez|efectivo|colch[oó]n|reserva|"
+            r"\bcaja\b",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "retirement",
+        re.compile(
+            r"retir|run out of savings|savings run out|deplet|social security|"
+            r"withdrawal|cut_withdrawals|jubilaci[oó]n|retiro|agotan|"
+            r"pensi[oó]n",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "cash_flow",
+        re.compile(
+            r"cash flow|cashflow|thin margin|free cash flow|shortfall|"
+            r"income dependence|paycheck|flujo de caja|margen|ahorro|"
+            r"savings|redirect_cashflow",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "education",
+        re.compile(
+            r"university|college|universidad|educaci[oó]n|education",
+            re.IGNORECASE,
+        ),
+    ),
+    (
+        "investments",
+        re.compile(
+            r"concentrat|concentraci[oó]n|equity|technology|\bvti\b|\bupro\b|"
+            r"\btax\b|401\(k\)|401k|roth|\bhsa\b|\b529\b|growth|"
+            r"inversi[oó]n|inversi|cartera|portafolio|portfolio|rebalance|"
+            r"apalancado",
+            re.IGNORECASE,
+        ),
+    ),
+)
+
+_TOPIC_COMPAT = {
+    "protection": ("protection",),
+    "debt": ("debt", "cash_flow"),
+    "liquidity": ("liquidity", "home_purchase", "cash_flow", "debt"),
+    "home_purchase": ("home_purchase", "liquidity", "cash_flow", "investments"),
+    "retirement": ("retirement", "cash_flow", "investments"),
+    "cash_flow": ("cash_flow", "debt", "liquidity"),
+    "education": ("education", "investments"),
+    "investments": ("investments", "retirement"),
+}
+
+_SUMMIT_CAMP_KINDS = ("summit", "closing")
+
+
+def _detect_topic(text):
+    """Classify a concern, option, or camp string into a canonical topic."""
+    cleaned = str(text or "").replace("_", " ").strip()
+    if not cleaned:
+        return "overview"
+    for topic, pattern in _TOPIC_RULES:
+        if pattern.search(cleaned):
+            return topic
+    return "overview"
+
+
+def _resolve_concern_text(case, raw_concern):
+    """Resolve an O1..O9 code, dict, or free-text concern to descriptive text."""
+    if isinstance(raw_concern, dict):
+        parts = [
+            raw_concern.get("topic"),
+            raw_concern.get("label"),
+            raw_concern.get("detail"),
+            raw_concern.get("id"),
+        ]
+        combined = " ".join(str(p).strip() for p in parts if p)
+        if combined:
+            return combined
+        return ""
+    text = str(raw_concern or "").strip()
+    if not text:
+        return ""
+    code = text.upper()
+    if re.fullmatch(r"O\d+", code):
+        for fear in case.get("fears") or []:
+            if isinstance(fear, dict) and str(fear.get("id", "")).upper() == code:
+                return " ".join(
+                    str(v).strip()
+                    for v in (fear.get("topic"), fear.get("label"), fear.get("detail"))
+                    if v
+                ) or text
+        persona = case.get("persona")
+        if isinstance(persona, dict):
+            for item in persona.get("objectiveConcerns") or []:
+                if isinstance(item, dict) and str(item.get("id", "")).upper() == code:
+                    return str(item.get("detail") or item.get("label") or text)
+        code_rx = re.compile(rf"\b{re.escape(code)}\b", re.IGNORECASE)
+        for line in case.get("subjective_concerns") or []:
+            if isinstance(line, str) and code_rx.search(line):
+                return line
+        persona_text = case.get("persona_text")
+        if isinstance(persona_text, str):
+            for line in persona_text.splitlines():
+                if code_rx.search(line):
+                    return line
+    return text
+
+
+def _option_topic(option):
+    """Detect the canonical topic of a camp option or top_move."""
+    if not isinstance(option, dict):
+        return "overview"
+    if option.get("topic"):
+        return str(option["topic"])
+    text = " ".join(
+        str(option.get(key) or "")
+        for key in ("id", "label", "title", "action")
+    )
+    return _detect_topic(text)
+
+
+def _camp_topics(camp):
+    """Collect the canonical topics represented by a camp without inventing data."""
+    topics = []
+    if not isinstance(camp, dict):
+        return topics
+    camp_id_topic = _detect_topic(camp.get("id", ""))
+    if camp_id_topic != "overview":
+        topics.append(camp_id_topic)
+    if camp.get("retirement_gap") is not None or camp.get("withdrawal_yearly") is not None:
+        if "retirement" not in topics:
+            topics.append("retirement")
+    event = camp.get("event")
+    if isinstance(event, dict):
+        if "home_price" in event or "down_payment" in event or "mortgage_monthly" in event:
+            if "home_purchase" not in topics:
+                topics.append("home_purchase")
+        if "cash_months" in event:
+            if "liquidity" not in topics:
+                topics.append("liquidity")
+        if "university_total" in event or "university_per_child" in event:
+            if "education" not in topics:
+                topics.append("education")
+    for option in camp.get("options") or []:
+        if isinstance(option, dict) and not option.get("fails"):
+            opt_topic = _option_topic(option)
+            if opt_topic != "overview" and opt_topic not in topics:
+                topics.append(opt_topic)
+    return topics
+
+
+def _reorder_non_failing_options(options, compat_topics):
+    """Move the first non-failing option matching compat_topics to index 0."""
+    reordered = copy.deepcopy(options)
+    if len(reordered) <= 1 or not compat_topics:
+        return reordered
+    best_idx = -1
+    for topic in compat_topics:
+        for idx, option in enumerate(reordered):
+            if isinstance(option, dict) and not option.get("fails"):
+                if _option_topic(option) == topic:
+                    best_idx = idx
+                    break
+        if best_idx >= 0:
+            break
+    if best_idx > 0:
+        chosen = reordered.pop(best_idx)
+        reordered.insert(0, chosen)
+    return reordered
+
+
+def _reorder_camps_for_topic(base_camps, target_topic):
+    """Place the eligible camp matching target_topic first, keeping summit camps anchored."""
+    camps = copy.deepcopy(base_camps)
+    if not camps or target_topic == "overview":
+        return camps
+    compat = _TOPIC_COMPAT.get(target_topic, (target_topic,))
+    eligible_indices = [
+        idx for idx, camp in enumerate(camps)
+        if isinstance(camp, dict)
+        and camp.get("kind") not in _SUMMIT_CAMP_KINDS
+        and not camp.get("is_summit")
+    ]
+    if not eligible_indices:
+        return camps
+
+    best_idx = -1
+    for topic in compat:
+        for idx in eligible_indices:
+            if topic in _camp_topics(camps[idx]):
+                best_idx = idx
+                break
+        if best_idx >= 0:
+            break
+
+    if best_idx > eligible_indices[0]:
+        chosen = camps.pop(best_idx)
+        camps.insert(eligible_indices[0], chosen)
+
+    first_camp = camps[eligible_indices[0]]
+    if isinstance(first_camp, dict) and first_camp.get("options"):
+        first_camp["options"] = _reorder_non_failing_options(
+            first_camp["options"], compat
+        )
+    return camps
+
+
 class Expedition:
     """Track quest, blind partner votes, mountain decisions, and rewind."""
 
-    def __init__(self, case, mode="plain"):
+    def __init__(self, case, mode="plain", fear_ranking=None,
+                 ranked_concerns=None):
         self.case = copy.deepcopy(case)
+        self._base_camps = copy.deepcopy(self.case.get("camps", []))
+        self._base_top_moves = copy.deepcopy(
+            self.case.get("score", {}).get("top_moves", [])
+        )
         self.mode = _validate_mode(mode)
         self.phase = "quest"
         self.quest = None
+        self.top_concern = None
+        self.prioritized_topic = None
         self.votes = {}
         self.blocked = False
         self.block_type = None
@@ -723,6 +971,43 @@ class Expedition:
         self.mountain_preload = None
         self.cordada_resolution = None
         self.current_score = self.case.get("score", {}).get("value")
+        initial_concerns = (
+            ranked_concerns if ranked_concerns is not None else fear_ranking
+        )
+        if initial_concerns:
+            concerns_list = list(initial_concerns)
+            self.quest = {
+                "ranked_concerns": concerns_list,
+                "subjective_concern": "",
+            }
+            self._apply_fear_priority(concerns_list)
+
+    def _apply_fear_priority(self, ranked_concerns):
+        """Reorder camps and top_moves cleanly from base order for Top-1 fear."""
+        self.case["camps"] = copy.deepcopy(self._base_camps)
+        if isinstance(self.case.get("score"), dict) and "top_moves" in self.case["score"]:
+            self.case["score"]["top_moves"] = copy.deepcopy(self._base_top_moves)
+        self.top_concern = None
+        self.prioritized_topic = None
+        if not ranked_concerns:
+            return
+        top_raw = ranked_concerns[0]
+        resolved_text = _resolve_concern_text(self.case, top_raw)
+        topic = _detect_topic(resolved_text)
+        self.top_concern = (
+            top_raw.get("id") or top_raw.get("label")
+            if isinstance(top_raw, dict)
+            else str(top_raw)
+        )
+        self.prioritized_topic = topic
+        if topic == "overview":
+            return
+        compat = _TOPIC_COMPAT.get(topic, (topic,))
+        self.case["camps"] = _reorder_camps_for_topic(self._base_camps, topic)
+        if isinstance(self.case.get("score"), dict) and self._base_top_moves:
+            self.case["score"]["top_moves"] = _reorder_non_failing_options(
+                self._base_top_moves, compat
+            )
 
     def _require_mountain(self):
         """Require the mountain phase and an unblocked route."""
@@ -736,12 +1021,22 @@ class Expedition:
             )
 
     def submit_quest(self, ranked_concerns, subjective_concern=""):
-        """Record concerns and advance to Cordada or the mountain."""
-        if self.phase != "quest":
+        """Record concerns, reorder Basecamp from Top-1 fear, and advance."""
+        can_resubmit = (
+            self.phase in ("cordada", "mountain")
+            and not self.decisions
+            and not self.failed_branches
+            and not self.completed
+        )
+        if self.phase != "quest" and not can_resubmit:
             raise PhaseOrderError("Quest ya fue completada.")
-        self.quest = {"ranked_concerns": ranked_concerns,
+        concerns_list = list(ranked_concerns or [])
+        self.quest = {"ranked_concerns": concerns_list,
                       "subjective_concern": subjective_concern}
-        self.phase = "cordada" if self.case.get("dual") else "mountain"
+        self._apply_fear_priority(concerns_list)
+        self.camp_index = 0
+        if self.phase == "quest":
+            self.phase = "cordada" if self.case.get("dual") else "mountain"
         return self.state()
 
     def _partner_key(self, partner):
@@ -874,6 +1169,9 @@ class Expedition:
             "phase": self.phase, "blocked": self.blocked,
             "block_type": self.block_type, "mode": selected_mode,
             "case": copy.deepcopy(self.case), "camp_index": self.camp_index,
+            "camps": copy.deepcopy(self.case.get("camps", [])),
+            "top_concern": self.top_concern,
+            "prioritized_topic": self.prioritized_topic,
             "decisions": copy.deepcopy(self.decisions),
             "failed_branches": copy.deepcopy(self.failed_branches),
             "completed": self.completed, "votes_submitted": votes_submitted,
@@ -1093,8 +1391,12 @@ class Expedition:
                 "display_text": current["display_text"]}
 
     def restart(self):
-        """Reset the expedition to its initial Quest phase."""
-        self.__init__(self.case, self.mode)
+        """Reset the expedition to its initial Quest phase and base camp order."""
+        base_case = copy.deepcopy(self.case)
+        base_case["camps"] = copy.deepcopy(self._base_camps)
+        if isinstance(base_case.get("score"), dict) and "top_moves" in base_case["score"]:
+            base_case["score"]["top_moves"] = copy.deepcopy(self._base_top_moves)
+        self.__init__(base_case, self.mode)
         return self.state()
 
     def advisor_brief(self, mode=None):
